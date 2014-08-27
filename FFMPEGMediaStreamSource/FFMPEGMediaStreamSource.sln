@@ -1,0 +1,70 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FFMPEGMediaStreamSource", "FFMPEGMediaStreamSource", "{587391C8-DBD7-4EE2-8329-1C3138E4B086}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFMPEGMediaStreamSource.Shared", "FFMPEGMediaStreamSource\FFMPEGMediaStreamSource.Shared\FFMPEGMediaStreamSource.Shared.vcxitems", "{00DF23A8-2784-4FCF-8316-1BCFE768489F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFMPEGMediaStreamSource.Windows", "FFMPEGMediaStreamSource\FFMPEGMediaStreamSource.Windows\FFMPEGMediaStreamSource.Windows.vcxproj", "{544BB2A0-B845-4257-AA74-964A24281EAB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFMPEGMediaStreamSource.WindowsPhone", "FFMPEGMediaStreamSource\FFMPEGMediaStreamSource.WindowsPhone\FFMPEGMediaStreamSource.WindowsPhone.vcxproj", "{499906C3-DAC7-4E40-B43C-91E6E9720972}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		FFMPEGMediaStreamSource\FFMPEGMediaStreamSource.Shared\FFMPEGMediaStreamSource.Shared.vcxitems*{499906c3-dac7-4e40-b43c-91e6e9720972}*SharedItemsImports = 4
+		FFMPEGMediaStreamSource\FFMPEGMediaStreamSource.Shared\FFMPEGMediaStreamSource.Shared.vcxitems*{00df23a8-2784-4fcf-8316-1bcfe768489f}*SharedItemsImports = 9
+		FFMPEGMediaStreamSource\FFMPEGMediaStreamSource.Shared\FFMPEGMediaStreamSource.Shared.vcxitems*{544bb2a0-b845-4257-aa74-964a24281eab}*SharedItemsImports = 4
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|ARM = Release|ARM
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|ARM.ActiveCfg = Debug|ARM
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|ARM.Build.0 = Debug|ARM
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|ARM.Deploy.0 = Debug|ARM
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|Win32.Build.0 = Debug|Win32
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|Win32.Deploy.0 = Debug|Win32
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|x64.ActiveCfg = Debug|x64
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|x64.Build.0 = Debug|x64
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Debug|x64.Deploy.0 = Debug|x64
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|ARM.ActiveCfg = Release|ARM
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|ARM.Build.0 = Release|ARM
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|ARM.Deploy.0 = Release|ARM
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|Win32.ActiveCfg = Release|Win32
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|Win32.Build.0 = Release|Win32
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|Win32.Deploy.0 = Release|Win32
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|x64.ActiveCfg = Release|x64
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|x64.Build.0 = Release|x64
+		{544BB2A0-B845-4257-AA74-964A24281EAB}.Release|x64.Deploy.0 = Release|x64
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Debug|ARM.ActiveCfg = Debug|ARM
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Debug|ARM.Build.0 = Debug|ARM
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Debug|ARM.Deploy.0 = Debug|ARM
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Debug|Win32.ActiveCfg = Debug|Win32
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Debug|Win32.Build.0 = Debug|Win32
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Debug|Win32.Deploy.0 = Debug|Win32
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Debug|x64.ActiveCfg = Debug|Win32
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Release|ARM.ActiveCfg = Release|ARM
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Release|ARM.Build.0 = Release|ARM
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Release|ARM.Deploy.0 = Release|ARM
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Release|Win32.ActiveCfg = Release|Win32
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Release|Win32.Build.0 = Release|Win32
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Release|Win32.Deploy.0 = Release|Win32
+		{499906C3-DAC7-4E40-B43C-91E6E9720972}.Release|x64.ActiveCfg = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{00DF23A8-2784-4FCF-8316-1BCFE768489F} = {587391C8-DBD7-4EE2-8329-1C3138E4B086}
+		{544BB2A0-B845-4257-AA74-964A24281EAB} = {587391C8-DBD7-4EE2-8329-1C3138E4B086}
+		{499906C3-DAC7-4E40-B43C-91E6E9720972} = {587391C8-DBD7-4EE2-8329-1C3138E4B086}
+	EndGlobalSection
+EndGlobal

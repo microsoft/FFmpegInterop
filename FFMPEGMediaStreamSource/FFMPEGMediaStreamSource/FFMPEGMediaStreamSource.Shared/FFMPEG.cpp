@@ -42,7 +42,8 @@ FFMPEG::FFMPEG() :
 	audioPacketQueueHead(0),
 	audioPacketQueueCount(0),
 	videoPacketQueueHead(0),
-	videoPacketQueueCount(0)
+	videoPacketQueueCount(0),
+	compressedVideo(true)
 {
 }
 
@@ -124,7 +125,16 @@ MediaStreamSource^ FFMPEG::OpenFile(StorageFile^ file, AudioStreamDescriptor^ au
 		return nullptr; // mark not ready
 	}
 
-	VideoEncodingProperties^ videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Yv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
+	VideoEncodingProperties^ videoProperties;
+	if (compressedVideo)
+	{
+		videoProperties = VideoEncodingProperties::CreateH264();
+	}
+	else
+	{
+		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Yv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
+	}
+
 	videoDesc = ref new VideoStreamDescriptor(videoProperties);
 	videoDesc->EncodingProperties->FrameRate->Numerator = avVideoCodecCtx->time_base.den;
 	videoDesc->EncodingProperties->FrameRate->Denominator = avVideoCodecCtx->time_base.num;
@@ -217,32 +227,58 @@ MediaStreamSample^ FFMPEG::FillVideoSample()
 		}
 
 		if (videoPacketQueueCount > 0)
-		{
+		{			
 			avPacket = PopVideoPacket();
-			if (avcodec_decode_video2(avVideoCodecCtx, avFrame, &frameComplete, &avPacket) < 0)
+			if (!compressedVideo)
 			{
-				return sample;
+				if (avcodec_decode_video2(avVideoCodecCtx, avFrame, &frameComplete, &avPacket) < 0)
+				{
+					return sample;
+				}
+			}
+			else
+			{
+				frameComplete = true;
 			}
 		}
 	}
-
-	av_image_copy(videoBufferData, videoBufferLineSize, (const uint8_t **)(avFrame->data), avFrame->linesize,
-		avVideoCodecCtx->pix_fmt, avVideoCodecCtx->width, avVideoCodecCtx->height);
-
+	
 	DataWriter^ dataWriter = ref new DataWriter();
-	auto YBuffer = ref new Platform::Array<uint8_t>(videoBufferData[0], videoBufferLineSize[0] * avVideoCodecCtx->height);
-	auto UBuffer = ref new Platform::Array<uint8_t>(videoBufferData[1], videoBufferLineSize[1] * avVideoCodecCtx->height / 2);
-	auto VBuffer = ref new Platform::Array<uint8_t>(videoBufferData[2], videoBufferLineSize[2] * avVideoCodecCtx->height / 2);
-	dataWriter->WriteBytes(YBuffer);
-	dataWriter->WriteBytes(VBuffer);
-	dataWriter->WriteBytes(UBuffer);
+	if (!compressedVideo)
+	{
+		av_image_copy(videoBufferData, videoBufferLineSize, (const uint8_t **)(avFrame->data), avFrame->linesize,
+			avVideoCodecCtx->pix_fmt, avVideoCodecCtx->width, avVideoCodecCtx->height);
+
+		auto YBuffer = ref new Platform::Array<uint8_t>(videoBufferData[0], videoBufferLineSize[0] * avVideoCodecCtx->height);
+		auto UBuffer = ref new Platform::Array<uint8_t>(videoBufferData[1], videoBufferLineSize[1] * avVideoCodecCtx->height / 2);
+		auto VBuffer = ref new Platform::Array<uint8_t>(videoBufferData[2], videoBufferLineSize[2] * avVideoCodecCtx->height / 2);
+		dataWriter->WriteBytes(YBuffer);
+		dataWriter->WriteBytes(VBuffer);
+		dataWriter->WriteBytes(UBuffer);
+	}
+	else
+	{
+		if (avPacket.flags & AV_PKT_FLAG_KEY)
+		{
+			GetSPSAndPPSBuffer(dataWriter);
+		}
+		WriteAnnexBPacket(dataWriter, avPacket);
+	}
 
 	Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(avVideoCodecCtx->pkt_timebase) * 10000000 * avPacket.pts) };
 	Windows::Foundation::TimeSpan dur = { ULONGLONG(av_q2d(avVideoCodecCtx->pkt_timebase) * 10000000 * avPacket.duration) };
 
-	sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
+	auto buffer = dataWriter->DetachBuffer();
+	sample = MediaStreamSample::CreateFromBuffer(buffer, pts);
 	sample->Duration = dur;
-	sample->KeyFrame = avFrame->key_frame == 1;
+	if (!compressedVideo)
+	{
+		sample->KeyFrame = avFrame->key_frame == 1;
+	}
+	else
+	{
+		sample->KeyFrame = (avPacket.flags & AV_PKT_FLAG_KEY) != 0;
+	}
 	timeOffset.Duration = timeOffset.Duration + avFrame->pkt_duration * 100;
 
 	return sample;
@@ -276,6 +312,49 @@ int FFMPEG::ReadPacket()
 	}
 
 	return ret;
+}
+
+void FFMPEG::WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket)
+{
+	uint32 index = 0;
+	uint32 size;
+	
+	do
+	{
+		// Grab the size of the blob
+		size = (avPacket.data[index] << 24) + (avPacket.data[index + 1] << 16) + (avPacket.data[index + 2] << 8) + avPacket.data[index + 3];
+
+		dataWriter->WriteByte(0);
+		dataWriter->WriteByte(0);
+		dataWriter->WriteByte(0);
+		dataWriter->WriteByte(1);
+		index += 4;
+
+		auto vBuffer = ref new Platform::Array<uint8_t>(&(avPacket.data[index]), size);
+		dataWriter->WriteBytes(vBuffer);
+		index += size;
+	} while (index < avPacket.size);
+}
+
+void FFMPEG::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
+{
+	byte* spsPos = avVideoCodecCtx->extradata + 8;
+	byte spsLength = spsPos[-1];
+	auto vSPS = ref new Platform::Array<uint8_t>(spsPos, spsLength);
+	dataWriter->WriteByte(0);
+	dataWriter->WriteByte(0);
+	dataWriter->WriteByte(0);
+	dataWriter->WriteByte(1);
+	dataWriter->WriteBytes(vSPS);
+
+	byte* ppsPos = avVideoCodecCtx->extradata + 8 + spsLength + 3;
+	byte ppsLength = ppsPos[-1];
+	auto vPPS = ref new Platform::Array<uint8_t>(ppsPos, ppsLength);
+	dataWriter->WriteByte(0);
+	dataWriter->WriteByte(0);
+	dataWriter->WriteByte(0);
+	dataWriter->WriteByte(1);
+	dataWriter->WriteBytes(vPPS);
 }
 
 void FFMPEG::PushAudioPacket(AVPacket packet)

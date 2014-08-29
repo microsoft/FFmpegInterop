@@ -23,6 +23,7 @@ extern "C" {
 }
 
 using namespace Windows::Storage;
+using namespace Windows::Storage::Streams;
 using namespace Windows::Media::Core;
 
 const int AUDIOPKTBUFFERSZ = 32;
@@ -45,6 +46,8 @@ namespace FFMPEGMediaStreamSource
 		MediaStreamSample^ FillAudioSample();
 		MediaStreamSample^ FillVideoSample();
 		int ReadPacket();
+		void GetSPSAndPPSBuffer(DataWriter^ dataWriter);
+		void WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket);
 
 		AVFormatContext* avFormatCtx;
 		AVCodecContext* avAudioCodecCtx;
@@ -54,6 +57,7 @@ namespace FFMPEGMediaStreamSource
 		AVFrame* avFrame;
 		int audioStreamIndex;
 		int videoStreamIndex;
+		bool compressedVideo;
 
 		uint8_t* videoBufferData[4];
 		int videoBufferLineSize[4];

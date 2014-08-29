@@ -47,7 +47,7 @@ MainPage::MainPage()
 {
 	InitializeComponent();
 	FFMPEGLib = ref new FFMPEG();
-	
+
 	if (!FFMPEGLib)
 	{
 		OutputDebugString(L"FFMPEG lib does not load");

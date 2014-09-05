@@ -54,18 +54,7 @@
                               SeekCompleted="media_SeekCompleted"
                               SizeChanged="media_SizeChanged"
                               Tapped="media_Tapped"
-                              
-                              />
-                
-                                  <!--AreTransportControlsEnabled="True"
-                                  MediaOpened="Media_MediaOpened"
-                                  MediaEnded="Media_MediaEnded"
-                                  MediaFailed="Media_MediaFailed"
-                                  CurrentStateChanged="Media_CurrentStateChanged"
-                                  AutoPlay="False" 
-                                  IsTapEnabled="True" 
-                                  AudioCategory="BackgroundCapableMedia" 
-                                  RateChanged="Media_RateChanged" />-->
+                />
             </Grid>
         </ScrollViewer>
 

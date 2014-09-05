@@ -129,21 +129,27 @@ MediaStreamSource^ FFMPEG::OpenFile(StorageFile^ file, AudioStreamDescriptor^ au
 	if (compressedVideo)
 	{
 		videoProperties = VideoEncodingProperties::CreateH264();
+		videoProperties->ProfileId = avVideoCodecCtx->profile;
+		videoProperties->Height = avVideoCodecCtx->height;
+		videoProperties->Width = avVideoCodecCtx->width;
 	}
 	else
 	{
 		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Yv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
 	}
 
+	videoProperties->FrameRate->Numerator = avVideoCodecCtx->time_base.den;
+	videoProperties->FrameRate->Denominator = avVideoCodecCtx->time_base.num;
+	videoProperties->Bitrate = avVideoCodecCtx->bit_rate;
 	videoDesc = ref new VideoStreamDescriptor(videoProperties);
-	videoDesc->EncodingProperties->FrameRate->Numerator = avVideoCodecCtx->time_base.den;
-	videoDesc->EncodingProperties->FrameRate->Denominator = avVideoCodecCtx->time_base.num;
-	videoDesc->EncodingProperties->Bitrate = avVideoCodecCtx->bit_rate;
 	videoStreamId = videoDesc->GetHashCode(); // identify Video stream against Audio stream
 
-	AudioEncodingProperties^ audioProperties = AudioEncodingProperties::CreateAac(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, avAudioCodecCtx->bit_rate);
-	audioDesc = ref new AudioStreamDescriptor(audioProperties);
-	audioStreamId = audioDesc->GetHashCode(); // identify Audio stream against Video stream
+	if (avAudioCodecCtx)
+	{
+		AudioEncodingProperties^ audioProperties = AudioEncodingProperties::CreateAac(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, avAudioCodecCtx->bit_rate);
+		audioDesc = ref new AudioStreamDescriptor(audioProperties);
+		audioStreamId = audioDesc->GetHashCode(); // identify Audio stream against Video stream
+	}
 
 	MediaStreamSource^ mss;
 	mss = ref new MediaStreamSource(videoDesc, audioDesc);

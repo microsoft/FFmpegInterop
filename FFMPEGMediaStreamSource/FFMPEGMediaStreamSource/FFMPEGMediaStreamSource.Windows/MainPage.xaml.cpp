@@ -155,9 +155,10 @@ void FFMPEGMediaStreamSource::MainPage::media_MediaEnded(Platform::Object^ sende
 }
 
 
-void FFMPEGMediaStreamSource::MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ e)
+void FFMPEGMediaStreamSource::MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
 {
-
+	std::wstring wStringPath(args->ErrorMessage->Begin());
+	OutputDebugString(wStringPath.c_str());
 }
 
 

@@ -121,7 +121,7 @@ void App::OnLaunched(LaunchActivatedEventArgs^ e)
 	Window::Current->Activate();
 }
 
-#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
 /// <summary>
 /// Restores the content transitions after the app has launched.
 /// </summary>
@@ -144,7 +144,25 @@ void App::RootFrame_FirstNavigated(Object^ sender, NavigationEventArgs^ e)
 
 	rootFrame->Navigated -= _firstNavigatedToken;
 }
-#endif
+
+/// <summary>
+/// Handle OnActivated event to deal with File Open/Save continuation activation kinds
+/// </summary>
+/// <param name="e">Application activated event arguments, it can be casted to proper sub-type based on ActivationKind</param>
+void App::OnActivated(IActivatedEventArgs^ e)
+{
+	Application::OnActivated(e);
+
+	auto continuationEventArgs = dynamic_cast<IContinuationActivatedEventArgs^>(e);
+	auto mainPage = dynamic_cast<MainPage^>(dynamic_cast<Frame^>(Window::Current->Content)->Content);
+
+	if (continuationEventArgs != nullptr && mainPage != nullptr)
+	{
+		mainPage->ContinueFileOpenPicker(dynamic_cast<FileOpenPickerContinuationEventArgs^>(continuationEventArgs));
+	}
+}
+#endif //WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+
 
 /// <summary>
 /// Invoked when application execution is being suspended. Application state is saved

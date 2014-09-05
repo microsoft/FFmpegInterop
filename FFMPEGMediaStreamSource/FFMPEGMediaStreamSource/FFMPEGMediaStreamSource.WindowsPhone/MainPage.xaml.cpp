@@ -29,6 +29,7 @@ using namespace FFMPEGMediaStreamSource;
 using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
+using namespace Windows::Storage::Pickers;
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::UI::Xaml::Controls::Primitives;
@@ -44,20 +45,149 @@ MainPage::MainPage()
 	InitializeComponent();
 }
 
-/// <summary>
-/// Invoked when this page is about to be displayed in a Frame.
-/// </summary>
-/// <param name="e">Event data that describes how this page was reached.  The Parameter
-/// property is typically used to configure the page.</param>
-void MainPage::OnNavigatedTo(NavigationEventArgs^ e)
+void MainPage::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)
 {
-	(void) e;	// Unused parameter
+	args->Request->Sample = FFMPEGLib->FillSample(args->Request->StreamDescriptor);
+}
 
-	// TODO: Prepare page for display here.
+void MainPage::OnStarting(Windows::Media::Core::MediaStreamSource ^sender, Windows::Media::Core::MediaStreamSourceStartingEventArgs ^args)
+{
+}
 
-	// TODO: If your application contains multiple pages, ensure that you are
-	// handling the hardware Back button by registering for the
-	// Windows::Phone::UI::Input::HardwareButtons.BackPressed event.
-	// If you are using the NavigationHelper provided by some templates,
-	// this event is handled for you.
+void FFMPEGMediaStreamSource::MainPage::AppBarButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+	FileOpenPicker^ filePicker = ref new FileOpenPicker();
+	filePicker->ViewMode = PickerViewMode::Thumbnail;
+	filePicker->SuggestedStartLocation = PickerLocationId::VideosLibrary;
+	filePicker->FileTypeFilter->Append("*");
+
+	filePicker->PickSingleFileAndContinue();
+}
+
+/// <summary>
+/// Handle the returned files from file picker
+/// This method is triggered by ContinuationManager based on ActivationKind
+/// </summary>
+/// <param name="args">File open picker continuation activation argment. It cantains the list of files user selected with file open picker </param>
+void FFMPEGMediaStreamSource::MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::FileOpenPickerContinuationEventArgs^ args)
+{
+	if (!FFMPEGLib)
+	{
+		FFMPEGLib = ref new FFMPEG();
+		FFMPEGLib->Initialize();
+	}
+
+	if (args->Files->Size > 0)
+	{
+		media->Stop();
+
+		VideoStreamDescriptor^ videoDesc; // Will be ignored for now
+		AudioStreamDescriptor^ audioDesc; // Will be ignored for now
+		MediaStreamSource^ mss = FFMPEGLib->OpenFile(args->Files->GetAt(0), audioDesc, videoDesc);
+
+		if (mss)
+		{
+			if (videoDesc) {
+			}
+
+			if (audioDesc) {
+				// Setup audio later
+			}
+
+			mss->Starting += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Core::MediaStreamSource ^, Windows::Media::Core::MediaStreamSourceStartingEventArgs ^>(this, &MainPage::OnStarting);
+			mss->SampleRequested += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Core::MediaStreamSource ^, Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs ^>(this, &MainPage::OnSampleRequested);
+
+			//media->AutoPlay = false;
+			media->SetMediaStreamSource(mss);
+		}
+	}
+	else
+	{
+		// Display error message
+	}
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_BufferingProgressChanged(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_CurrentStateChanged(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_DataContextChanged(Windows::UI::Xaml::FrameworkElement^ sender, Windows::UI::Xaml::DataContextChangedEventArgs^ args)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_DoubleTapped(Platform::Object^ sender, Windows::UI::Xaml::Input::DoubleTappedRoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_DownloadProgressChanged(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_LayoutUpdated(Platform::Object^ sender, Platform::Object^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_Loaded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
+{
+	std::wstring wStringPath(args->ErrorMessage->Begin());
+	OutputDebugString(wStringPath.c_str());
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_MediaOpened(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_RateChanged(Platform::Object^ sender, Windows::UI::Xaml::Media::RateChangedRoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_SeekCompleted(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_SizeChanged(Platform::Object^ sender, Windows::UI::Xaml::SizeChangedEventArgs^ e)
+{
+
+}
+
+
+void FFMPEGMediaStreamSource::MainPage::media_Tapped(Platform::Object^ sender, Windows::UI::Xaml::Input::TappedRoutedEventArgs^ e)
+{
+
 }

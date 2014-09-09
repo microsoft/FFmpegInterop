@@ -20,13 +20,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="FFMPEGMediaStreamSource.Windows_TemporaryKey.pfx" />
-    <None Include="..\..\..\..\ffmpegStore81\bin\avcodec-55.dll" />
-    <None Include="..\..\..\..\ffmpegStore81\bin\avdevice-55.dll" />
-    <None Include="..\..\..\..\ffmpegStore81\bin\avfilter-4.dll" />
-    <None Include="..\..\..\..\ffmpegStore81\bin\avformat-55.dll" />
-    <None Include="..\..\..\..\ffmpegStore81\bin\avutil-52.dll" />
-    <None Include="..\..\..\..\ffmpegStore81\bin\swresample-0.dll" />
-    <None Include="..\..\..\..\ffmpegStore81\bin\swscale-2.dll" />
+    <None Include="..\..\..\..\FFMPEG\Build\Windows81\Win32\bin\avcodec-56.dll" />
+    <None Include="..\..\..\..\FFMPEG\Build\Windows81\Win32\bin\avdevice-56.dll" />
+    <None Include="..\..\..\..\FFMPEG\Build\Windows81\Win32\bin\avfilter-5.dll" />
+    <None Include="..\..\..\..\FFMPEG\Build\Windows81\Win32\bin\avformat-56.dll" />
+    <None Include="..\..\..\..\FFMPEG\Build\Windows81\Win32\bin\avutil-54.dll" />
+    <None Include="..\..\..\..\FFMPEG\Build\Windows81\Win32\bin\swresample-1.dll" />
+    <None Include="..\..\..\..\FFMPEG\Build\Windows81\Win32\bin\swscale-3.dll" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">

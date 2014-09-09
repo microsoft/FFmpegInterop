@@ -27,3 +27,11 @@
 #include <ppltasks.h>
 
 #include "App.xaml.h"
+
+#if !DEBUG
+#ifdef OutputDebugString
+#undef OutputDebugString
+#endif
+#define OutputDebugString(x)
+#endif
+

@@ -5,3 +5,5 @@ Generated Files
 *.suo
 *.sdf
 *.opensdf
+*.user
+*.ipch

@@ -28,10 +28,5 @@
 
 #include "App.xaml.h"
 
-#if !DEBUG
-#ifdef OutputDebugString
-#undef OutputDebugString
-#endif
-#define OutputDebugString(x)
-#endif
+void log_callback_help(void* ptr, int level, const char* fmt, va_list vl);
 

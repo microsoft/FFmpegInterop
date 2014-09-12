@@ -22,3 +22,12 @@
 //
 
 #include "pch.h"
+
+
+void log_callback_help(void *ptr, int level, const char *fmt, va_list vl)
+{
+	char buffer [1024];
+	sprintf_s(buffer, fmt, (const char*)vl);
+
+	OutputDebugStringA((LPCSTR)buffer);
+}

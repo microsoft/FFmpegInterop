@@ -55,6 +55,8 @@ void FFMPEG::Initialize()
 {
 	OutputDebugString(L"Initialize\n");
 	av_register_all();
+	av_log_set_callback(log_callback_help);
+	avformat_network_init();
 }
 
 void FFMPEG::Close()
@@ -83,7 +85,7 @@ MediaStreamSource^ FFMPEG::OpenFile(StorageFile^ file, AudioStreamDescriptor^ au
 	// Get filename, replace with get stream buffer later on
 	std::wstring wStringPath(file->Path->Begin());
 	std::string stringPath(wStringPath.begin(), wStringPath.end());
-
+	
 	if (avformat_open_input(&avFormatCtx, stringPath.c_str(), NULL, NULL) < 0)
 	{
 		return nullptr; // Error opening file

@@ -31,7 +31,7 @@
     <!-- Main Grid which contains the MediaElement object -->
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-        <!--ScrollViewer for MediaContent -->
+        <!--Grid for MediaContent -->
         <Grid Name="MediaContainer" Background="{StaticResource ApplicationPageBackgroundThemeBrush}" >
 
             <!--The main MediaElement -->

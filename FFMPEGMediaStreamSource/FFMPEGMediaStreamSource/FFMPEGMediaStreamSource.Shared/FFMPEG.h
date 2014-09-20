@@ -22,12 +22,14 @@ extern "C" {
 #include <libavformat\avformat.h>
 }
 
+using namespace Windows::Foundation;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::Core;
 
 const int AUDIOPKTBUFFERSZ = 32;
 const int VIDEOPKTBUFFERSZ = 32;
+const int FILESTREAMBUFFERSZ = 32 * 1024;
 
 namespace FFMPEGMediaStreamSource
 {
@@ -38,9 +40,12 @@ namespace FFMPEGMediaStreamSource
 		virtual ~FFMPEG();
 
 		void Initialize();
-		MediaStreamSource^ OpenFile(StorageFile^ file, AudioStreamDescriptor^ audioDesc, VideoStreamDescriptor^ videoDesc);
-		MediaStreamSample^ FillSample(IMediaStreamDescriptor^ streamDesc);
 		void Close();
+
+		MediaStreamSource^ CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+
+		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
+		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
 
 	private:
 		MediaStreamSample^ FillAudioSample();
@@ -49,6 +54,7 @@ namespace FFMPEGMediaStreamSource
 		void GetSPSAndPPSBuffer(DataWriter^ dataWriter);
 		void WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket);
 
+		AVIOContext *avIOCtx;
 		AVFormatContext* avFormatCtx;
 		AVCodecContext* avAudioCodecCtx;
 		AVCodecContext* avVideoCodecCtx;
@@ -77,7 +83,9 @@ namespace FFMPEGMediaStreamSource
 		void PushVideoPacket(AVPacket packet);
 		AVPacket PopVideoPacket();
 
-		Windows::Foundation::TimeSpan timeOffset;
+		TimeSpan mediaDuration;
+		IStream* fileStreamData;
+		unsigned char* fileStreamBuffer;
 	};
 }
 

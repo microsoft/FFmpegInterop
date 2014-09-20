@@ -57,11 +57,6 @@ MainPage::MainPage()
 	FFMPEGLib->Initialize();
 }
 
-void MainPage::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)
-{
-	args->Request->Sample = FFMPEGLib->FillSample(args->Request->StreamDescriptor);
-}
-
 void MainPage::OnStarting(Windows::Media::Core::MediaStreamSource ^sender, Windows::Media::Core::MediaStreamSourceStartingEventArgs ^args)
 {
 }
@@ -75,29 +70,28 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Click(Platform::Object^ sen
 
 	create_task(filePicker->PickSingleFileAsync()).then([this](StorageFile^ file)
 	{
-		if (file)
+		if (file != nullptr)
 		{
 			media->Stop();
 
-			VideoStreamDescriptor^ videoDesc; // Will be ignored for now
-			AudioStreamDescriptor^ audioDesc; // Will be ignored for now
-			MediaStreamSource^ mss = FFMPEGLib->OpenFile(file, audioDesc, videoDesc);
-
-			if (mss)
+			create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file ](task<IRandomAccessStream^> task)
 			{
-				if (videoDesc) {
+				try
+				{
+					IRandomAccessStream^ readStream = task.get();
+
+					//
+					MediaStreamSource^ mss = FFMPEGLib->CreateMediaStreamSource(readStream, false, false);
+
+					if (mss)
+					{
+						media->SetMediaStreamSource(mss);
+					}
 				}
-
-				if (audioDesc) {
-					// Setup audio later
+				catch (COMException^ ex)
+				{
 				}
-
-				mss->Starting += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Core::MediaStreamSource ^, Windows::Media::Core::MediaStreamSourceStartingEventArgs ^>(this, &MainPage::OnStarting);
-				mss->SampleRequested += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Core::MediaStreamSource ^, Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs ^>(this, &MainPage::OnSampleRequested);
-
-				//media->AutoPlay = false;
-				media->SetMediaStreamSource(mss);
-			}
+			});
 		}
 		else
 		{

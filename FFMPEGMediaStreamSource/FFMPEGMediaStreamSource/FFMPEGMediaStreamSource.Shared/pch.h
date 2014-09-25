@@ -30,3 +30,9 @@
 
 void log_callback_help(void* ptr, int level, const char* fmt, va_list vl);
 
+#if !_DEBUG
+#ifdef OutputDebugString
+#undef OutputDebugString
+#endif
+#define OutputDebugString(x)
+#endif

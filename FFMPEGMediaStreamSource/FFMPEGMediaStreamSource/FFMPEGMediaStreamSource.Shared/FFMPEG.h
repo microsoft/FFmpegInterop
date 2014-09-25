@@ -27,8 +27,8 @@ using namespace Windows::Storage;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::Core;
 
-const int AUDIOPKTBUFFERSZ = 32;
-const int VIDEOPKTBUFFERSZ = 32;
+const int AUDIOPKTBUFFERSZ = 320;
+const int VIDEOPKTBUFFERSZ = 320;
 const int FILESTREAMBUFFERSZ = 32 * 1024;
 
 namespace FFMPEGMediaStreamSource

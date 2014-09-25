@@ -289,7 +289,7 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 		if (ReadPacket() < 0)
 		{
 			OutputDebugString(L"FillAudioSample Reaching End Of File\n");
-			break;
+			return sample;
 		}
 	}
 

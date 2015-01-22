@@ -19,7 +19,8 @@
 #pragma once
 
 extern "C" {
-#include <libavformat\avformat.h>
+#include <libavformat/avformat.h>
+#include <libswresample/swresample.h>
 }
 
 using namespace Windows::Foundation;
@@ -29,47 +30,47 @@ using namespace Windows::Media::Core;
 
 const int AUDIOPKTBUFFERSZ = 320;
 const int VIDEOPKTBUFFERSZ = 320;
-const int FILESTREAMBUFFERSZ = 32 * 1024;
+const int FILESTREAMBUFFERSZ = 1024;
 
 namespace FFMPEGMediaStreamSource
 {
 	public ref class FFMPEG sealed
 	{
 	public:
-		FFMPEG();
+		FFMPEG(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
 		virtual ~FFMPEG();
-
-		void Initialize();
-		void Close();
-
-		MediaStreamSource^ CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		MediaStreamSource^ GetMSS();
 
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
 
 	private:
+		void Close();
+		void CreateAudioStreamDescriptor(bool forceAudioDecode);
+		void CreateVideoStreamDescriptor(bool forceVideoDecode);
+		MediaStreamSource^ CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
 		MediaStreamSample^ FillAudioSample();
 		MediaStreamSample^ FillVideoSample();
 		int ReadPacket();
 		void GetSPSAndPPSBuffer(DataWriter^ dataWriter);
 		void WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket);
 
+		MediaStreamSource^ mss;
 		AVIOContext *avIOCtx;
 		AVFormatContext* avFormatCtx;
 		AVCodecContext* avAudioCodecCtx;
 		AVCodecContext* avVideoCodecCtx;
-		AVCodec* avAudioCodec;
-		AVCodec* avVideoCodec;
+		SwrContext *swrCtx;
 		AVFrame* avFrame;
+		AudioStreamDescriptor^ audioStreamDescriptor;
+		VideoStreamDescriptor^ videoStreamDescriptor;
 		int audioStreamIndex;
 		int videoStreamIndex;
-		bool compressedVideo;
+		bool generateUncompressedAudio;
+		bool generateUncompressedVideo;
 
 		uint8_t* videoBufferData[4];
 		int videoBufferLineSize[4];
-
-		int audioStreamId;
-		int videoStreamId;
 
 		AVPacket audioPacketQueue[AUDIOPKTBUFFERSZ];
 		int audioPacketQueueHead;
@@ -88,4 +89,3 @@ namespace FFMPEGMediaStreamSource
 		unsigned char* fileStreamBuffer;
 	};
 }
-

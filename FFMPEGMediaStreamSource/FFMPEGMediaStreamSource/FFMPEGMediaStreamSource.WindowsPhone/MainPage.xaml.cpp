@@ -67,23 +67,18 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Click(Platform::Object^ sen
 /// <param name="args">File open picker continuation activation argment. It cantains the list of files user selected with file open picker </param>
 void FFMPEGMediaStreamSource::MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::FileOpenPickerContinuationEventArgs^ args)
 {
-	if (!FFMPEGLib)
-	{
-		FFMPEGLib = ref new FFMPEG();
-		FFMPEGLib->Initialize();
-	}
-
 	if (args->Files->Size > 0)
 	{
 		media->Stop();
 
 		StorageFile^ file = args->Files->GetAt(0);
-		create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file](task<IRandomAccessStream^> task)
+		create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file](task<IRandomAccessStream^> stream)
 		{
 			try
 			{
-				IRandomAccessStream^ readStream = task.get();
-				MediaStreamSource^ mss = FFMPEGLib->CreateMediaStreamSource(readStream, false, false);
+				IRandomAccessStream^ readStream = stream.get();
+				FFMPEGLib = ref new FFMPEG(readStream, false, false);
+				MediaStreamSource^ mss = FFMPEGLib->GetMSS();
 
 				if (mss)
 				{

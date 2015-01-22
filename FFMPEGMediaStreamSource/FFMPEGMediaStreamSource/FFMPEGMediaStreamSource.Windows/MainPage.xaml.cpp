@@ -46,15 +46,6 @@ using namespace Windows::UI::Xaml::Navigation;
 MainPage::MainPage()
 {
 	InitializeComponent();
-	FFMPEGLib = ref new FFMPEG();
-
-	if (!FFMPEGLib)
-	{
-		OutputDebugString(L"FFMPEG lib does not load");
-		return;
-	};
-
-	FFMPEGLib->Initialize();
 }
 
 void MainPage::OnStarting(Windows::Media::Core::MediaStreamSource ^sender, Windows::Media::Core::MediaStreamSourceStartingEventArgs ^args)
@@ -74,14 +65,13 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Click(Platform::Object^ sen
 		{
 			media->Stop();
 
-			create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file ](task<IRandomAccessStream^> task)
+			create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file](task<IRandomAccessStream^> stream)
 			{
 				try
 				{
-					IRandomAccessStream^ readStream = task.get();
-
-					//
-					MediaStreamSource^ mss = FFMPEGLib->CreateMediaStreamSource(readStream, false, false);
+					IRandomAccessStream^ readStream = stream.get();
+					FFMPEGLib = ref new FFMPEG(readStream, false, false);
+					MediaStreamSource^ mss = FFMPEGLib->GetMSS();
 
 					if (mss)
 					{

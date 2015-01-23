@@ -117,22 +117,20 @@ void FFMPEG::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEven
 	if (request->StartPosition && request->StartPosition->Value.Duration <= mediaDuration.Duration)
 	{
 		// Select the first valid stream either from video or audio.
-		int streamIndex = audioStreamIndex > 0 ? audioStreamIndex : videoStreamIndex > 0 ? videoStreamIndex : -1;
+		int streamIndex = audioStreamIndex >= 0 ? audioStreamIndex : videoStreamIndex > 0 ? videoStreamIndex : -1;
 		int64_t seekTarget = request->StartPosition->Value.Duration;
 		request->SetActualStartPosition(request->StartPosition->Value);
 
-		if (streamIndex > 0)
+		if (streamIndex >= 0)
 		{
 			// Convert TimeSpan unit to AV_TIME_BASE
-			seekTarget = seekTarget / (av_q2d(avAudioCodecCtx->time_base) * 10000000);
-		}
+			seekTarget = seekTarget / (av_q2d(avAudioCodecCtx->pkt_timebase) * 10000000);
 
-		if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, 0) < 0)
-		{
-			OutputDebugString(L" - ### Error while seeking\n");
-		}
-		else
-		{
+			if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, 0) < 0)
+			{
+				OutputDebugString(L" - ### Error while seeking\n");
+			}
+
 			// TODO: Change circular queue to PacketList linked list
 
 			// Flush all audio packet in queue and internal buffer
@@ -174,9 +172,6 @@ void FFMPEG::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^sender, 
 
 MediaStreamSource^ FFMPEG::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
 {
-	// TODO: Destroy all previously allocated items
-	//Close();
-
 	if (!stream)
 	{
 		return nullptr;
@@ -393,11 +388,9 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 	if (generateUncompressedAudio && swrCtx)
 	{
 		// Resample frame to AV_SAMPLE_FMT_S16 format
-		av_samples_alloc(&resampledData, NULL, avFrame->channels, avFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-		int resampledDataSize = swr_convert(swrCtx, &resampledData, avFrame->nb_samples, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
-
-		unsigned int aBufferSize = avFrame->linesize[0];
-		auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, resampledDataSize * avFrame->channels * 2);
+		unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, avFrame->channels, avFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+		int resampledDataSize = swr_convert(swrCtx, &resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
+		auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, aBufferSize);
 		dataWriter->WriteBytes(aBuffer);
 		av_freep(&resampledData);
 		av_frame_unref(avFrame);
@@ -415,8 +408,8 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 		dataWriter->WriteBytes(aBuffer);
 	}
 
-	Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(avAudioCodecCtx->time_base) * 10000000 * avPacket.pts) };
-	Windows::Foundation::TimeSpan dur = { ULONGLONG(av_q2d(avAudioCodecCtx->time_base) * 10000000 * avPacket.duration) };
+	Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(avAudioCodecCtx->pkt_timebase) * 10000000 * avPacket.pts) };
+	Windows::Foundation::TimeSpan dur = { ULONGLONG(av_q2d(avAudioCodecCtx->pkt_timebase) * 10000000 * avPacket.duration) };
 
 	sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
 	sample->Duration = dur;

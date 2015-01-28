@@ -31,6 +31,7 @@ using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Storage::Pickers;
+using namespace Windows::UI::Popups;
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Xaml::Controls;
 using namespace Windows::UI::Xaml::Controls::Primitives;
@@ -84,15 +85,20 @@ void FFMPEGMediaStreamSource::MainPage::ContinueFileOpenPicker(Windows::Applicat
 				{
 					media->SetMediaStreamSource(mss);
 				}
+				else
+				{
+					// Display error message
+					auto errorDialog = ref new MessageDialog("Cannot open media");
+					errorDialog->ShowAsync();
+				}
 			}
 			catch (COMException^ ex)
 			{
+				// Display error message
+				auto errorDialog = ref new MessageDialog("Cannot open file");
+				errorDialog->ShowAsync();
 			}
 		});
-	}
-	else
-	{
-		// Display error message
 	}
 }
 
@@ -147,8 +153,9 @@ void FFMPEGMediaStreamSource::MainPage::media_MediaEnded(Platform::Object^ sende
 
 void FFMPEGMediaStreamSource::MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
 {
-	std::wstring wStringPath(args->ErrorMessage->Begin());
-	OutputDebugString(wStringPath.c_str());
+	// Display error message
+	auto errorDialog = ref new MessageDialog(args->ErrorMessage);
+	errorDialog->ShowAsync();
 }
 
 

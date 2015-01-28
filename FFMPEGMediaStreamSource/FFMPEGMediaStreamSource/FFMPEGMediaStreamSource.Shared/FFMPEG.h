@@ -41,11 +41,9 @@ namespace FFMPEGMediaStreamSource
 		virtual ~FFMPEG();
 		MediaStreamSource^ GetMSS();
 
+	private:
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
-
-	private:
-		void Close();
 		void CreateAudioStreamDescriptor(bool forceAudioDecode);
 		void CreateVideoStreamDescriptor(bool forceVideoDecode);
 		MediaStreamSource^ CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);

@@ -83,18 +83,6 @@ FFMPEG::FFMPEG(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVid
 
 FFMPEG::~FFMPEG()
 {
-	Close();
-}
-
-MediaStreamSource^ FFMPEG::GetMSS()
-{
-	return mss;
-}
-
-void FFMPEG::Close()
-{
-	// TODO: Stop all callbacks
-
 	av_freep(videoBufferData);
 
 	if (avFrame)
@@ -102,11 +90,16 @@ void FFMPEG::Close()
 		av_freep(avFrame);
 	}
 
+	swr_free(&swrCtx);
 	avcodec_close(avAudioCodecCtx);
 	avcodec_close(avVideoCodecCtx);
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
-	swr_free(&swrCtx);
+}
+
+MediaStreamSource^ FFMPEG::GetMSS()
+{
+	return mss;
 }
 
 void FFMPEG::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args)
@@ -281,13 +274,14 @@ void FFMPEG::CreateAudioStreamDescriptor(bool forceAudioDecode)
 	{
 		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateMp3(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, avAudioCodecCtx->bit_rate));
 	}
-	else if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
+	else
 	{
 		unsigned int bitsPerSample = avAudioCodecCtx->bits_per_coded_sample ? avAudioCodecCtx->bits_per_coded_sample : 16;
 		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, bitsPerSample));
 		generateUncompressedAudio = true;
 
-		// Set up resampler to convert AV_SAMPLE_FMT_FLTP format to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
+		// Set up resampler to convert any PCM format (e.g. AV_SAMPLE_FMT_FLTP) to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element.
+		// Additional logic can be added to avoid resampling PCM data that is already in AV_SAMPLE_FMT_S16_PCM.
 		swrCtx = swr_alloc_set_opts(
 			NULL,
 			avAudioCodecCtx->channel_layout,
@@ -300,13 +294,6 @@ void FFMPEG::CreateAudioStreamDescriptor(bool forceAudioDecode)
 			NULL);
 
 		swr_init(swrCtx);
-	}
-	else
-	{
-		avAudioCodecCtx->request_sample_fmt = AV_SAMPLE_FMT_S16;
-		unsigned int bitsPerSample = avAudioCodecCtx->bits_per_coded_sample ? avAudioCodecCtx->bits_per_coded_sample : 16;
-		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, bitsPerSample));
-		generateUncompressedAudio = true;
 	}
 }
 
@@ -327,8 +314,8 @@ void FFMPEG::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		generateUncompressedVideo = true;
 	}
 
-	videoProperties->FrameRate->Numerator = avVideoCodecCtx->time_base.den;
-	videoProperties->FrameRate->Denominator = avVideoCodecCtx->time_base.num;
+	videoProperties->FrameRate->Numerator = avVideoCodecCtx->framerate.num;
+	videoProperties->FrameRate->Denominator = avVideoCodecCtx->framerate.den;
 	videoProperties->Bitrate = avVideoCodecCtx->bit_rate;
 	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 }
@@ -367,6 +354,7 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 
 				if (decodedBytes < 0)
 				{
+					OutputDebugString(L"Fail To Decode!\n");
 					return sample;
 				}
 
@@ -385,21 +373,14 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 	uint8_t *resampledData;
 
 	DataWriter^ dataWriter = ref new DataWriter();
-	if (generateUncompressedAudio && swrCtx)
+	if (generateUncompressedAudio)
 	{
-		// Resample frame to AV_SAMPLE_FMT_S16 format
+		// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
 		unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, avFrame->channels, avFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 		int resampledDataSize = swr_convert(swrCtx, &resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
 		auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, aBufferSize);
 		dataWriter->WriteBytes(aBuffer);
 		av_freep(&resampledData);
-		av_frame_unref(avFrame);
-	}
-	else if (generateUncompressedAudio)
-	{
-		unsigned int aBufferSize = avFrame->linesize[0];
-		auto aBuffer = ref new Platform::Array<uint8_t>(*avFrame->extended_data, aBufferSize);
-		dataWriter->WriteBytes(aBuffer);
 		av_frame_unref(avFrame);
 	}
 	else
@@ -472,7 +453,6 @@ MediaStreamSample^ FFMPEG::FillVideoSample()
 		dataWriter->WriteBytes(YBuffer);
 		dataWriter->WriteBytes(VBuffer);
 		dataWriter->WriteBytes(UBuffer);
-		av_frame_unref(avFrame);
 	}
 	else
 	{
@@ -492,6 +472,7 @@ MediaStreamSample^ FFMPEG::FillVideoSample()
 	if (generateUncompressedVideo)
 	{
 		sample->KeyFrame = avFrame->key_frame == 1;
+		av_frame_unref(avFrame);
 	}
 	else
 	{

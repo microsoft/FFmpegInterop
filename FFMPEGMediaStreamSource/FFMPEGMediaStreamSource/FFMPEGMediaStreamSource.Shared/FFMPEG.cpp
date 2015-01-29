@@ -129,6 +129,7 @@ void FFMPEG::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEven
 			// Flush all audio packet in queue and internal buffer
 			if (audioStreamIndex >= 0)
 			{
+				avcodec_flush_buffers(avAudioCodecCtx);
 				while (audioPacketQueueCount > 0)
 				{
 					av_free_packet(&PopAudioPacket());
@@ -138,6 +139,7 @@ void FFMPEG::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEven
 			// Flush all video packet in queue and internal buffer
 			if (videoStreamIndex >= 0)
 			{
+				avcodec_flush_buffers(avVideoCodecCtx);
 				while (videoPacketQueueCount > 0)
 				{
 					av_free_packet(&PopVideoPacket());
@@ -274,20 +276,34 @@ void FFMPEG::CreateAudioStreamDescriptor(bool forceAudioDecode)
 	{
 		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateMp3(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, avAudioCodecCtx->bit_rate));
 	}
+	else if (avAudioCodecCtx->codec_id == AV_CODEC_ID_AC3 && !forceAudioDecode)
+	{
+		AudioEncodingProperties^ audioProperties = ref new AudioEncodingProperties();
+		audioProperties->Subtype = "AC3";
+		audioProperties->SampleRate = avAudioCodecCtx->sample_rate;
+		audioProperties->ChannelCount = avAudioCodecCtx->channels;
+		audioProperties->Bitrate = avAudioCodecCtx->bit_rate;
+		audioStreamDescriptor = ref new AudioStreamDescriptor(audioProperties);
+	}
 	else
 	{
+		// Set default 16 bits when bits per sample value is unknown (0)
 		unsigned int bitsPerSample = avAudioCodecCtx->bits_per_coded_sample ? avAudioCodecCtx->bits_per_coded_sample : 16;
 		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, bitsPerSample));
 		generateUncompressedAudio = true;
+
+		// Set default channel layout when the value is unknown (0)
+		int64 inChannelLayout = avAudioCodecCtx->channel_layout ? avAudioCodecCtx->channel_layout : av_get_default_channel_layout(avAudioCodecCtx->channels);
+		int64 outChannelLayout = av_get_default_channel_layout(avAudioCodecCtx->channels);
 
 		// Set up resampler to convert any PCM format (e.g. AV_SAMPLE_FMT_FLTP) to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element.
 		// Additional logic can be added to avoid resampling PCM data that is already in AV_SAMPLE_FMT_S16_PCM.
 		swrCtx = swr_alloc_set_opts(
 			NULL,
-			avAudioCodecCtx->channel_layout,
+			outChannelLayout,
 			AV_SAMPLE_FMT_S16,
 			avAudioCodecCtx->sample_rate,
-			avAudioCodecCtx->channel_layout,
+			inChannelLayout,
 			avAudioCodecCtx->sample_fmt,
 			avAudioCodecCtx->sample_rate,
 			0,
@@ -329,6 +345,7 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 	av_init_packet(&avPacket);
 	avPacket.data = NULL;
 	avPacket.size = 0;
+	DataWriter^ dataWriter = ref new DataWriter();
 
 	int frameComplete = 0;
 
@@ -346,47 +363,48 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 
 		if (audioPacketQueueCount > 0)
 		{
+			// Pick audio packet from the queue one at a time
 			avPacket = PopAudioPacket();
+
 			if (generateUncompressedAudio)
 			{
-				int packetSize = avPacket.size;
-				int decodedBytes = avcodec_decode_audio4(avAudioCodecCtx, avFrame, &frameComplete, &avPacket);
-
-				if (decodedBytes < 0)
+				// Each audio packet may contain multiple frames which requires calling avcodec_decode_audio4 for each frame. Loop through the entire packet data
+				while (avPacket.size > 0)
 				{
-					OutputDebugString(L"Fail To Decode!\n");
-					return sample;
-				}
+					frameComplete = 0;
+					int decodedBytes = avcodec_decode_audio4(avAudioCodecCtx, avFrame, &frameComplete, &avPacket);
 
-				if (decodedBytes != packetSize) {
-					// Trap this condition to be handled
-					throw - 1;
+					if (decodedBytes < 0)
+					{
+						OutputDebugString(L"Fail To Decode!\n");
+						break; // Skip broken frame
+					}
+
+					if (frameComplete)
+					{
+						// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
+						uint8_t *resampledData;
+						unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, avFrame->channels, avFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+						int resampledDataSize = swr_convert(swrCtx, &resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
+						auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, aBufferSize);
+						dataWriter->WriteBytes(aBuffer);
+						av_freep(&resampledData);
+						av_frame_unref(avFrame);
+					}
+
+					// Advance to the next frame data that have not been decoded if any
+					avPacket.size -= decodedBytes;
+					avPacket.data += decodedBytes;
 				}
 			}
 			else
 			{
+				// Pass the compressed audio packet as is without decoding to Media Element
+				auto aBuffer = ref new Platform::Array<uint8_t>(avPacket.data, avPacket.size);
+				dataWriter->WriteBytes(aBuffer);
 				frameComplete = true;
 			}
 		}
-	}
-
-	uint8_t *resampledData;
-
-	DataWriter^ dataWriter = ref new DataWriter();
-	if (generateUncompressedAudio)
-	{
-		// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
-		unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, avFrame->channels, avFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-		int resampledDataSize = swr_convert(swrCtx, &resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
-		auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, aBufferSize);
-		dataWriter->WriteBytes(aBuffer);
-		av_freep(&resampledData);
-		av_frame_unref(avFrame);
-	}
-	else
-	{
-		auto aBuffer = ref new Platform::Array<uint8_t>(avPacket.data, avPacket.size);
-		dataWriter->WriteBytes(aBuffer);
 	}
 
 	Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(avAudioCodecCtx->pkt_timebase) * 10000000 * avPacket.pts) };

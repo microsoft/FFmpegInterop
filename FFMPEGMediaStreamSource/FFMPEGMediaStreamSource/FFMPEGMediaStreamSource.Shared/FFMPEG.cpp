@@ -70,10 +70,6 @@ FFMPEG::FFMPEG(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVid
 	videoStreamIndex(AVERROR_STREAM_NOT_FOUND),
 	fileStreamData(NULL),
 	fileStreamBuffer(NULL),
-	audioPacketQueueHead(0),
-	audioPacketQueueCount(0),
-	videoPacketQueueHead(0),
-	videoPacketQueueCount(0),
 	generateUncompressedAudio(false),
 	generateUncompressedVideo(false)
 {
@@ -109,43 +105,43 @@ void FFMPEG::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEven
 	// Perform seek operation when MediaStreamSource received seek event from MediaElement
 	if (request->StartPosition && request->StartPosition->Value.Duration <= mediaDuration.Duration)
 	{
-		// Select the first valid stream either from video or audio.
-		int streamIndex = audioStreamIndex >= 0 ? audioStreamIndex : videoStreamIndex > 0 ? videoStreamIndex : -1;
-		int64_t seekTarget = request->StartPosition->Value.Duration;
-		request->SetActualStartPosition(request->StartPosition->Value);
+		// Select the first valid stream either from video or audio
+		int streamIndex = videoStreamIndex >= 0 ? videoStreamIndex : audioStreamIndex >= 0 ? audioStreamIndex : -1;
 
 		if (streamIndex >= 0)
 		{
 			// Convert TimeSpan unit to AV_TIME_BASE
-			seekTarget = seekTarget / (av_q2d(avAudioCodecCtx->pkt_timebase) * 10000000);
+			int64_t seekTarget = request->StartPosition->Value.Duration / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000);
 
 			if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, 0) < 0)
 			{
 				OutputDebugString(L" - ### Error while seeking\n");
 			}
-
-			// TODO: Change circular queue to PacketList linked list
-
-			// Flush all audio packet in queue and internal buffer
-			if (audioStreamIndex >= 0)
+			else
 			{
-				avcodec_flush_buffers(avAudioCodecCtx);
-				while (audioPacketQueueCount > 0)
+				// Flush all audio packet in queue and internal buffer
+				if (audioStreamIndex >= 0)
 				{
-					av_free_packet(&PopAudioPacket());
+					while (!audioPacketQueue.empty())
+					{
+						av_free_packet(&PopAudioPacket());
+					}
+					avcodec_flush_buffers(avAudioCodecCtx);
 				}
-			}
 
-			// Flush all video packet in queue and internal buffer
-			if (videoStreamIndex >= 0)
-			{
-				avcodec_flush_buffers(avVideoCodecCtx);
-				while (videoPacketQueueCount > 0)
+				// Flush all video packet in queue and internal buffer
+				if (videoStreamIndex >= 0)
 				{
-					av_free_packet(&PopVideoPacket());
+					while (!videoPacketQueue.empty())
+					{
+						av_free_packet(&PopVideoPacket());
+					}
+					avcodec_flush_buffers(avVideoCodecCtx);
 				}
 			}
 		}
+
+		request->SetActualStartPosition(request->StartPosition->Value);
 	}
 }
 
@@ -352,7 +348,7 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 	while (!frameComplete)
 	{
 		// Continue reading until there is an audio packet in the stream. All video packet encountered will be queued.
-		while (audioPacketQueueCount <= 0)
+		while (audioPacketQueue.empty())
 		{
 			if (ReadPacket() < 0)
 			{
@@ -361,7 +357,7 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 			}
 		}
 
-		if (audioPacketQueueCount > 0)
+		if (!audioPacketQueue.empty())
 		{
 			// Pick audio packet from the queue one at a time
 			avPacket = PopAudioPacket();
@@ -407,8 +403,8 @@ MediaStreamSample^ FFMPEG::FillAudioSample()
 		}
 	}
 
-	Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(avAudioCodecCtx->pkt_timebase) * 10000000 * avPacket.pts) };
-	Windows::Foundation::TimeSpan dur = { ULONGLONG(av_q2d(avAudioCodecCtx->pkt_timebase) * 10000000 * avPacket.duration) };
+	Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(avFormatCtx->streams[audioStreamIndex]->time_base) * 10000000 * avPacket.pts) };
+	Windows::Foundation::TimeSpan dur = { ULONGLONG(av_q2d(avFormatCtx->streams[audioStreamIndex]->time_base) * 10000000 * avPacket.duration) };
 
 	sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
 	sample->Duration = dur;
@@ -433,7 +429,7 @@ MediaStreamSample^ FFMPEG::FillVideoSample()
 	while (!frameComplete)
 	{
 		// Continue reading until there is a video packet in the stream. All audio packet encountered will be queued.
-		while (videoPacketQueueCount <= 0)
+		while (videoPacketQueue.empty())
 		{
 			if (ReadPacket() < 0)
 			{
@@ -442,7 +438,7 @@ MediaStreamSample^ FFMPEG::FillVideoSample()
 			}
 		}
 
-		if (videoPacketQueueCount > 0)
+		if (!videoPacketQueue.empty())
 		{
 			avPacket = PopVideoPacket();
 			if (generateUncompressedVideo)
@@ -481,8 +477,14 @@ MediaStreamSample^ FFMPEG::FillVideoSample()
 		WriteAnnexBPacket(dataWriter, avPacket);
 	}
 
-	Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(avVideoCodecCtx->pkt_timebase) * 10000000 * avPacket.pts) };
-	Windows::Foundation::TimeSpan dur = { ULONGLONG(av_q2d(avVideoCodecCtx->pkt_timebase) * 10000000 * avPacket.duration) };
+	// Use decoding timestamp if presentation timestamp is not valid
+	if (avPacket.pts == AV_NOPTS_VALUE && avPacket.dts != AV_NOPTS_VALUE)
+	{
+		avPacket.pts = avPacket.dts;
+	}
+
+	Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(avFormatCtx->streams[videoStreamIndex]->time_base) * 10000000 * avPacket.pts) };
+	Windows::Foundation::TimeSpan dur = { ULONGLONG(av_q2d(avFormatCtx->streams[videoStreamIndex]->time_base) * 10000000 * avPacket.duration) };
 
 	auto buffer = dataWriter->DetachBuffer();
 	sample = MediaStreamSample::CreateFromBuffer(buffer, pts);
@@ -579,15 +581,7 @@ void FFMPEG::PushAudioPacket(AVPacket packet)
 {
 	OutputDebugString(L" - PushAudio\n");
 
-	if (audioPacketQueueCount < AUDIOPKTBUFFERSZ)
-	{
-		audioPacketQueue[(audioPacketQueueHead + audioPacketQueueCount) % AUDIOPKTBUFFERSZ] = packet;
-		audioPacketQueueCount++;
-	}
-	else
-	{
-		OutputDebugString(L" - ### PushAudio too much\n"); // remove later
-	}
+	audioPacketQueue.push(packet);
 }
 
 AVPacket FFMPEG::PopAudioPacket()
@@ -599,11 +593,10 @@ AVPacket FFMPEG::PopAudioPacket()
 	avPacket.data = NULL;
 	avPacket.size = 0;
 
-	if (audioPacketQueueCount > 0)
+	if (!audioPacketQueue.empty())
 	{
-		avPacket = audioPacketQueue[audioPacketQueueHead];
-		audioPacketQueueHead = (audioPacketQueueHead + 1) % AUDIOPKTBUFFERSZ;
-		audioPacketQueueCount--;
+		avPacket = audioPacketQueue.front();
+		audioPacketQueue.pop();
 	}
 
 	return avPacket;
@@ -613,15 +606,7 @@ void FFMPEG::PushVideoPacket(AVPacket packet)
 {
 	OutputDebugString(L" - PushVideo\n");
 
-	if (videoPacketQueueCount < VIDEOPKTBUFFERSZ)
-	{
-		videoPacketQueue[(videoPacketQueueHead + videoPacketQueueCount) % VIDEOPKTBUFFERSZ] = packet;
-		videoPacketQueueCount++;
-	}
-	else
-	{
-		OutputDebugString(L" - ### PushVideo too much\n"); // remove later
-	}
+	videoPacketQueue.push(packet);
 }
 
 AVPacket FFMPEG::PopVideoPacket()
@@ -633,11 +618,10 @@ AVPacket FFMPEG::PopVideoPacket()
 	avPacket.data = NULL;
 	avPacket.size = 0;
 
-	if (videoPacketQueueCount > 0)
+	if (!videoPacketQueue.empty())
 	{
-		avPacket = videoPacketQueue[videoPacketQueueHead];
-		videoPacketQueueHead = (videoPacketQueueHead + 1) % VIDEOPKTBUFFERSZ;
-		videoPacketQueueCount--;
+		avPacket = videoPacketQueue.front();
+		videoPacketQueue.pop();
 	}
 
 	return avPacket;

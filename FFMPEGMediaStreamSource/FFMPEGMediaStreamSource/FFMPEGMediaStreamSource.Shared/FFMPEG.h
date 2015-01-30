@@ -17,6 +17,7 @@
 //*****************************************************************************
 
 #pragma once
+#include <queue>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -70,15 +71,10 @@ namespace FFMPEGMediaStreamSource
 		uint8_t* videoBufferData[4];
 		int videoBufferLineSize[4];
 
-		AVPacket audioPacketQueue[AUDIOPKTBUFFERSZ];
-		int audioPacketQueueHead;
-		int audioPacketQueueCount;
+		std::queue<AVPacket> audioPacketQueue;
+		std::queue<AVPacket> videoPacketQueue;
 		void PushAudioPacket(AVPacket packet);
 		AVPacket PopAudioPacket();
-
-		AVPacket videoPacketQueue[VIDEOPKTBUFFERSZ];
-		int videoPacketQueueHead;
-		int videoPacketQueueCount;
 		void PushVideoPacket(AVPacket packet);
 		AVPacket PopVideoPacket();
 

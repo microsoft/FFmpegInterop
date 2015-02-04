@@ -24,7 +24,6 @@
 #pragma once
 
 #include "MainPage.g.h"
-#include "FFMPEG.h"
 
 namespace FFMPEGMediaStreamSource
 {
@@ -59,6 +58,6 @@ namespace FFMPEGMediaStreamSource
 		void media_SizeChanged(Platform::Object^ sender, Windows::UI::Xaml::SizeChangedEventArgs^ e);
 		void media_Tapped(Platform::Object^ sender, Windows::UI::Xaml::Input::TappedRoutedEventArgs^ e);
 
-		FFMPEG^ FFMPEGLib;
+		FFmpeg::FFmpegLibrary^ FFMPEGLib;
 	};
 }

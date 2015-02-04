@@ -24,13 +24,17 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
+using namespace FFmpeg;
 using namespace FFMPEGMediaStreamSource;
 
 using namespace concurrency;
 using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
+using namespace Windows::Media::Core;
+using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
+using namespace Windows::Storage::Streams;
 using namespace Windows::UI::Popups;
 using namespace Windows::UI::Xaml;
 using namespace Windows::UI::Xaml::Controls;
@@ -78,11 +82,12 @@ void FFMPEGMediaStreamSource::MainPage::ContinueFileOpenPicker(Windows::Applicat
 			try
 			{
 				IRandomAccessStream^ readStream = stream.get();
-				FFMPEGLib = ref new FFMPEG(readStream, false, false);
-				MediaStreamSource^ mss = FFMPEGLib->GetMSS();
+				FFMPEGLib = ref new FFmpegLibrary(readStream, true, false);
+				MediaStreamSource^ mss = FFMPEGLib->GetMediaStreamSource();
 
 				if (mss)
 				{
+					// Pass MediaStreamSource to Media Element
 					media->SetMediaStreamSource(mss);
 				}
 				else

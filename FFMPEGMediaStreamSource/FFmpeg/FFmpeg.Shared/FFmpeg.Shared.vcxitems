@@ -3,9 +3,10 @@
   <PropertyGroup Label="Globals">
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
     <HasSharedItems>true</HasSharedItems>
-    <SharedGUID>427a8ddf-2c5c-4188-884a-5622538f8255</SharedGUID>
-    <ItemsProjectGuid>{00df23a8-2784-4fcf-8316-1bcfe768489f}</ItemsProjectGuid>
-    <ItemsRootNamespace>FFMPEGMediaStreamSource</ItemsRootNamespace>
+    <ItemsProjectGuid>{b290d2ce-e857-4ace-8541-d80a3b9ab04e}</ItemsProjectGuid>
+    <ItemsRootNamespace>FFmpeg</ItemsRootNamespace>
+    <ItemsProjectName>FFmpeg.Shared</ItemsProjectName>
+    <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -13,19 +14,14 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ApplicationDefinition Include="$(MSBuildThisFileDirectory)App.xaml">
-      <SubType>Designer</SubType>
-    </ApplicationDefinition>
-    <ClCompile Include="$(MSBuildThisFileDirectory)App.xaml.cpp">
-      <DependentUpon>$(MSBuildThisFileDirectory)App.xaml</DependentUpon>
-    </ClCompile>
-    <ClInclude Include="$(MSBuildThisFileDirectory)App.xaml.h">
-      <DependentUpon>$(MSBuildThisFileDirectory)App.xaml</DependentUpon>
-    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegLibrary.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegLibrary.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />

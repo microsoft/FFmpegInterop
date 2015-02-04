@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 //
 //	Copyright 2015 Microsoft Corporation
 //
@@ -19,28 +19,25 @@
 #pragma once
 #include <queue>
 
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libswresample/swresample.h>
-}
-
 using namespace Windows::Foundation;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::Core;
 
-const int AUDIOPKTBUFFERSZ = 320;
-const int VIDEOPKTBUFFERSZ = 320;
-const int FILESTREAMBUFFERSZ = 1024;
-
-namespace FFMPEGMediaStreamSource
+extern "C"
 {
-	public ref class FFMPEG sealed
+#include <libavformat/avformat.h>
+#include <libswresample/swresample.h>
+}
+
+namespace FFmpeg
+{
+	public ref class FFmpegLibrary sealed
 	{
 	public:
-		FFMPEG(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
-		virtual ~FFMPEG();
-		MediaStreamSource^ GetMSS();
+		FFmpegLibrary(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		virtual ~FFmpegLibrary();
+		MediaStreamSource^ GetMediaStreamSource();
 
 	private:
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
@@ -55,7 +52,7 @@ namespace FFMPEGMediaStreamSource
 		void WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket);
 
 		MediaStreamSource^ mss;
-		AVIOContext *avIOCtx;
+		AVIOContext* avIOCtx;
 		AVFormatContext* avFormatCtx;
 		AVCodecContext* avAudioCodecCtx;
 		AVCodecContext* avVideoCodecCtx;

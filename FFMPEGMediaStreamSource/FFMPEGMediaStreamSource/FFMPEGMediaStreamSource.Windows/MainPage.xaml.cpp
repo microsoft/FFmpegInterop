@@ -44,18 +44,17 @@ using namespace Windows::UI::Xaml::Input;
 using namespace Windows::UI::Xaml::Media;
 using namespace Windows::UI::Xaml::Navigation;
 
-// The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=234238
-
-MainPage::MainPage()
+MainPage::MainPage() :
+forceDecodeAudio(false),
+forceDecodeVideo(false)
 {
 	InitializeComponent();
+
+	// Show the TopAppBar on startup so user can start opening media
+	this->TopAppBar->IsOpen = true;
 }
 
-void MainPage::OnStarting(Windows::Media::Core::MediaStreamSource ^sender, Windows::Media::Core::MediaStreamSourceStartingEventArgs ^args)
-{
-}
-
-void FFMPEGMediaStreamSource::MainPage::AppBarButton_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void FFMPEGMediaStreamSource::MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	FileOpenPicker^ filePicker = ref new FileOpenPicker();
 	filePicker->ViewMode = PickerViewMode::Thumbnail;
@@ -72,8 +71,9 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Click(Platform::Object^ sen
 			{
 				try
 				{
+					// Instantiate FFmpeg object and pass the stream from opened file
 					IRandomAccessStream^ readStream = stream.get();
-					FFMPEGLib = ref new FFmpegLibrary(readStream, false, false);
+					FFMPEGLib = ref new FFmpegLibrary(readStream, forceDecodeAudio, forceDecodeVideo);
 					MediaStreamSource^ mss = FFMPEGLib->GetMediaStreamSource();
 
 					if (mss)
@@ -97,90 +97,33 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Click(Platform::Object^ sen
 			});
 		}
 	});
+
+	// Set the TopAppBar to non-sticky so it will hide automatically after first file open
+	this->TopAppBar->IsSticky = false;
 }
 
-
-void FFMPEGMediaStreamSource::MainPage::media_BufferingProgressChanged(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void FFMPEGMediaStreamSource::MainPage::AppBarButton_Audio_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-
+	auto button = dynamic_cast<AppBarToggleButton^>(sender);
+	forceDecodeAudio = button->IsChecked->Value;
 }
 
 
-void FFMPEGMediaStreamSource::MainPage::media_CurrentStateChanged(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void FFMPEGMediaStreamSource::MainPage::AppBarButton_Video_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-
+	auto button = dynamic_cast<AppBarToggleButton^>(sender);
+	forceDecodeVideo = button->IsChecked->Value;
 }
-
-
-void FFMPEGMediaStreamSource::MainPage::media_DataContextChanged(Windows::UI::Xaml::FrameworkElement^ sender, Windows::UI::Xaml::DataContextChangedEventArgs^ args)
-{
-
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_DoubleTapped(Platform::Object^ sender, Windows::UI::Xaml::Input::DoubleTappedRoutedEventArgs^ e)
-{
-
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_DownloadProgressChanged(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
-{
-
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_LayoutUpdated(Platform::Object^ sender, Platform::Object^ e)
-{
-
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_Loaded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
-{
-
-}
-
 
 void FFMPEGMediaStreamSource::MainPage::media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-
+	// Show the TopAppBar when media has finished playing
+	this->TopAppBar->IsOpen = true;
 }
-
 
 void FFMPEGMediaStreamSource::MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
 {
 	// Display error message
 	auto errorDialog = ref new MessageDialog(args->ErrorMessage);
 	errorDialog->ShowAsync();
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_MediaOpened(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
-{
-
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_RateChanged(Platform::Object^ sender, Windows::UI::Xaml::Media::RateChangedRoutedEventArgs^ e)
-{
-
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_SeekCompleted(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
-{
-
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_SizeChanged(Platform::Object^ sender, Windows::UI::Xaml::SizeChangedEventArgs^ e)
-{
-
-}
-
-
-void FFMPEGMediaStreamSource::MainPage::media_Tapped(Platform::Object^ sender, Windows::UI::Xaml::Input::TappedRoutedEventArgs^ e)
-{
-
 }

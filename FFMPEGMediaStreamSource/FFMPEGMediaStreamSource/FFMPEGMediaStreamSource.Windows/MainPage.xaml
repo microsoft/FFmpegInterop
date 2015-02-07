@@ -36,36 +36,26 @@
             <!--The main MediaElement -->
             <MediaElement x:Name="media"
                             AreTransportControlsEnabled="True"
-                            AudioCategory="BackgroundCapableMedia"
+                            AudioCategory="ForegroundOnlyMedia"
                             AutoPlay="True"
-                              
-                            BufferingProgressChanged="media_BufferingProgressChanged"
-                            CurrentStateChanged="media_CurrentStateChanged"
-                            DataContextChanged="media_DataContextChanged"
-                            DoubleTapped="media_DoubleTapped"
-                            DownloadProgressChanged="media_DownloadProgressChanged"
-                            LayoutUpdated="media_LayoutUpdated"
-                            Loaded="media_Loaded"
                             MediaEnded="media_MediaEnded"
                             MediaFailed="media_MediaFailed"
-                            MediaOpened="media_MediaOpened"
-                            RateChanged="media_RateChanged"
-                            SeekCompleted="media_SeekCompleted"
-                            SizeChanged="media_SizeChanged"
-                            Tapped="media_Tapped"
             />
+
         </Grid>
 
-        <!--TextBlock to display messages to the user. -->
-        <TextBlock Name="txtDisplay" Width="300" Height="250" FontSize="40" TextAlignment="Center" Opacity=".5" FontWeight="Bold" />
     </Grid>
 
     <!--The Top AppBar -->
     <Page.TopAppBar>
-        <AppBar x:Name="topAppBar"  Background="#00b2f0">
-            <Grid>
-                <AppBarButton x:Uid="appBarButtonBrowse" Icon="OpenLocal" HorizontalAlignment="Center" Click="AppBarButton_Click"/>
-            </Grid>
-        </AppBar>
+        <CommandBar x:Name="topAppBar" IsSticky="True">
+            <CommandBar.PrimaryCommands>
+                <AppBarButton Label="Open File" Icon="OpenLocal" Click="AppBarButton_Browse_Click"/>
+            </CommandBar.PrimaryCommands>
+            <CommandBar.SecondaryCommands>
+                <AppBarToggleButton Label="Force Decode Audio" Icon="Repair" Click="AppBarButton_Audio_Click"/>
+                <AppBarToggleButton Label="Force Decode Video" Icon="Repair" Click="AppBarButton_Video_Click"/>
+            </CommandBar.SecondaryCommands>
+        </CommandBar>
     </Page.TopAppBar>
 </Page>

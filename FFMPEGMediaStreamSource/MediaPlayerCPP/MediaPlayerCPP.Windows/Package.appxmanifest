@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest">
 
-  <Identity Name="860b5aca-9495-43ed-b75f-b2b6362434cf"
+  <Identity Name="65be0418-276a-4496-add1-bc1beabbbf9d"
             Publisher="CN=timargo"
             Version="1.0.0.0" />
 
   <Properties>
-    <DisplayName>FFMPEGMediaStreamSource.Windows</DisplayName>
+    <DisplayName>MediaPlayerCPP.Windows</DisplayName>
     <PublisherDisplayName>timargo</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -23,12 +23,12 @@
   <Applications>
     <Application Id="App"
         Executable="$targetnametoken$.exe"
-        EntryPoint="FFMPEGMediaStreamSource_Windows.App">
+        EntryPoint="MediaPlayerCPP_Windows.App">
         <m2:VisualElements
-            DisplayName="FFMPEGMediaStreamSource.Windows"
+            DisplayName="MediaPlayerCPP.Windows"
             Square150x150Logo="Assets\Logo.png"
             Square30x30Logo="Assets\SmallLogo.png"
-            Description="FFMPEGMediaStreamSource.Windows"
+            Description="MediaPlayerCPP.Windows"
             ForegroundText="light"
             BackgroundColor="#464646">
             <m2:SplashScreen Image="Assets\SplashScreen.png" />

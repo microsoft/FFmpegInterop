@@ -2,7 +2,7 @@
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Assets">
-      <UniqueIdentifier>{523bb90f-0e53-4da8-a658-97d06fe0d8c5}</UniqueIdentifier>
+      <UniqueIdentifier>{46438d59-fa82-45a3-8b79-9be641685188}</UniqueIdentifier>
       <Extensions>bmp;fbx;gif;jpg;jpeg;tga;tiff;tif;png</Extensions>
     </Filter>
   </ItemGroup>
@@ -19,14 +19,14 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="FFMPEGMediaStreamSource.Windows_TemporaryKey.pfx" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\Windows81\$(Platform)\bin\avcodec-56.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\Windows81\$(Platform)\bin\avdevice-56.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\Windows81\$(Platform)\bin\avfilter-5.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\Windows81\$(Platform)\bin\avformat-56.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\Windows81\$(Platform)\bin\avutil-54.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\Windows81\$(Platform)\bin\swresample-1.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\Windows81\$(Platform)\bin\swscale-3.dll" />
+    <None Include="MediaPlayerCPP.Windows_TemporaryKey.pfx" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\Windows81\$(Platform)\bin\avcodec-56.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\Windows81\$(Platform)\bin\avdevice-56.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\Windows81\$(Platform)\bin\avfilter-5.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\Windows81\$(Platform)\bin\avformat-56.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\Windows81\$(Platform)\bin\avutil-54.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\Windows81\$(Platform)\bin\swresample-1.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\Windows81\$(Platform)\bin\swscale-3.dll" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">

@@ -16,32 +16,13 @@
 //
 //*****************************************************************************
 
-//
-// MainPage.xaml.h
-// Declaration of the MainPage class.
+// pch.h
+// Header for standard system include files.
 //
 
 #pragma once
 
-#include "MainPage.g.h"
+#include <collection.h>
+#include <ppltasks.h>
 
-namespace FFMPEGMediaStreamSource
-{
-	public ref class MainPage sealed
-	{
-	public:
-		MainPage();
-
-	private:
-		void AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-		void AppBarButton_Audio_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-		void AppBarButton_Video_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-
-		void media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-		void media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args);
-
-		FFmpeg::FFmpegLibrary^ FFMPEGLib;
-		bool forceDecodeAudio;
-		bool forceDecodeVideo;
-	};
-}
+#include "App.xaml.h"

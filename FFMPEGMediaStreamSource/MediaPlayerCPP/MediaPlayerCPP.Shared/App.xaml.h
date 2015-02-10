@@ -25,7 +25,7 @@
 
 #include "App.g.h"
 
-namespace FFMPEGMediaStreamSource
+namespace MediaPlayerCPP
 {
 	/// <summary>
 	/// Provides application-specific behavior to supplement the default Application class.
@@ -36,12 +36,12 @@ namespace FFMPEGMediaStreamSource
 		App();
 
 		virtual void OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEventArgs^ e) override;
-#if WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
 		virtual void OnActivated(Windows::ApplicationModel::Activation::IActivatedEventArgs^ e) override;
 #endif
 
 	private:
-#if WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
 		Windows::UI::Xaml::Media::Animation::TransitionCollection^ _transitions;
 		Windows::Foundation::EventRegistrationToken _firstNavigatedToken;
 

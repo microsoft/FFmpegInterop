@@ -25,7 +25,7 @@
 #include "MainPage.xaml.h"
 
 using namespace FFmpeg;
-using namespace FFMPEGMediaStreamSource;
+using namespace MediaPlayerCPP;
 
 using namespace concurrency;
 using namespace Platform;
@@ -54,7 +54,7 @@ forceDecodeVideo(false)
 	this->TopAppBar->IsOpen = true;
 }
 
-void FFMPEGMediaStreamSource::MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	FileOpenPicker^ filePicker = ref new FileOpenPicker();
 	filePicker->ViewMode = PickerViewMode::Thumbnail;
@@ -91,7 +91,7 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Browse_Click(Platform::Obje
 				catch (COMException^ ex)
 				{
 					// Display error message
-					auto errorDialog = ref new MessageDialog("Cannot open file");
+					auto errorDialog = ref new MessageDialog(ex->Message);
 					errorDialog->ShowAsync();
 				}
 			});
@@ -102,26 +102,25 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Browse_Click(Platform::Obje
 	this->TopAppBar->IsSticky = false;
 }
 
-void FFMPEGMediaStreamSource::MainPage::AppBarButton_Audio_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::AppBarButton_Audio_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	auto button = dynamic_cast<AppBarToggleButton^>(sender);
 	forceDecodeAudio = button->IsChecked->Value;
 }
 
-
-void FFMPEGMediaStreamSource::MainPage::AppBarButton_Video_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::AppBarButton_Video_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	auto button = dynamic_cast<AppBarToggleButton^>(sender);
 	forceDecodeVideo = button->IsChecked->Value;
 }
 
-void FFMPEGMediaStreamSource::MainPage::media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	// Show the TopAppBar when media has finished playing
 	this->TopAppBar->IsOpen = true;
 }
 
-void FFMPEGMediaStreamSource::MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
+void MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
 {
 	// Display error message
 	auto errorDialog = ref new MessageDialog(args->ErrorMessage);

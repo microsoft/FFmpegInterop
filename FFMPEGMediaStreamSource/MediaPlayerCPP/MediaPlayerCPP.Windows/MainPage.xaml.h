@@ -25,20 +25,17 @@
 
 #include "MainPage.g.h"
 
-namespace FFMPEGMediaStreamSource
+namespace MediaPlayerCPP
 {
 	public ref class MainPage sealed
 	{
 	public:
 		MainPage();
-		void ContinueFileOpenPicker(Windows::ApplicationModel::Activation::FileOpenPickerContinuationEventArgs^ args);
 
 	private:
 		void AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void AppBarButton_Audio_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void AppBarButton_Video_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-		void CommandBar_Opened(Platform::Object^ sender, Platform::Object^ e);
-		void CommandBar_Closed(Platform::Object^ sender, Platform::Object^ e);
 
 		void media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args);

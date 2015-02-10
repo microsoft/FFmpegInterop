@@ -24,7 +24,7 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
-using namespace FFMPEGMediaStreamSource;
+using namespace MediaPlayerCPP;
 
 using namespace Platform;
 using namespace Windows::ApplicationModel;
@@ -121,7 +121,7 @@ void App::OnLaunched(LaunchActivatedEventArgs^ e)
 	Window::Current->Activate();
 }
 
-#if WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
 /// <summary>
 /// Restores the content transitions after the app has launched.
 /// </summary>
@@ -161,8 +161,7 @@ void App::OnActivated(IActivatedEventArgs^ e)
 		mainPage->ContinueFileOpenPicker(dynamic_cast<FileOpenPickerContinuationEventArgs^>(continuationEventArgs));
 	}
 }
-#endif //WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
-
+#endif
 
 /// <summary>
 /// Invoked when application execution is being suspended. Application state is saved

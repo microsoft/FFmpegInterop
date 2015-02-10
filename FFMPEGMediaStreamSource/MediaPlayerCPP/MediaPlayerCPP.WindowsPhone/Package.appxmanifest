@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest" xmlns:m3="http://schemas.microsoft.com/appx/2014/manifest" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
 
-  <Identity Name="e600603e-0326-4ff5-b9f5-4b18793a7500"
+  <Identity Name="ec3da1a1-78d7-47b1-8db7-df1e885da8a5"
             Publisher="CN=timargo"
             Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="e600603e-0326-4ff5-b9f5-4b18793a7500" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="ec3da1a1-78d7-47b1-8db7-df1e885da8a5" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>FFMPEGMediaStreamSource.WindowsPhone</DisplayName>
+    <DisplayName>MediaPlayerCPP.WindowsPhone</DisplayName>
     <PublisherDisplayName>timargo</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -25,12 +25,12 @@
   <Applications>
     <Application Id="App"
         Executable="$targetnametoken$.exe"
-        EntryPoint="FFMPEGMediaStreamSource_WindowsPhone.App">
+        EntryPoint="MediaPlayerCPP_WindowsPhone.App">
         <m3:VisualElements
-            DisplayName="FFMPEGMediaStreamSource.WindowsPhone"
+            DisplayName="MediaPlayerCPP.WindowsPhone"
             Square150x150Logo="Assets\Logo.png"
             Square44x44Logo="Assets\SmallLogo.png"
-            Description="FFMPEGMediaStreamSource.WindowsPhone"
+            Description="MediaPlayerCPP.WindowsPhone"
             ForegroundText="light"
             BackgroundColor="transparent">
             <m3:DefaultTile Wide310x150Logo="Assets\WideLogo.png" Square71x71Logo="Assets\Square71x71Logo.png"/>

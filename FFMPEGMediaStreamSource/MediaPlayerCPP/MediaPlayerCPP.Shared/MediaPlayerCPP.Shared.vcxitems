@@ -3,9 +3,9 @@
   <PropertyGroup Label="Globals">
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
     <HasSharedItems>true</HasSharedItems>
-    <SharedGUID>427a8ddf-2c5c-4188-884a-5622538f8255</SharedGUID>
-    <ItemsProjectGuid>{00df23a8-2784-4fcf-8316-1bcfe768489f}</ItemsProjectGuid>
-    <ItemsRootNamespace>FFMPEGMediaStreamSource</ItemsRootNamespace>
+    <SharedGUID>aa2c18f2-d878-4df8-bbfc-09d88b3647f3</SharedGUID>
+    <ItemsProjectGuid>{742ff46f-3031-433b-858e-75ac90e968f1}</ItemsProjectGuid>
+    <ItemsRootNamespace>MediaPlayerCPP</ItemsRootNamespace>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -25,7 +25,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />                   
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />

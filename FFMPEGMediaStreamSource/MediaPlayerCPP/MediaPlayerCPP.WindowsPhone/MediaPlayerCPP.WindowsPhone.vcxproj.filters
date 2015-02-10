@@ -2,7 +2,7 @@
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Assets">
-      <UniqueIdentifier>{099d75f1-7db5-4824-8d32-ab44a62f2e3b}</UniqueIdentifier>
+      <UniqueIdentifier>{fc033ec7-5ed2-4d5f-8bf0-b8684dbb65af}</UniqueIdentifier>
       <Extensions>bmp;fbx;gif;jpg;jpeg;tga;tiff;tif;png</Extensions>
     </Filter>
     <Image Include="Assets\Logo.scale-240.png">
@@ -37,12 +37,12 @@
     <Page Include="MainPage.xaml" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\WindowsPhone81\$(Platform)\bin\avcodec-56.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\WindowsPhone81\$(Platform)\bin\avdevice-56.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\WindowsPhone81\$(Platform)\bin\avfilter-5.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\WindowsPhone81\$(Platform)\bin\avformat-56.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\WindowsPhone81\$(Platform)\bin\avutil-54.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\WindowsPhone81\$(Platform)\bin\swresample-1.dll" />
-    <None Include="$(SolutionDir)..\..\FFMPEG\Build\WindowsPhone81\$(Platform)\bin\swscale-3.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avcodec-56.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avdevice-56.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avfilter-5.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avformat-56.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avutil-54.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\WindowsPhone81\$(Platform)\bin\swresample-1.dll" />
+    <None Include="$(SolutionDir)..\..\ffmpeg\Build\WindowsPhone81\$(Platform)\bin\swscale-3.dll" />
   </ItemGroup>
 </Project>

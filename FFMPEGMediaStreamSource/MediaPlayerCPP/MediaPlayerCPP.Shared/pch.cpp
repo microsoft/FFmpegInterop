@@ -16,15 +16,9 @@
 //
 //*****************************************************************************
 
-#pragma once
+//
+// pch.cpp
+// Include the standard header and generate the precompiled header.
+//
 
-#include <collection.h>
-#include <ppltasks.h>
-
-// Disable debug string output on non-debug build
-#if !_DEBUG
-#ifdef OutputDebugString
-#undef OutputDebugString
-#endif
-#define OutputDebugString(x)
-#endif
+#include "pch.h"

@@ -25,7 +25,7 @@
 #include "MainPage.xaml.h"
 
 using namespace FFmpeg;
-using namespace FFMPEGMediaStreamSource;
+using namespace MediaPlayerCPP;
 
 using namespace concurrency;
 using namespace Platform;
@@ -56,7 +56,7 @@ forceDecodeVideo(false)
 /// This method is triggered by ContinuationManager based on ActivationKind
 /// </summary>
 /// <param name="args">File open picker continuation activation argment. It cantains the list of files user selected with file open picker </param>
-void FFMPEGMediaStreamSource::MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::FileOpenPickerContinuationEventArgs^ args)
+void MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::FileOpenPickerContinuationEventArgs^ args)
 {
 	if (args->Files->Size > 0)
 	{
@@ -94,7 +94,7 @@ void FFMPEGMediaStreamSource::MainPage::ContinueFileOpenPicker(Windows::Applicat
 	}
 }
 
-void FFMPEGMediaStreamSource::MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	FileOpenPicker^ filePicker = ref new FileOpenPicker();
 	filePicker->ViewMode = PickerViewMode::Thumbnail;
@@ -104,7 +104,7 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Browse_Click(Platform::Obje
 	filePicker->PickSingleFileAndContinue();
 }
 
-void FFMPEGMediaStreamSource::MainPage::AppBarButton_Audio_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::AppBarButton_Audio_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	auto button = dynamic_cast<AppBarToggleButton^>(sender);
 	forceDecodeAudio = button->IsChecked->Value;
@@ -119,7 +119,7 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Audio_Click(Platform::Objec
 	}
 }
 
-void FFMPEGMediaStreamSource::MainPage::AppBarButton_Video_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::AppBarButton_Video_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	auto button = dynamic_cast<AppBarToggleButton^>(sender);
 	forceDecodeVideo = button->IsChecked->Value;
@@ -134,21 +134,21 @@ void FFMPEGMediaStreamSource::MainPage::AppBarButton_Video_Click(Platform::Objec
 	}
 }
 
-void FFMPEGMediaStreamSource::MainPage::CommandBar_Opened(Platform::Object^ sender, Platform::Object^ e)
+void MainPage::CommandBar_Opened(Platform::Object^ sender, Platform::Object^ e)
 {
 	this->BottomAppBar->Opacity = 1.0;
 }
 
-void FFMPEGMediaStreamSource::MainPage::CommandBar_Closed(Platform::Object^ sender, Platform::Object^ e)
+void MainPage::CommandBar_Closed(Platform::Object^ sender, Platform::Object^ e)
 {
 	this->BottomAppBar->Opacity = 0.0;
 }
 
-void FFMPEGMediaStreamSource::MainPage::media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 }
 
-void FFMPEGMediaStreamSource::MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
+void MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
 {
 	// Display error message
 	auto errorDialog = ref new MessageDialog(args->ErrorMessage);

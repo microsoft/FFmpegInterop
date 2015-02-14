@@ -40,8 +40,9 @@ namespace MediaPlayerCPP
 		void CommandBar_Opened(Platform::Object^ sender, Platform::Object^ e);
 		void CommandBar_Closed(Platform::Object^ sender, Platform::Object^ e);
 
-		void media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-		void media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args);
+		void MediaElement_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
+		void MediaElement_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ e);
+		void DisplayErrorMessage(Platform::String^ message);
 
 		FFmpeg::FFmpegLibrary^ FFMPEGLib;
 		bool forceDecodeAudio;

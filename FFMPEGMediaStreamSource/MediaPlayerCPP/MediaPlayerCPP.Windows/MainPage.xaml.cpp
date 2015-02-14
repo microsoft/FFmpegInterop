@@ -61,12 +61,14 @@ void MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::
 	filePicker->SuggestedStartLocation = PickerLocationId::VideosLibrary;
 	filePicker->FileTypeFilter->Append("*");
 
+	// Show file picker so user can select a file
 	create_task(filePicker->PickSingleFileAsync()).then([this](StorageFile^ file)
 	{
 		if (file != nullptr)
 		{
-			media->Stop();
+			mediaElement->Stop();
 
+			// Open StorageFile as IRandomAccessStream to be passed to FFmpegLibrary
 			create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file](task<IRandomAccessStream^> stream)
 			{
 				try
@@ -79,20 +81,16 @@ void MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::
 					if (mss)
 					{
 						// Pass MediaStreamSource to Media Element
-						media->SetMediaStreamSource(mss);
+						mediaElement->SetMediaStreamSource(mss);
 					}
 					else
 					{
-						// Display error message
-						auto errorDialog = ref new MessageDialog("Cannot open media");
-						errorDialog->ShowAsync();
+						DisplayErrorMessage("Cannot open media");
 					}
 				}
 				catch (COMException^ ex)
 				{
-					// Display error message
-					auto errorDialog = ref new MessageDialog(ex->Message);
-					errorDialog->ShowAsync();
+					DisplayErrorMessage(ex->Message);
 				}
 			});
 		}
@@ -114,15 +112,20 @@ void MainPage::AppBarButton_Video_Click(Platform::Object^ sender, Windows::UI::X
 	forceDecodeVideo = button->IsChecked->Value;
 }
 
-void MainPage::media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::MediaElement_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	// Show the TopAppBar when media has finished playing
 	this->TopAppBar->IsOpen = true;
 }
 
-void MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
+void MainPage::MediaElement_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ e)
+{
+	DisplayErrorMessage(e->ErrorMessage);
+}
+
+void MainPage::DisplayErrorMessage(Platform::String^ message)
 {
 	// Display error message
-	auto errorDialog = ref new MessageDialog(args->ErrorMessage);
+	auto errorDialog = ref new MessageDialog(message);
 	errorDialog->ShowAsync();
 }

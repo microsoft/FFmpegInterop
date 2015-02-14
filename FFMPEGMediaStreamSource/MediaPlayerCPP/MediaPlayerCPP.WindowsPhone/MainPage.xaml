@@ -31,23 +31,23 @@
     <!-- Main Grid which contains the MediaElement object -->
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-        <!--Grid for MediaContent -->
+        <!-- Grid for MediaContent -->
         <Grid Name="MediaContainer" Background="{StaticResource ApplicationPageBackgroundThemeBrush}" >
 
-            <!--The main MediaElement -->
-            <MediaElement x:Name="media"
+            <!-- The main MediaElement -->
+            <MediaElement x:Name="mediaElement"
                             AreTransportControlsEnabled="True"
                             AudioCategory="ForegroundOnlyMedia"
                             AutoPlay="True"
-                            MediaEnded="media_MediaEnded"
-                            MediaFailed="media_MediaFailed"
+                            MediaEnded="MediaElement_MediaEnded"
+                            MediaFailed="MediaElement_MediaFailed"
             />
 
         </Grid>
 
     </Grid>
 
-    <!--The Bottom AppBar -->
+    <!-- The Bottom AppBar -->
     <Page.BottomAppBar>
         <CommandBar Opacity="0.0" Opened="CommandBar_Opened" Closed="CommandBar_Closed">
             <CommandBar.PrimaryCommands>

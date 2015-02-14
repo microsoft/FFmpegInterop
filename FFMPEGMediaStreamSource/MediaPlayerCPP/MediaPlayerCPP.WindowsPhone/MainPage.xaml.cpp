@@ -51,17 +51,14 @@ forceDecodeVideo(false)
 	InitializeComponent();
 }
 
-/// <summary>
-/// Handle the returned files from file picker
-/// This method is triggered by ContinuationManager based on ActivationKind
-/// </summary>
-/// <param name="args">File open picker continuation activation argment. It cantains the list of files user selected with file open picker </param>
+// Handle the returned files from file picker
 void MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::FileOpenPickerContinuationEventArgs^ args)
 {
 	if (args->Files->Size > 0)
 	{
-		media->Stop();
+		mediaElement->Stop();
 
+		// Open StorageFile as IRandomAccessStream to be passed to FFmpegLibrary
 		StorageFile^ file = args->Files->GetAt(0);
 		create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file](task<IRandomAccessStream^> stream)
 		{
@@ -75,20 +72,16 @@ void MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::Fil
 				if (mss)
 				{
 					// Pass MediaStreamSource to Media Element
-					media->SetMediaStreamSource(mss);
+					mediaElement->SetMediaStreamSource(mss);
 				}
 				else
 				{
-					// Display error message
-					auto errorDialog = ref new MessageDialog("Cannot open media");
-					errorDialog->ShowAsync();
+					DisplayErrorMessage("Cannot open media");
 				}
 			}
 			catch (COMException^ ex)
 			{
-				// Display error message
-				auto errorDialog = ref new MessageDialog("Cannot open file");
-				errorDialog->ShowAsync();
+				DisplayErrorMessage(ex->Message);
 			}
 		});
 	}
@@ -101,6 +94,7 @@ void MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::
 	filePicker->SuggestedStartLocation = PickerLocationId::VideosLibrary;
 	filePicker->FileTypeFilter->Append("*");
 
+	// Launch file picker that will be handled by ContinueFileOpenPicker after application is re-activated
 	filePicker->PickSingleFileAndContinue();
 }
 
@@ -144,13 +138,18 @@ void MainPage::CommandBar_Closed(Platform::Object^ sender, Platform::Object^ e)
 	this->BottomAppBar->Opacity = 0.0;
 }
 
-void MainPage::media_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+void MainPage::MediaElement_MediaEnded(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 }
 
-void MainPage::media_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
+void MainPage::MediaElement_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ args)
+{
+	DisplayErrorMessage(args->ErrorMessage);
+}
+
+void MainPage::DisplayErrorMessage(Platform::String^ message)
 {
 	// Display error message
-	auto errorDialog = ref new MessageDialog(args->ErrorMessage);
+	auto errorDialog = ref new MessageDialog(message);
 	errorDialog->ShowAsync();
 }

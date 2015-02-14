@@ -1,4 +1,5 @@
-﻿//*****************************************************************************
+﻿<!--
+//*****************************************************************************
 //
 //	Copyright 2015 Microsoft Corporation
 //
@@ -15,14 +16,11 @@
 //	limitations under the License.
 //
 //*****************************************************************************
+-->
+ <Application
+    x:Class="MediaPlayerCPP.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MediaPlayerCPP">
 
-// pch.h
-// Header for standard system include files.
-//
-
-#pragma once
-
-#include <collection.h>
-#include <ppltasks.h>
-
-#include "App.xaml.h"
+</Application>

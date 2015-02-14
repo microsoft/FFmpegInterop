@@ -2,7 +2,6 @@ Debug
 Release
 Generated Files
 AppPackages
-*.pfx
 *.suo
 *.sdf
 *.opensdf

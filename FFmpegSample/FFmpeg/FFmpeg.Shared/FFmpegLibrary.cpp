@@ -41,6 +41,7 @@ avFormatCtx(NULL),
 avAudioCodecCtx(NULL),
 avVideoCodecCtx(NULL),
 swrCtx(NULL),
+swsCtx(NULL),
 avFrame(NULL),
 audioStreamIndex(AVERROR_STREAM_NOT_FOUND),
 videoStreamIndex(AVERROR_STREAM_NOT_FOUND),
@@ -55,7 +56,10 @@ generateUncompressedVideo(false)
 
 FFmpegLibrary::~FFmpegLibrary()
 {
-	av_freep(videoBufferData);
+	if (videoBufferData)
+	{
+		av_freep(videoBufferData);
+	}
 
 	if (avFrame)
 	{
@@ -63,6 +67,7 @@ FFmpegLibrary::~FFmpegLibrary()
 	}
 
 	swr_free(&swrCtx);
+	sws_freeContext(swsCtx);
 	avcodec_close(avAudioCodecCtx);
 	avcodec_close(avVideoCodecCtx);
 	avformat_close_input(&avFormatCtx);
@@ -194,11 +199,6 @@ MediaStreamSource^ FFmpegLibrary::CreateMediaStreamSource(IRandomAccessStream^ s
 			return nullptr; // Cannot open the video codec
 		}
 
-		if (av_image_alloc(videoBufferData, videoBufferLineSize, avVideoCodecCtx->width, avVideoCodecCtx->height, avVideoCodecCtx->pix_fmt, 1) < 0)
-		{
-			return nullptr; // Cannot open the video codec
-		}
-
 		// Detect video format and create video stream descriptor accordingly
 		CreateVideoStreamDescriptor(forceVideoDecode);
 	}
@@ -292,8 +292,26 @@ void FFmpegLibrary::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	}
 	else
 	{
-		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Yv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
+		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
 		generateUncompressedVideo = true;
+
+		// Setup software scaler to convert any decoder pixel format (e.g. YUV420P) to NV12 that is supported in Windows & Windows Phone MediaElement
+		swsCtx = sws_getContext(
+			avVideoCodecCtx->width,
+			avVideoCodecCtx->height,
+			avVideoCodecCtx->pix_fmt,
+			avVideoCodecCtx->width,
+			avVideoCodecCtx->height,
+			AV_PIX_FMT_NV12,
+			SWS_BICUBIC,
+			NULL,
+			NULL,
+			NULL);
+
+		if (!swsCtx || av_image_alloc(videoBufferData, videoBufferLineSize, avVideoCodecCtx->width, avVideoCodecCtx->height, AV_PIX_FMT_NV12, 1) < 0)
+		{
+			return; // Don't generate video stream descriptor if scaler or video buffer cannot be initialized
+		}
 	}
 
 	videoProperties->FrameRate->Numerator = avVideoCodecCtx->framerate.num;
@@ -428,15 +446,13 @@ MediaStreamSample^ FFmpegLibrary::FillVideoSample()
 	DataWriter^ dataWriter = ref new DataWriter();
 	if (generateUncompressedVideo)
 	{
-		av_image_copy(videoBufferData, videoBufferLineSize, (const uint8_t **)(avFrame->data), avFrame->linesize,
-			avVideoCodecCtx->pix_fmt, avVideoCodecCtx->width, avVideoCodecCtx->height);
+		// Convert decoded video pixel format to NV12 using FFmpeg software scaler
+		sws_scale(swsCtx, (const uint8_t **)(avFrame->data), avFrame->linesize, 0, avVideoCodecCtx->height, videoBufferData, videoBufferLineSize);
 
 		auto YBuffer = ref new Platform::Array<uint8_t>(videoBufferData[0], videoBufferLineSize[0] * avVideoCodecCtx->height);
-		auto UBuffer = ref new Platform::Array<uint8_t>(videoBufferData[1], videoBufferLineSize[1] * avVideoCodecCtx->height / 2);
-		auto VBuffer = ref new Platform::Array<uint8_t>(videoBufferData[2], videoBufferLineSize[2] * avVideoCodecCtx->height / 2);
+		auto UVBuffer = ref new Platform::Array<uint8_t>(videoBufferData[1], videoBufferLineSize[1] * avVideoCodecCtx->height / 2);
 		dataWriter->WriteBytes(YBuffer);
-		dataWriter->WriteBytes(VBuffer);
-		dataWriter->WriteBytes(UBuffer);
+		dataWriter->WriteBytes(UVBuffer);
 	}
 	else
 	{
@@ -603,7 +619,7 @@ static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 	IStream* pStream = reinterpret_cast<IStream*>(ptr);
 	ULONG bytesRead = 0;
 	HRESULT hr = pStream->Read(buf, bufSize, &bytesRead);
-	
+
 	if (hr == S_FALSE)
 	{
 		return AVERROR_EOF;  // Let FFmpeg know that we have reached eof

@@ -28,6 +28,7 @@ extern "C"
 {
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
 }
 
 namespace FFmpeg
@@ -57,6 +58,7 @@ namespace FFmpeg
 		AVCodecContext* avAudioCodecCtx;
 		AVCodecContext* avVideoCodecCtx;
 		SwrContext *swrCtx;
+		SwsContext *swsCtx;
 		AVFrame* avFrame;
 		AudioStreamDescriptor^ audioStreamDescriptor;
 		VideoStreamDescriptor^ videoStreamDescriptor;

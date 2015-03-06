@@ -32,34 +32,8 @@ using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
 
 const int FILESTREAMBUFFERSZ = 1024;
-
-// Static function to read file stream and pass data to FFmpeg
-static int FileStreamRead(void* ptr, uint8_t* buf, int buf_size)
-{
-	IStream* pStream = reinterpret_cast<IStream*>(ptr);
-	ULONG bytesRead = 0;
-	HRESULT hr = pStream->Read(buf, buf_size, &bytesRead);
-	if (hr == S_FALSE)
-		return AVERROR_EOF;  // Let FFmpeg know that we have reached eof
-	if (FAILED(hr))
-		return -1;
-	return bytesRead;
-}
-
-// Static function to seek in file stream
-static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
-{
-	IStream* pStream = reinterpret_cast<IStream*>(ptr);
-
-	// Seek:
-	LARGE_INTEGER in = { pos };
-	ULARGE_INTEGER out = { 0 };
-	if (FAILED(pStream->Seek(in, whence, &out)))
-		return -1;
-
-	// Return the new position:
-	return out.QuadPart;
-}
+static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
+static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
 
 FFmpegLibrary::FFmpegLibrary(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode) :
 avIOCtx(NULL),
@@ -113,7 +87,7 @@ void FFmpegLibrary::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStart
 		if (streamIndex >= 0)
 		{
 			// Convert TimeSpan unit to AV_TIME_BASE
-			int64_t seekTarget = request->StartPosition->Value.Duration / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000);
+			int64_t seekTarget = static_cast<int64_t>(request->StartPosition->Value.Duration / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
 
 			if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, 0) < 0)
 			{
@@ -174,6 +148,7 @@ MediaStreamSource^ FFmpegLibrary::CreateMediaStreamSource(IRandomAccessStream^ s
 	CreateStreamOverRandomAccessStream(reinterpret_cast<IUnknown*>(stream), IID_PPV_ARGS(&fileStreamData));
 
 	// Setup FFmpeg custom IO to access file as stream. This is necessary when accessing any file outside of app installation directory and appdata folder.
+	// Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
 	fileStreamBuffer = (unsigned char*)av_malloc(FILESTREAMBUFFERSZ);
 	avIOCtx = avio_alloc_context(fileStreamBuffer, FILESTREAMBUFFERSZ, 0, fileStreamData, FileStreamRead, 0, FileStreamSeek);
 
@@ -181,6 +156,8 @@ MediaStreamSource^ FFmpegLibrary::CreateMediaStreamSource(IRandomAccessStream^ s
 	avFormatCtx->pb = avIOCtx;
 	avFormatCtx->flags |= AVFMT_FLAG_CUSTOM_IO;
 
+	// Open media file using custom IO setup above instead of using file name. Opening a file using file name will invoke fopen C API call that only have
+	// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
 	if (avformat_open_input(&avFormatCtx, "", NULL, NULL) < 0)
 	{
 		return nullptr; // Error opening file
@@ -273,15 +250,6 @@ void FFmpegLibrary::CreateAudioStreamDescriptor(bool forceAudioDecode)
 	else if (avAudioCodecCtx->codec_id == AV_CODEC_ID_MP3 && !forceAudioDecode)
 	{
 		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateMp3(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, avAudioCodecCtx->bit_rate));
-	}
-	else if (avAudioCodecCtx->codec_id == AV_CODEC_ID_AC3 && !forceAudioDecode)
-	{
-		AudioEncodingProperties^ audioProperties = ref new AudioEncodingProperties();
-		audioProperties->Subtype = "AC3";
-		audioProperties->SampleRate = avAudioCodecCtx->sample_rate;
-		audioProperties->ChannelCount = avAudioCodecCtx->channels;
-		audioProperties->Bitrate = avAudioCodecCtx->bit_rate;
-		audioStreamDescriptor = ref new AudioStreamDescriptor(audioProperties);
 	}
 	else
 	{
@@ -530,7 +498,7 @@ int FFmpegLibrary::ReadPacket()
 	}
 	else
 	{
-		OutputDebugString(L"Unidentified stream type !!!!!\n");
+		OutputDebugString(L"Ignoring unused stream\n");
 	}
 
 	return ret;
@@ -538,7 +506,7 @@ int FFmpegLibrary::ReadPacket()
 
 void FFmpegLibrary::WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket)
 {
-	uint32 index = 0;
+	int32 index = 0;
 	uint32 size;
 
 	do
@@ -627,4 +595,40 @@ AVPacket FFmpegLibrary::PopVideoPacket()
 	}
 
 	return avPacket;
+}
+
+// Static function to read file stream and pass data to FFmpeg. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
+static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
+{
+	IStream* pStream = reinterpret_cast<IStream*>(ptr);
+	ULONG bytesRead = 0;
+	HRESULT hr = pStream->Read(buf, bufSize, &bytesRead);
+	
+	if (hr == S_FALSE)
+	{
+		return AVERROR_EOF;  // Let FFmpeg know that we have reached eof
+	}
+
+	if (FAILED(hr))
+	{
+		return -1;
+	}
+
+	return bytesRead;
+}
+
+// Static function to seek in file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
+static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
+{
+	IStream* pStream = reinterpret_cast<IStream*>(ptr);
+	LARGE_INTEGER in;
+	in.QuadPart = pos;
+	ULARGE_INTEGER out = { 0 };
+
+	if (FAILED(pStream->Seek(in, whence, &out)))
+	{
+		return -1;
+	}
+
+	return out.QuadPart; // Return the new position:
 }

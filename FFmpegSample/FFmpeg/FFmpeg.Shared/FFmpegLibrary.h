@@ -41,11 +41,11 @@ namespace FFmpeg
 		MediaStreamSource^ GetMediaStreamSource();
 
 	private:
-		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
-		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
+		MediaStreamSource^ CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
 		void CreateAudioStreamDescriptor(bool forceAudioDecode);
 		void CreateVideoStreamDescriptor(bool forceVideoDecode);
-		MediaStreamSource^ CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
+		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
 		MediaStreamSample^ FillAudioSample();
 		MediaStreamSample^ FillVideoSample();
 		int ReadPacket();
@@ -53,6 +53,9 @@ namespace FFmpeg
 		void WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket);
 
 		MediaStreamSource^ mss;
+		EventRegistrationToken startingRequestedToken;
+		EventRegistrationToken sampleRequestedToken;
+
 		AVIOContext* avIOCtx;
 		AVFormatContext* avFormatCtx;
 		AVCodecContext* avAudioCodecCtx;
@@ -60,6 +63,7 @@ namespace FFmpeg
 		SwrContext *swrCtx;
 		SwsContext *swsCtx;
 		AVFrame* avFrame;
+
 		AudioStreamDescriptor^ audioStreamDescriptor;
 		VideoStreamDescriptor^ videoStreamDescriptor;
 		int audioStreamIndex;
@@ -69,6 +73,9 @@ namespace FFmpeg
 
 		uint8_t* videoBufferData[4];
 		int videoBufferLineSize[4];
+		TimeSpan mediaDuration;
+		IStream* fileStreamData;
+		unsigned char* fileStreamBuffer;
 
 		std::queue<AVPacket> audioPacketQueue;
 		std::queue<AVPacket> videoPacketQueue;
@@ -76,9 +83,5 @@ namespace FFmpeg
 		AVPacket PopAudioPacket();
 		void PushVideoPacket(AVPacket packet);
 		AVPacket PopVideoPacket();
-
-		TimeSpan mediaDuration;
-		IStream* fileStreamData;
-		unsigned char* fileStreamBuffer;
 	};
 }

@@ -31,7 +31,7 @@ using namespace Platform;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
 
-const int FILESTREAMBUFFERSZ = 1024;
+const int FILESTREAMBUFFERSZ = 16384;
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
 
@@ -629,14 +629,15 @@ static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 	ULONG bytesRead = 0;
 	HRESULT hr = pStream->Read(buf, bufSize, &bytesRead);
 
-	if (hr == S_FALSE)
-	{
-		return AVERROR_EOF;  // Let FFmpeg know that we have reached eof
-	}
-
 	if (FAILED(hr))
 	{
 		return -1;
+	}
+
+	// If we succeed but don't have any bytes, assume end of file
+	if (bytesRead == 0)
+	{
+		return AVERROR_EOF;  // Let FFmpeg know that we have reached eof
 	}
 
 	return bytesRead;

@@ -77,11 +77,6 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 		av_freep(avFrame);
 	}
 
-	if (fileStreamBuffer)
-	{
-		av_free(fileStreamBuffer);
-	}
-
 	swr_free(&swrCtx);
 	sws_freeContext(swsCtx);
 	avcodec_close(avAudioCodecCtx);

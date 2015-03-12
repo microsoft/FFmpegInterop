@@ -44,7 +44,7 @@ namespace MediaPlayerCPP
 		void MediaElement_MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ e);
 		void DisplayErrorMessage(Platform::String^ message);
 
-		FFmpegInterop::FFmpegInteropMSS^ FFMPEGLib;
+		FFmpegInterop::FFmpegInteropMSS^ FFmpegMSS;
 		bool forceDecodeAudio;
 		bool forceDecodeVideo;
 	};

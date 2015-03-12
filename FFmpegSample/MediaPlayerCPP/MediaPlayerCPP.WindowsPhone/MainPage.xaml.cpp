@@ -66,8 +66,8 @@ void MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::Fil
 			{
 				// Instantiate FFmpeg object and pass the stream from opened file
 				IRandomAccessStream^ readStream = stream.get();
-				FFMPEGLib = ref new FFmpegInteropMSS(readStream, forceDecodeAudio, forceDecodeVideo);
-				MediaStreamSource^ mss = FFMPEGLib->GetMediaStreamSource();
+				FFmpegMSS = ref new FFmpegInteropMSS(readStream, forceDecodeAudio, forceDecodeVideo);
+				MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
 
 				if (mss)
 				{

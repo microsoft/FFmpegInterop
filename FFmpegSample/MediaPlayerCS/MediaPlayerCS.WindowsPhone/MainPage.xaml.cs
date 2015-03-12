@@ -15,7 +15,7 @@
 //	limitations under the License.
 //
 //*****************************************************************************
-using FFmpeg;
+using FFmpegInterop;
 
 using System;
 using System.Linq;
@@ -32,7 +32,7 @@ namespace MediaPlayerCS
 {
     public sealed partial class MainPage : Page
     {
-        private FFmpegLibrary FFMPEGLib;
+        private FFmpegInteropMSS FFmpegMSS;
 		private bool forceDecodeAudio = false;
 		private bool forceDecodeVideo = false;
 
@@ -52,13 +52,13 @@ namespace MediaPlayerCS
 
                 try
                 {
-                    // Open StorageFile as IRandomAccessStream to be passed to FFmpegLibrary
+                    // Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
                     StorageFile file = args.Files.FirstOrDefault();
                     IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
 
                     // Instantiate FFmpeg object and pass the stream from opened file
-                    FFMPEGLib = new FFmpegLibrary(readStream, forceDecodeAudio, forceDecodeVideo);
-                    MediaStreamSource mss = FFMPEGLib.GetMediaStreamSource();
+                    FFmpegMSS = new FFmpegInteropMSS(readStream, forceDecodeAudio, forceDecodeVideo);
+                    MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
 
                     if (mss != null)
                     {

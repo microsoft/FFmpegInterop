@@ -120,11 +120,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\FFmpeg\FFmpeg.WindowsPhone\FFmpeg.WindowsPhone.vcxproj">
-      <Project>{ebc5ca98-87f1-4a01-a48d-69659c103e72}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="$(SolutionDir)..\..\ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avcodec-56.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
@@ -167,6 +162,11 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</DeploymentContent>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\FFmpegInterop\FFmpegInterop.WindowsPhone\FFmpegInterop.WindowsPhone.vcxproj">
+      <Project>{ebc5ca98-87f1-4a01-a48d-69659c103e72}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

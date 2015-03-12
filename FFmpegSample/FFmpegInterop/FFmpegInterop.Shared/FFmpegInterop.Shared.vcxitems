@@ -5,7 +5,7 @@
     <HasSharedItems>true</HasSharedItems>
     <ItemsProjectGuid>{b290d2ce-e857-4ace-8541-d80a3b9ab04e}</ItemsProjectGuid>
     <ItemsRootNamespace>FFmpeg</ItemsRootNamespace>
-    <ItemsProjectName>FFmpeg.Shared</ItemsProjectName>
+    <ItemsProjectName>FFmpegInterop.Shared</ItemsProjectName>
     <CodeSharingProject>248F659F-DAC5-46E8-AC09-60EC9FC95053</CodeSharingProject>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -14,11 +14,11 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegLibrary.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegInteropMSS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegLibrary.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegInteropMSS.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

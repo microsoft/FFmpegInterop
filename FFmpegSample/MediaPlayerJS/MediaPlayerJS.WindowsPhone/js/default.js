@@ -41,15 +41,15 @@
         if (args.files !== undefined && args.files.size > 0) {
             mediaElement.pause();
 
-            // Open StorageFile as IRandomAccessStream to be passed to FFmpegLibrary
+            // Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
             var file = args.files[0];
             file.openAsync(Windows.Storage.FileAccessMode.read).done(
                 function (readStream) {
 
                     try {
                         // Instantiate FFmpeg object and pass the stream from opened file
-                        var ffmpegLib = new FFmpeg.FFmpegLibrary(readStream, forceAudioDecode, forceVideoDecode);
-                        var mss = ffmpegLib.getMediaStreamSource();
+                        var FFmpegMSS = new FFmpeg.FFmpegInteropMSS(readStream, forceAudioDecode, forceVideoDecode);
+                        var mss = FFmpegMSS.getMediaStreamSource();
 
                         if (mss) {
                             // Pass MediaStreamSource to Media Element

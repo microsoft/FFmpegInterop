@@ -31,13 +31,14 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
-namespace FFmpeg
+namespace FFmpegInterop
 {
-	public ref class FFmpegLibrary sealed
+	public ref class FFmpegInteropMSS sealed
 	{
 	public:
-		FFmpegLibrary(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
-		virtual ~FFmpegLibrary();
+		// Contructor
+		FFmpegInteropMSS(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		virtual ~FFmpegInteropMSS();
 		MediaStreamSource^ GetMediaStreamSource();
 
 	private:

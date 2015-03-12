@@ -23,8 +23,7 @@
 
 // Disable debug string output on non-debug build
 #if !_DEBUG
-#ifdef OutputDebugString
-#undef OutputDebugString
-#endif
-#define OutputDebugString(x)
+#define DebugMessage(x)
+#else
+#define DebugMessage(x) OutputDebugString(x)
 #endif

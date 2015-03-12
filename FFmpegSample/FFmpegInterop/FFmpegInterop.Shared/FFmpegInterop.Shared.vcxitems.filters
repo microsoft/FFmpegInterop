@@ -2,12 +2,12 @@
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegLibrary.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegInteropMSS.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegLibrary.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegInteropMSS.cpp" />
   </ItemGroup>
 </Project>

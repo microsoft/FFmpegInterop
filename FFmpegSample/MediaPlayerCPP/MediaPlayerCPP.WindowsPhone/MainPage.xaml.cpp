@@ -24,7 +24,7 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
-using namespace FFmpeg;
+using namespace FFmpegInterop;
 using namespace MediaPlayerCPP;
 
 using namespace concurrency;
@@ -58,7 +58,7 @@ void MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::Fil
 	{
 		mediaElement->Stop();
 
-		// Open StorageFile as IRandomAccessStream to be passed to FFmpegLibrary
+		// Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
 		StorageFile^ file = args->Files->GetAt(0);
 		create_task(file->OpenAsync(FileAccessMode::Read)).then([this, file](task<IRandomAccessStream^> stream)
 		{
@@ -66,7 +66,7 @@ void MainPage::ContinueFileOpenPicker(Windows::ApplicationModel::Activation::Fil
 			{
 				// Instantiate FFmpeg object and pass the stream from opened file
 				IRandomAccessStream^ readStream = stream.get();
-				FFMPEGLib = ref new FFmpegLibrary(readStream, forceDecodeAudio, forceDecodeVideo);
+				FFMPEGLib = ref new FFmpegInteropMSS(readStream, forceDecodeAudio, forceDecodeVideo);
 				MediaStreamSource^ mss = FFMPEGLib->GetMediaStreamSource();
 
 				if (mss)

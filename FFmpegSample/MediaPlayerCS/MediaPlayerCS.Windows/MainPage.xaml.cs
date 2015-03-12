@@ -16,7 +16,7 @@
 //
 //*****************************************************************************
 
-using FFmpeg;
+using FFmpegInterop;
 
 using System;
 using Windows.Media.Core;
@@ -31,7 +31,7 @@ namespace MediaPlayerCS
 {
     public sealed partial class MainPage : Page
     {
-        private FFmpegLibrary FFMPEGLib;
+        private FFmpegInteropMSS FFmpegMSS;
 		private bool forceDecodeAudio = false;
 		private bool forceDecodeVideo = false;
 
@@ -57,14 +57,14 @@ namespace MediaPlayerCS
             {
                 mediaElement.Stop();
 
-                // Open StorageFile as IRandomAccessStream to be passed to FFmpegLibrary
+                // Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
                 IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
 
                 try
                 {
 					// Instantiate FFmpeg object and pass the stream from opened file
-                    FFMPEGLib = new FFmpegLibrary(readStream, forceDecodeAudio, forceDecodeVideo);
-                    MediaStreamSource mss = FFMPEGLib.GetMediaStreamSource();
+                    FFmpegMSS = new FFmpegInteropMSS(readStream, forceDecodeAudio, forceDecodeVideo);
+                    MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
 
                     if (mss != null)
                     {

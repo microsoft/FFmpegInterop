@@ -17,7 +17,7 @@
 //*****************************************************************************
 
 #include "pch.h"
-#include "FFmpegLibrary.h"
+#include "FFmpegInteropMSS.h"
 #include "shcore.h"
 
 extern "C"
@@ -26,16 +26,20 @@ extern "C"
 }
 
 using namespace concurrency;
-using namespace FFmpeg;
+using namespace FFmpegInterop;
 using namespace Platform;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
 
+// Size of the buffer when reading a stream
 const int FILESTREAMBUFFERSZ = 16384;
+
+// Static functions passed to FFmpeg for stream interop
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
 
-FFmpegLibrary::FFmpegLibrary(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode) :
+// Initialize an FFmpeg
+FFmpegInteropMSS::FFmpegInteropMSS(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode) :
 avIOCtx(NULL),
 avFormatCtx(NULL),
 avAudioCodecCtx(NULL),
@@ -54,7 +58,7 @@ generateUncompressedVideo(false)
 	mss = CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode);
 }
 
-FFmpegLibrary::~FFmpegLibrary()
+FFmpegInteropMSS::~FFmpegInteropMSS()
 {
 	if (mss)
 	{
@@ -73,6 +77,11 @@ FFmpegLibrary::~FFmpegLibrary()
 		av_freep(avFrame);
 	}
 
+	if (fileStreamBuffer)
+	{
+		av_free(fileStreamBuffer);
+	}
+
 	swr_free(&swrCtx);
 	sws_freeContext(swsCtx);
 	avcodec_close(avAudioCodecCtx);
@@ -81,12 +90,12 @@ FFmpegLibrary::~FFmpegLibrary()
 	av_free(avIOCtx);
 }
 
-MediaStreamSource^ FFmpegLibrary::GetMediaStreamSource()
+MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
 {
 	return mss;
 }
 
-MediaStreamSource^ FFmpegLibrary::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
+MediaStreamSource^ FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
 {
 	if (!stream)
 	{
@@ -178,14 +187,14 @@ MediaStreamSource^ FFmpegLibrary::CreateMediaStreamSource(IRandomAccessStream^ s
 	{
 		mss->Duration = mediaDuration;
 		mss->CanSeek = true;
-		startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegLibrary::OnStarting);
-		sampleRequestedToken = mss->SampleRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSampleRequestedEventArgs ^>(this, &FFmpegLibrary::OnSampleRequested);
+		startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);
+		sampleRequestedToken = mss->SampleRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSampleRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSampleRequested);
 	}
 
 	return mss;
 }
 
-void FFmpegLibrary::CreateAudioStreamDescriptor(bool forceAudioDecode)
+void FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 {
 	if (avAudioCodecCtx->codec_id == AV_CODEC_ID_AAC && !forceAudioDecode)
 	{
@@ -223,7 +232,7 @@ void FFmpegLibrary::CreateAudioStreamDescriptor(bool forceAudioDecode)
 	}
 }
 
-void FFmpegLibrary::CreateVideoStreamDescriptor(bool forceVideoDecode)
+void FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 {
 	VideoEncodingProperties^ videoProperties;
 
@@ -264,7 +273,7 @@ void FFmpegLibrary::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 }
 
-void FFmpegLibrary::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args)
+void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args)
 {
 	MediaStreamSourceStartingRequest^ request = args->Request;
 
@@ -281,7 +290,7 @@ void FFmpegLibrary::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStart
 
 			if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, 0) < 0)
 			{
-				OutputDebugString(L" - ### Error while seeking\n");
+				DebugMessage(L" - ### Error while seeking\n");
 			}
 			else
 			{
@@ -313,7 +322,7 @@ void FFmpegLibrary::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStart
 	}
 }
 
-void FFmpegLibrary::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)
+void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)
 {
 	if (args->Request->StreamDescriptor == audioStreamDescriptor)
 	{
@@ -329,9 +338,9 @@ void FFmpegLibrary::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^s
 	}
 }
 
-MediaStreamSample^ FFmpegLibrary::FillAudioSample()
+MediaStreamSample^ FFmpegInteropMSS::FillAudioSample()
 {
-	OutputDebugString(L"FillAudioSample\n");
+	DebugMessage(L"FillAudioSample\n");
 
 	MediaStreamSample^ sample;
 	AVPacket avPacket;
@@ -349,7 +358,7 @@ MediaStreamSample^ FFmpegLibrary::FillAudioSample()
 		{
 			if (ReadPacket() < 0)
 			{
-				OutputDebugString(L"FillAudioSample Reaching End Of File\n");
+				DebugMessage(L"FillAudioSample Reaching End Of File\n");
 				return sample;
 			}
 		}
@@ -369,7 +378,7 @@ MediaStreamSample^ FFmpegLibrary::FillAudioSample()
 
 					if (decodedBytes < 0)
 					{
-						OutputDebugString(L"Fail To Decode!\n");
+						DebugMessage(L"Fail To Decode!\n");
 						break; // Skip broken frame
 					}
 
@@ -411,9 +420,9 @@ MediaStreamSample^ FFmpegLibrary::FillAudioSample()
 	return sample;
 }
 
-MediaStreamSample^ FFmpegLibrary::FillVideoSample()
+MediaStreamSample^ FFmpegInteropMSS::FillVideoSample()
 {
-	OutputDebugString(L"FillVideoSample\n");
+	DebugMessage(L"FillVideoSample\n");
 
 	MediaStreamSample^ sample;
 	AVPacket avPacket;
@@ -430,7 +439,7 @@ MediaStreamSample^ FFmpegLibrary::FillVideoSample()
 		{
 			if (ReadPacket() < 0)
 			{
-				OutputDebugString(L"FillVideoSample Reaching End Of File\n");
+				DebugMessage(L"FillVideoSample Reaching End Of File\n");
 				return sample;
 			}
 		}
@@ -465,6 +474,7 @@ MediaStreamSample^ FFmpegLibrary::FillVideoSample()
 	}
 	else
 	{
+	// This should only be H.264
 		if (avPacket.flags & AV_PKT_FLAG_KEY)
 		{
 			GetSPSAndPPSBuffer(dataWriter);
@@ -499,7 +509,7 @@ MediaStreamSample^ FFmpegLibrary::FillVideoSample()
 	return sample;
 }
 
-int FFmpegLibrary::ReadPacket()
+int FFmpegInteropMSS::ReadPacket()
 {
 	int ret;
 	AVPacket avPacket;
@@ -523,34 +533,40 @@ int FFmpegLibrary::ReadPacket()
 	}
 	else
 	{
-		OutputDebugString(L"Ignoring unused stream\n");
+		DebugMessage(L"Ignoring unused stream\n");
 	}
 
 	return ret;
 }
 
-void FFmpegLibrary::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
+void FFmpegInteropMSS::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 {
 	byte* spsPos = avVideoCodecCtx->extradata + 8;
 	byte spsLength = spsPos[-1];
 	auto vSPS = ref new Platform::Array<uint8_t>(spsPos, spsLength);
-	dataWriter->WriteByte(0);
+
+	// Write the NAL unit for the SPS
 	dataWriter->WriteByte(0);
 	dataWriter->WriteByte(0);
 	dataWriter->WriteByte(1);
+
+	// Write the SPS
 	dataWriter->WriteBytes(vSPS);
 
 	byte* ppsPos = avVideoCodecCtx->extradata + 8 + spsLength + 3;
 	byte ppsLength = ppsPos[-1];
 	auto vPPS = ref new Platform::Array<uint8_t>(ppsPos, ppsLength);
-	dataWriter->WriteByte(0);
+
+	// Write the NAL unit for the PPS
 	dataWriter->WriteByte(0);
 	dataWriter->WriteByte(0);
 	dataWriter->WriteByte(1);
+
+	// Write the PPS
 	dataWriter->WriteBytes(vPPS);
 }
 
-void FFmpegLibrary::WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket)
+void FFmpegInteropMSS::WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket)
 {
 	int32 index = 0;
 	uint32 size;
@@ -560,28 +576,29 @@ void FFmpegLibrary::WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket)
 		// Grab the size of the blob
 		size = (avPacket.data[index] << 24) + (avPacket.data[index + 1] << 16) + (avPacket.data[index + 2] << 8) + avPacket.data[index + 3];
 
-		dataWriter->WriteByte(0);
+		// Write the NAL unit to the stream
 		dataWriter->WriteByte(0);
 		dataWriter->WriteByte(0);
 		dataWriter->WriteByte(1);
 		index += 4;
 
+		// Write the rest of the packet to the stream
 		auto vBuffer = ref new Platform::Array<uint8_t>(&(avPacket.data[index]), size);
 		dataWriter->WriteBytes(vBuffer);
 		index += size;
 	} while (index < avPacket.size);
 }
 
-void FFmpegLibrary::PushAudioPacket(AVPacket packet)
+void FFmpegInteropMSS::PushAudioPacket(AVPacket packet)
 {
-	OutputDebugString(L" - PushAudio\n");
+	DebugMessage(L" - PushAudio\n");
 
 	audioPacketQueue.push(packet);
 }
 
-AVPacket FFmpegLibrary::PopAudioPacket()
+AVPacket FFmpegInteropMSS::PopAudioPacket()
 {
-	OutputDebugString(L" - PopAudio\n");
+	DebugMessage(L" - PopAudio\n");
 
 	AVPacket avPacket;
 	av_init_packet(&avPacket);
@@ -597,16 +614,16 @@ AVPacket FFmpegLibrary::PopAudioPacket()
 	return avPacket;
 }
 
-void FFmpegLibrary::PushVideoPacket(AVPacket packet)
+void FFmpegInteropMSS::PushVideoPacket(AVPacket packet)
 {
-	OutputDebugString(L" - PushVideo\n");
+	DebugMessage(L" - PushVideo\n");
 
 	videoPacketQueue.push(packet);
 }
 
-AVPacket FFmpegLibrary::PopVideoPacket()
+AVPacket FFmpegInteropMSS::PopVideoPacket()
 {
-	OutputDebugString(L" - PopVideo\n");
+	DebugMessage(L" - PopVideo\n");
 
 	AVPacket avPacket;
 	av_init_packet(&avPacket);

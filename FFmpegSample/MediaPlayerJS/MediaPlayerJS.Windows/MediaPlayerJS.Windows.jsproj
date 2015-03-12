@@ -74,7 +74,7 @@
     <SDKReference Include="Microsoft.WinJS.2.0, Version=1.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\FFmpeg\FFmpeg.Windows\FFmpeg.Windows.vcxproj" />
+    <ProjectReference Include="..\..\FFmpegInterop\FFmpegInterop.Windows\FFmpegInterop.Windows.vcxproj" />
   </ItemGroup>
   <Import Project="..\MediaPlayerJS.Shared\MediaPlayerJS.Shared.projitems" Label="Shared" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\$(WMSJSProjectDirectory)\Microsoft.VisualStudio.$(WMSJSProject).targets" />

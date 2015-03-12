@@ -94,6 +94,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <PackageCertificateKeyFile>MediaPlayerCPP.Windows_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <AppxBundlePlatforms>arm</AppxBundlePlatforms>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
@@ -215,7 +217,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\FFmpeg\FFmpeg.Windows\FFmpeg.Windows.vcxproj">
+    <ProjectReference Include="..\..\FFmpegInterop\FFmpegInterop.Windows\FFmpegInterop.Windows.vcxproj">
       <Project>{97248e49-6262-4c37-b118-224ff3b98fd0}</Project>
     </ProjectReference>
   </ItemGroup>

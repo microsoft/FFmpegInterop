@@ -63,7 +63,7 @@ namespace MediaPlayerCS
                 try
                 {
 					// Instantiate FFmpeg object and pass the stream from opened file
-                    FFmpegMSS = new FFmpegInteropMSS(readStream, forceDecodeAudio, forceDecodeVideo);
+                    FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
                     MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
 
                     if (mss != null)

@@ -57,7 +57,7 @@ namespace MediaPlayerCS
                     IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
 
                     // Instantiate FFmpeg object and pass the stream from opened file
-                    FFmpegMSS = new FFmpegInteropMSS(readStream, forceDecodeAudio, forceDecodeVideo);
+                    FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
                     MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
 
                     if (mss != null)

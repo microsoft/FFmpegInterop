@@ -38,8 +38,8 @@ const int FILESTREAMBUFFERSZ = 16384;
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
 
-// Initialize an FFmpeg
-FFmpegInteropMSS::FFmpegInteropMSS(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode) :
+// Initialize an FFmpegInteropObject
+FFmpegInteropMSS::FFmpegInteropMSS() :
 avIOCtx(NULL),
 avFormatCtx(NULL),
 avAudioCodecCtx(NULL),
@@ -52,10 +52,10 @@ videoStreamIndex(AVERROR_STREAM_NOT_FOUND),
 fileStreamData(NULL),
 fileStreamBuffer(NULL),
 generateUncompressedAudio(false),
-generateUncompressedVideo(false)
+generateUncompressedVideo(false),
+needAnnexBSamples(false)
 {
 	av_register_all();
-	mss = CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode);
 }
 
 FFmpegInteropMSS::~FFmpegInteropMSS()
@@ -85,16 +85,28 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	av_free(avIOCtx);
 }
 
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
+{
+	auto interopMSS = ref new FFmpegInteropMSS();
+	if (!interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode))
+	{
+		// We failed to initialize, clear the variable to return failure
+		interopMSS = nullptr;
+	}
+
+	return interopMSS;
+}
+
 MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
 {
 	return mss;
 }
 
-MediaStreamSource^ FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
+bool FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
 {
 	if (!stream)
 	{
-		return nullptr;
+		return false;
 	}
 
 	// Convert asynchronous IRandomAccessStream to synchronous IStream. This API requires shcore.h and shcore.lib
@@ -105,6 +117,11 @@ MediaStreamSource^ FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream
 	fileStreamBuffer = (unsigned char*)av_malloc(FILESTREAMBUFFERSZ);
 	avIOCtx = avio_alloc_context(fileStreamBuffer, FILESTREAMBUFFERSZ, 0, fileStreamData, FileStreamRead, 0, FileStreamSeek);
 
+	return InitFFmpegContext(forceAudioDecode, forceVideoDecode);
+}
+
+bool FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode)
+{
 	avFormatCtx = avformat_alloc_context();
 	avFormatCtx->pb = avIOCtx;
 	avFormatCtx->flags |= AVFMT_FLAG_CUSTOM_IO;
@@ -113,12 +130,12 @@ MediaStreamSource^ FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream
 	// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
 	if (avformat_open_input(&avFormatCtx, "", NULL, NULL) < 0)
 	{
-		return nullptr; // Error opening file
+		return false; // Error opening file
 	}
 
 	if (avformat_find_stream_info(avFormatCtx, NULL) < 0)
 	{
-		return nullptr; // Error finding info
+		return false; // Error finding info
 	}
 
 	// find the audio stream and its decoder
@@ -129,7 +146,7 @@ MediaStreamSource^ FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream
 		if (avcodec_open2(avAudioCodecCtx, avAudioCodec, NULL) < 0)
 		{
 			avAudioCodecCtx = NULL;
-			return nullptr; // Cannot open the audio codec
+			return false; // Cannot open the audio codec
 		}
 
 		// Detect audio format and create audio stream descriptor accordingly
@@ -144,7 +161,7 @@ MediaStreamSource^ FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream
 		if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
 		{
 			avVideoCodecCtx = NULL;
-			return nullptr; // Cannot open the video codec
+			return false; // Cannot open the video codec
 		}
 
 		// Detect video format and create video stream descriptor accordingly
@@ -154,13 +171,11 @@ MediaStreamSource^ FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream
 	avFrame = av_frame_alloc();
 	if (!avFrame)
 	{
-		return nullptr; // mark not ready
+		return false; // mark not ready
 	}
 
 	// Convert media duration from AV_TIME_BASE to TimeSpan unit
 	mediaDuration = { ULONGLONG(avFormatCtx->duration * 10000000 / double(AV_TIME_BASE)) };
-
-	MediaStreamSource^ mss;
 
 	if (audioStreamDescriptor)
 	{
@@ -186,7 +201,7 @@ MediaStreamSource^ FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream
 		sampleRequestedToken = mss->SampleRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSampleRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSampleRequested);
 	}
 
-	return mss;
+	return mss != nullptr;
 }
 
 void FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
@@ -237,6 +252,7 @@ void FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		videoProperties->ProfileId = avVideoCodecCtx->profile;
 		videoProperties->Height = avVideoCodecCtx->height;
 		videoProperties->Width = avVideoCodecCtx->width;
+		needAnnexBSamples = true;
 	}
 	else
 	{
@@ -469,12 +485,22 @@ MediaStreamSample^ FFmpegInteropMSS::FillVideoSample()
 	}
 	else
 	{
-	// This should only be H.264
-		if (avPacket.flags & AV_PKT_FLAG_KEY)
+		if (needAnnexBSamples)
 		{
-			GetSPSAndPPSBuffer(dataWriter);
+			// On a KeyFrame, write the SPS and PPS
+			if (avPacket.flags & AV_PKT_FLAG_KEY)
+			{
+				GetSPSAndPPSBuffer(dataWriter);
+			}
+			// Convert the packet to NAL format
+			WriteNALPacket(dataWriter, avPacket);
 		}
-		WriteAnnexBPacket(dataWriter, avPacket);
+		else
+		{
+			auto aBuffer = ref new Platform::Array<uint8_t>(avPacket.data, avPacket.size);
+			dataWriter->WriteBytes(aBuffer);
+			frameComplete = true;
+		}
 	}
 
 	// Use decoding timestamp if presentation timestamp is not valid
@@ -543,6 +569,7 @@ void FFmpegInteropMSS::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 	// Write the NAL unit for the SPS
 	dataWriter->WriteByte(0);
 	dataWriter->WriteByte(0);
+	dataWriter->WriteByte(0);
 	dataWriter->WriteByte(1);
 
 	// Write the SPS
@@ -555,13 +582,14 @@ void FFmpegInteropMSS::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 	// Write the NAL unit for the PPS
 	dataWriter->WriteByte(0);
 	dataWriter->WriteByte(0);
+	dataWriter->WriteByte(0);
 	dataWriter->WriteByte(1);
 
 	// Write the PPS
 	dataWriter->WriteBytes(vPPS);
 }
 
-void FFmpegInteropMSS::WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket)
+void FFmpegInteropMSS::WriteNALPacket(DataWriter^ dataWriter, AVPacket avPacket)
 {
 	int32 index = 0;
 	uint32 size;
@@ -572,6 +600,7 @@ void FFmpegInteropMSS::WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPack
 		size = (avPacket.data[index] << 24) + (avPacket.data[index + 1] << 16) + (avPacket.data[index + 2] << 8) + avPacket.data[index + 3];
 
 		// Write the NAL unit to the stream
+		dataWriter->WriteByte(0);
 		dataWriter->WriteByte(0);
 		dataWriter->WriteByte(0);
 		dataWriter->WriteByte(1);

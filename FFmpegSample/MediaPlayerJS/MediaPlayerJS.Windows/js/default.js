@@ -53,7 +53,7 @@
 
                             try {
                                 // Instantiate FFmpeg object and pass the stream from opened file
-                                var FFmpegMSS = new FFmpeg.FFmpegInteropMSS(readStream, forceAudioDecode, forceVideoDecode);
+                                var FFmpegMSS = FFmpegInterop.FFmpegInteropMSS.createFFmpegInteropMSSFromStream(readStream, forceAudioDecode, forceVideoDecode);
                                 var mss = FFmpegMSS.getMediaStreamSource();
 
                                 if (mss) {

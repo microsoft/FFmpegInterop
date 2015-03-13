@@ -75,7 +75,7 @@ void MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::
 				{
 					// Instantiate FFmpeg object and pass the stream from opened file
 					IRandomAccessStream^ readStream = stream.get();
-					FFmpegMSS = ref new FFmpegInteropMSS(readStream, forceDecodeAudio, forceDecodeVideo);
+					FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
 					MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
 
 					if (mss)

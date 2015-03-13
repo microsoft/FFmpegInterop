@@ -19,6 +19,7 @@
 #pragma once
 #include <queue>
 
+using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Streams;
@@ -36,13 +37,17 @@ namespace FFmpegInterop
 	public ref class FFmpegInteropMSS sealed
 	{
 	public:
+		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+
 		// Contructor
-		FFmpegInteropMSS(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
-		virtual ~FFmpegInteropMSS();
 		MediaStreamSource^ GetMediaStreamSource();
+		virtual ~FFmpegInteropMSS();
 
 	private:
-		MediaStreamSource^ CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		FFmpegInteropMSS();
+
+		bool CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		bool InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
 		void CreateAudioStreamDescriptor(bool forceAudioDecode);
 		void CreateVideoStreamDescriptor(bool forceVideoDecode);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
@@ -50,8 +55,10 @@ namespace FFmpegInterop
 		MediaStreamSample^ FillAudioSample();
 		MediaStreamSample^ FillVideoSample();
 		int ReadPacket();
+
+		// H.264 NAL conversion methods
 		void GetSPSAndPPSBuffer(DataWriter^ dataWriter);
-		void WriteAnnexBPacket(DataWriter^ dataWriter, AVPacket avPacket);
+		void WriteNALPacket(DataWriter^ dataWriter, AVPacket avPacket);
 
 		MediaStreamSource^ mss;
 		EventRegistrationToken startingRequestedToken;
@@ -71,6 +78,7 @@ namespace FFmpegInterop
 		int videoStreamIndex;
 		bool generateUncompressedAudio;
 		bool generateUncompressedVideo;
+		bool needAnnexBSamples;
 
 		uint8_t* videoBufferData[4];
 		int videoBufferLineSize[4];

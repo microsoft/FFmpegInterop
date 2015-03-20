@@ -76,12 +76,19 @@ void MainPage::AppBarButton_Browse_Click(Platform::Object^ sender, Windows::UI::
 					// Instantiate FFmpeg object and pass the stream from opened file
 					IRandomAccessStream^ readStream = stream.get();
 					FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
-					MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
-
-					if (mss)
+					if (FFmpegMSS != nullptr)
 					{
-						// Pass MediaStreamSource to Media Element
-						mediaElement->SetMediaStreamSource(mss);
+						MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
+
+						if (mss)
+						{
+							// Pass MediaStreamSource to Media Element
+							mediaElement->SetMediaStreamSource(mss);
+						}
+						else
+						{
+							DisplayErrorMessage("Cannot open media");
+						}
 					}
 					else
 					{

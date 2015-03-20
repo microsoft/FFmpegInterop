@@ -18,18 +18,16 @@
 
 #pragma once
 #include <queue>
+#include "MediaSampleProvider.h"
+#include "FFmpegReader.h"
 
 using namespace Platform;
 using namespace Windows::Foundation;
-using namespace Windows::Storage;
-using namespace Windows::Storage::Streams;
 using namespace Windows::Media::Core;
 
 extern "C"
 {
 #include <libavformat/avformat.h>
-#include <libswresample/swresample.h>
-#include <libswscale/swscale.h>
 }
 
 namespace FFmpegInterop
@@ -38,59 +36,48 @@ namespace FFmpegInterop
 	{
 	public:
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
 
 		// Contructor
 		MediaStreamSource^ GetMediaStreamSource();
 		virtual ~FFmpegInteropMSS();
 
+	internal:
+		int ReadPacket();
+
 	private:
 		FFmpegInteropMSS();
 
-		bool CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
-		bool InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
-		void CreateAudioStreamDescriptor(bool forceAudioDecode);
-		void CreateVideoStreamDescriptor(bool forceVideoDecode);
+		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		HRESULT CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
+		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
+		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
+		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
-		MediaStreamSample^ FillAudioSample();
-		MediaStreamSample^ FillVideoSample();
-		int ReadPacket();
-
-		// H.264 NAL conversion methods
-		void GetSPSAndPPSBuffer(DataWriter^ dataWriter);
-		void WriteNALPacket(DataWriter^ dataWriter, AVPacket avPacket);
 
 		MediaStreamSource^ mss;
 		EventRegistrationToken startingRequestedToken;
 		EventRegistrationToken sampleRequestedToken;
 
+		internal:
 		AVIOContext* avIOCtx;
 		AVFormatContext* avFormatCtx;
 		AVCodecContext* avAudioCodecCtx;
 		AVCodecContext* avVideoCodecCtx;
-		SwrContext *swrCtx;
-		SwsContext *swsCtx;
-		AVFrame* avFrame;
 
+		private:
 		AudioStreamDescriptor^ audioStreamDescriptor;
 		VideoStreamDescriptor^ videoStreamDescriptor;
 		int audioStreamIndex;
 		int videoStreamIndex;
-		bool generateUncompressedAudio;
-		bool generateUncompressedVideo;
-		bool needAnnexBSamples;
 
-		uint8_t* videoBufferData[4];
-		int videoBufferLineSize[4];
+		MediaSampleProvider^ audioSampleProvider;
+		MediaSampleProvider^ videoSampleProvider;
+
 		TimeSpan mediaDuration;
 		IStream* fileStreamData;
 		unsigned char* fileStreamBuffer;
-
-		std::queue<AVPacket> audioPacketQueue;
-		std::queue<AVPacket> videoPacketQueue;
-		void PushAudioPacket(AVPacket packet);
-		AVPacket PopAudioPacket();
-		void PushVideoPacket(AVPacket packet);
-		AVPacket PopVideoPacket();
+		FFmpegReader^ m_pReader;
 	};
 }

@@ -15,13 +15,23 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegInteropMSS.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegReader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)H264SampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)MediaSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)UncompressedAudioSampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)UncompressedVideoSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegInteropMSS.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegReader.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)H264SampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)MediaSampleProvider.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)UncompressedAudioSampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)UncompressedVideoSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />

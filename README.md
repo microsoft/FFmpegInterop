@@ -19,3 +19,18 @@ You can follow the instruction on how to [build FFmpeg for WinRT](https://trac.f
 	git clone git://github.com/microsoft/FFmpegInterop.git
 
 If you have followed the Wiki instructions and have the appropriate builds of FFmpeg in the *FFmpeg/Build/<platform\>/<architecture\>* folders, FFmpegInterop should build cleanly giving you the interop object as well as 3 sample MediaPlayers (C++, C# and JS) that show how to connect the MediaStreamSource to a MediaElement or Video tag for playback.
+
+###Using the FFmpegInterop object
+
+Using the **FFmpegInterop** object is fairly straightforward and can be observed from the sample applications provided.
+
+1. Get a stream for the media you want to playback.
+2. Create a new FFmpegInteropObject using FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream() passing it the stream and whether you want to force the decoding of the media (if you don't force decoding of the media, the MediaStreamSource will try to pass the compressed data for playback, this is currently enabled for mp3, aac and h.264 media).
+3. Get the MediaStreamSource from the Interop object by invoking GetMediaStreamSource()
+4. Assign the MediaStreamSource to your MediaElement or VideoTag for playback.
+
+	#####You can try to use the method FFmepgInteropMSS.CreateFFmpegInteropMSSFromUri to create a MediaStreamSource on a streaming source (shoutcast for example).
+
+This project is in an early stage and we look forward to engaging with the community and figure out where we can take this project.
+
+###The Windows OSS Team.

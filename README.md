@@ -4,16 +4,16 @@
 
 ##Welcome to FFmpegInterop library for Windows.
 
-FFmpegInterop is an open-source project that aims to provide a easy way to use FFmpeg in a Windows modern application for playback of different media content. FFmpegInterop implements a [MediaStreamSource](https://msdn.microsoft.com/en-us/library/windows/apps/windows.media.core.mediastreamsource.aspx) which leverages FFmpeg to process the media and leverages the Windows media pipeline for the playback.
+FFmpegInterop is an open-source project that aims to provide an easy way to use FFmpeg in Windows 8.1 and Windows Phone 8.1 applications for playback of a variety of media contents. FFmpegInterop implements a [MediaStreamSource](https://msdn.microsoft.com/en-us/library/windows/apps/windows.media.core.mediastreamsource.aspx) which leverages FFmpeg to process media and uses the Windows media pipeline for playback.
 
-Some of the advantages of this approach is that synchronizing audio and video is handled by the Windows media pipeline. You can leverage the Windows built-in audio and video decoders if you want, allowing for better power consumption on a mobile device.
+One of the advantages of this approach is that audio and video synchronization is handled by the Windows media pipeline. You can also use the Windows built-in audio and video decoders which allows for better power consumption mobile devices.
 
 ##Prerequisites
 Getting a compatible build of FFmpeg is required for this to work.
 
 You can get the code for [FFmpeg on Github](http://github.com/FFmpeg) by cloning [git://source.ffmpeg.org/ffmpeg.git](git://source.ffmpeg.org/ffmpeg.git).
 
-You can follow the instruction on how to [build FFmpeg for WinRT](https://trac.ffmpeg.org/wiki/CompilationGuide/WinRT) (Windows Phone and Windows Store) apps. This project is configured to use have FFmpeg in a folder next to the FFmpegInterop project.
+You can follow the instructions on how to [build FFmpeg for WinRT](https://trac.ffmpeg.org/wiki/CompilationGuide/WinRT) (Windows Phone and Windows Store) apps. This project is configured to use have FFmpeg in a folder next to the FFmpegInterop project.
 
 	git clone git://source.ffmpeg.org/ffmpeg.git
 	git clone git://github.com/microsoft/FFmpegInterop.git
@@ -31,6 +31,6 @@ Using the **FFmpegInterop** object is fairly straightforward and can be observed
 
 	#####You can try to use the method FFmepgInteropMSS.CreateFFmpegInteropMSSFromUri to create a MediaStreamSource on a streaming source (shoutcast for example).
 
-This project is in an early stage and we look forward to engaging with the community and figure out where we can take this project.
+This project is in an early stage and we look forward to engaging with the community and hearing your feedback to figure out where we can take this project.
 
 ###The Windows OSS Team.

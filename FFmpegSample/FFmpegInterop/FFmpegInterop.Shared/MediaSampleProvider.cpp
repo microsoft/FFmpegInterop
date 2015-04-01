@@ -78,8 +78,9 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		{
 			if (m_pReader->ReadPacket() < 0)
 			{
-				DebugMessage(L"GetNextSammple reaching EOF\n");
+				DebugMessage(L"GetNextSample reaching EOF\n");
 				hr = E_FAIL;
+				break;
 			}
 		}
 

@@ -69,12 +69,10 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	audioSampleProvider = nullptr;
 	videoSampleProvider = nullptr;
 
-	// 
 	if (m_pReader != nullptr)
 	{
 		m_pReader->SetAudioStream(AVERROR_STREAM_NOT_FOUND, nullptr);
 		m_pReader->SetVideoStream(AVERROR_STREAM_NOT_FOUND, nullptr);
-
 		m_pReader = nullptr;
 	}
 
@@ -82,7 +80,6 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	avcodec_close(avVideoCodecCtx);
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
-
 }
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)

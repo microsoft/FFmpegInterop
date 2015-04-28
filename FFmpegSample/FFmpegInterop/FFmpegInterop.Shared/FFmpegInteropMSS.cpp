@@ -281,7 +281,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 	if (SUCCEEDED(hr))
 	{
 		// Convert media duration from AV_TIME_BASE to TimeSpan unit
-		mediaDuration = { ULONGLONG(avFormatCtx->duration * 10000000 / double(AV_TIME_BASE)) };
+		mediaDuration = { LONGLONG(avFormatCtx->duration * 10000000 / double(AV_TIME_BASE)) };
 
 		if (audioStreamDescriptor)
 		{

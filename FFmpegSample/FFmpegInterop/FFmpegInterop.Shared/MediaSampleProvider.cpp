@@ -106,8 +106,8 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 			avPacket.pts = avPacket.dts;
 		}
 
-		Windows::Foundation::TimeSpan pts = { ULONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.pts) };
-		Windows::Foundation::TimeSpan dur = { ULONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.duration) };
+		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.pts) };
+		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.duration) };
 
 		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
 		sample->Duration = dur;

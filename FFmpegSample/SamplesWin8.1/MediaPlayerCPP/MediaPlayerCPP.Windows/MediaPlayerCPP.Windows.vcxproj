@@ -217,7 +217,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\FFmpegInterop\FFmpegInterop.Windows\FFmpegInterop.Windows.vcxproj">
+    <ProjectReference Include="..\..\..\FFmpegInterop\Win8.1\FFmpegInterop.Windows\FFmpegInterop.Windows.vcxproj">
       <Project>{97248e49-6262-4c37-b118-224ff3b98fd0}</Project>
     </ProjectReference>
   </ItemGroup>

@@ -14,24 +14,24 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegInteropMSS.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegReader.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)H264SampleProvider.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)MediaSampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropMSS.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegReader.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\H264SampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\MediaSampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedAudioSampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedVideoSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)UncompressedAudioSampleProvider.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)UncompressedVideoSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegInteropMSS.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegReader.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)H264SampleProvider.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)MediaSampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropMSS.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegReader.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\H264SampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\MediaSampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedAudioSampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedVideoSampleProvider.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)UncompressedAudioSampleProvider.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)UncompressedVideoSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />

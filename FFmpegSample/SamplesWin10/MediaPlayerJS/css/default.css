@@ -1,0 +1,68 @@
+﻿/******************************************************************************
+//
+//	Copyright 2015 Microsoft Corporation
+//
+//	Licensed under the Apache License, Version 2.0 (the "License");
+//	you may not use this file except in compliance with the License.
+//	You may obtain a copy of the License at
+//
+//	http ://www.apache.org/licenses/LICENSE-2.0
+//
+//	Unless required by applicable law or agreed to in writing, software
+//	distributed under the License is distributed on an "AS IS" BASIS,
+//	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//	See the License for the specific language governing permissions and
+//	limitations under the License.
+//
+//****************************************************************************/
+#mediaElement {
+    width: 100vw;
+    height: 100vh;
+}
+
+#uriBox {
+    width: 210px;
+    vertical-align: top;
+}
+
+.commands {
+    margin-top: 50px;
+    margin-left: 10px;
+}
+
+/*SplitView pane show button style*/
+button.win-splitview-button {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    z-index: 3;
+    box-sizing: border-box;
+    height: 30px;
+    width: 30px;
+    min-height: 0;
+    min-width: 0;
+    padding: 0;
+    border: 1px dotted transparent;
+    margin: 0;
+    outline: none;
+    background-color: transparent;
+}
+
+html.win-hoverable button.win-splitview-button:hover {
+    background-color: rgba(255,255,255, 0.1);
+}
+
+button.win-splitview-button.win-splitview-button:active,
+button.win-splitview-button.win-splitview-button:hover:active {
+    background-color: rgba(255,255,255, 0.2);
+}
+
+button.win-splitview-button.win-keyboard:focus {
+    border-color: rgb(255, 255, 255);
+}
+
+button.win-splitview-button:after {
+    font-size: 20px;
+    font-family: 'Segoe MDL2 Assets', 'Symbols';
+    content: "\E700";
+}

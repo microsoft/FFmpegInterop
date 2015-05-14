@@ -19,7 +19,7 @@
 #include "pch.h"
 #include "FFmpegInteropMSS.h"
 #include "MediaSampleProvider.h"
-#include "H264SampleProvider.h"
+#include "H264AVCSampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
 #include "shcore.h"
@@ -348,7 +348,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		videoProperties->Height = avVideoCodecCtx->height;
 		videoProperties->Width = avVideoCodecCtx->width;
 
-		videoSampleProvider = ref new H264SampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		videoSampleProvider = ref new H264AVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 	}
 	else
 	{

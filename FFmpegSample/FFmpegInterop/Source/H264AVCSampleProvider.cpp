@@ -17,11 +17,11 @@
 //*****************************************************************************
 
 #include "pch.h"
-#include "H264SampleProvider.h"
+#include "H264AVCSampleProvider.h"
 
 using namespace FFmpegInterop;
 
-H264SampleProvider::H264SampleProvider(
+H264AVCSampleProvider::H264AVCSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx)
@@ -30,11 +30,11 @@ H264SampleProvider::H264SampleProvider(
 }
 
 
-H264SampleProvider::~H264SampleProvider()
+H264AVCSampleProvider::~H264AVCSampleProvider()
 {
 }
 
-HRESULT H264SampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT H264AVCSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
 {
 	HRESULT hr = S_OK;
 	// On a KeyFrame, write the SPS and PPS
@@ -53,7 +53,7 @@ HRESULT H264SampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPack
 	return hr;
 }
 
-HRESULT H264SampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
+HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 {
 	HRESULT hr = S_OK;
 	int spsLength = 0;
@@ -126,7 +126,7 @@ HRESULT H264SampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 }
 
 // Write out an H.264 packet converting stream offsets to start-codes
-HRESULT H264SampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT H264AVCSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket)
 {
 	HRESULT hr = S_OK;
 	int32 index = 0;

@@ -11,6 +11,7 @@
     <ClCompile Include="..\..\Source\FFmpegInteropMSS.cpp" />
     <ClCompile Include="..\..\Source\FFmpegReader.cpp" />
     <ClCompile Include="..\..\Source\H264AVCSampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\H264SampleProvider.cpp" />
     <ClCompile Include="..\..\Source\MediaSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedVideoSampleProvider.cpp" />
@@ -20,6 +21,7 @@
     <ClInclude Include="..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="..\..\Source\FFmpegReader.h" />
     <ClInclude Include="..\..\Source\H264AVCSampleProvider.h" />
+    <ClInclude Include="..\..\Source\H264SampleProvider.h" />
     <ClInclude Include="..\..\Source\MediaSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedVideoSampleProvider.h" />

@@ -20,6 +20,7 @@
 #include "FFmpegInteropMSS.h"
 #include "MediaSampleProvider.h"
 #include "H264AVCSampleProvider.h"
+#include "H264SampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
 #include "shcore.h"
@@ -122,16 +123,27 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 
 	if (SUCCEEDED(hr))
 	{
+		avFormatCtx = avformat_alloc_context();
+		if (avFormatCtx == nullptr)
+		{
+			hr = E_OUTOFMEMORY;
+		}
+	}
+
+	if (SUCCEEDED(hr))
+	{
 		std::wstring uriW(uri->Begin());
 		std::string uriA(uriW.begin(), uriW.end());
 		charStr = uriA.c_str();
 
-		if (avio_open(&avIOCtx, charStr, AVIO_FLAG_READ) < 0)
+		// Open media file using custom IO setup above instead of using file name. Opening a file using file name will invoke fopen C API call that only have
+		// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
+		if (avformat_open_input(&avFormatCtx, charStr, NULL, NULL) < 0)
 		{
-			hr = E_FAIL;
+			hr = E_FAIL; // Error opening file
 		}
-
 	}
+
 	if (SUCCEEDED(hr))
 	{
 		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
@@ -176,19 +188,11 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 
 	if (SUCCEEDED(hr))
 	{
-		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
-	}
-
-	return hr;
-}
-
-HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode)
-{
-	HRESULT hr = S_OK;
-	avFormatCtx = avformat_alloc_context();
-	if (avFormatCtx == nullptr)
-	{
-		hr = E_OUTOFMEMORY;
+		avFormatCtx = avformat_alloc_context();
+		if (avFormatCtx == nullptr)
+		{
+			hr = E_OUTOFMEMORY;
+		}
 	}
 
 	if (SUCCEEDED(hr))
@@ -203,6 +207,18 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			hr = E_FAIL; // Error opening file
 		}
 	}
+
+	if (SUCCEEDED(hr))
+	{
+		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
+	}
+
+	return hr;
+}
+
+HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode)
+{
+	HRESULT hr = S_OK;
 
 	if (SUCCEEDED(hr))
 	{
@@ -263,7 +279,6 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			}
 			else
 			{
-
 				// Detect video format and create video stream descriptor accordingly
 				hr = CreateVideoStreamDescriptor(forceVideoDecode);
 				if (SUCCEEDED(hr))
@@ -348,7 +363,15 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		videoProperties->Height = avVideoCodecCtx->height;
 		videoProperties->Width = avVideoCodecCtx->width;
 
-		videoSampleProvider = ref new H264AVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		// Check for H264 bitstream flavor. H.264 AVC extradata starts with 1 while non AVC one starts with 0
+		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 0 && avVideoCodecCtx->extradata[0] == 1)
+		{
+			videoSampleProvider = ref new H264AVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		}
+		else
+		{
+			videoSampleProvider = ref new H264SampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		}
 	}
 	else
 	{
@@ -356,8 +379,18 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		videoSampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 	}
 
-	videoProperties->FrameRate->Numerator = avVideoCodecCtx->framerate.num;
-	videoProperties->FrameRate->Denominator = avVideoCodecCtx->framerate.den;
+	// Detect the correct framerate
+	if (avVideoCodecCtx->framerate.num != 0 || avVideoCodecCtx->framerate.den != 1)
+	{
+		videoProperties->FrameRate->Numerator = avVideoCodecCtx->framerate.num;
+		videoProperties->FrameRate->Denominator = avVideoCodecCtx->framerate.den;
+	}
+	else if (avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.num != 0 || avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.den != 0)
+	{
+		videoProperties->FrameRate->Numerator = avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.num;
+		videoProperties->FrameRate->Denominator = avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.den;
+	}
+
 	videoProperties->Bitrate = avVideoCodecCtx->bit_rate;
 	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 

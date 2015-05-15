@@ -29,7 +29,6 @@ H264AVCSampleProvider::H264AVCSampleProvider(
 {
 }
 
-
 H264AVCSampleProvider::~H264AVCSampleProvider()
 {
 }
@@ -129,13 +128,14 @@ HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 HRESULT H264AVCSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket)
 {
 	HRESULT hr = S_OK;
-	int32 index = 0;
-	int32 size = 0;
+	uint32 index = 0;
+	uint32 size = 0;
+	uint32 packetSize = (uint32)avPacket->size;
 
 	do
 	{
 		// Make sure we have enough data
-		if (avPacket->size < (index + 4))
+		if (packetSize < (index + 4))
 		{
 			hr = E_FAIL;
 			break;
@@ -151,16 +151,18 @@ HRESULT H264AVCSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* 
 		dataWriter->WriteByte(1);
 		index += 4;
 
-		if (avPacket->size < (index + size))
+		// Stop if index and size goes beyond packet size or overflow
+		if (packetSize < (index + size) || (UINT32_MAX - index) < size)
 		{
 			hr = E_FAIL;
 			break;
 		}
+
 		// Write the rest of the packet to the stream
 		auto vBuffer = ref new Platform::Array<uint8_t>(&(avPacket->data[index]), size);
 		dataWriter->WriteBytes(vBuffer);
 		index += size;
-	} while (index < avPacket->size);
+	} while (index < packetSize);
 
 	return hr;
 }

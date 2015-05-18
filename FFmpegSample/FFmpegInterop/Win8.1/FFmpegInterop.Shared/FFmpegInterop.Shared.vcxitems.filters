@@ -8,6 +8,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\MediaSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedVideoSampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\H264AVCSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -19,5 +20,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\MediaSampleProvider.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedVideoSampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\H264AVCSampleProvider.cpp" />
   </ItemGroup>
 </Project>

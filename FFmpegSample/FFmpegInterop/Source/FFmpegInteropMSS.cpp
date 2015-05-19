@@ -239,10 +239,11 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 	if (SUCCEEDED(hr))
 	{
-		// find the audio stream and its decoder
+		// Find the audio stream and its decoder
 		AVCodec* avAudioCodec = nullptr;
 		audioStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &avAudioCodec, 0);
-		if (audioStreamIndex != AVERROR_STREAM_NOT_FOUND && avAudioCodec) {
+		if (audioStreamIndex != AVERROR_STREAM_NOT_FOUND && avAudioCodec)
+		{
 			avAudioCodecCtx = avFormatCtx->streams[audioStreamIndex]->codec;
 			if (avcodec_open2(avAudioCodecCtx, avAudioCodec, NULL) < 0)
 			{
@@ -267,26 +268,37 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 	if (SUCCEEDED(hr))
 	{
-		// find the video stream and its decoder
+		// Find the video stream and its decoder
 		AVCodec* avVideoCodec = nullptr;
 		videoStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &avVideoCodec, 0);
-		if (videoStreamIndex != AVERROR_STREAM_NOT_FOUND && avVideoCodec) {
-			avVideoCodecCtx = avFormatCtx->streams[videoStreamIndex]->codec;
-			if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
+		if (videoStreamIndex != AVERROR_STREAM_NOT_FOUND && avVideoCodec)
+		{
+			// FFmpeg identifies album/cover art from a music file as a video stream
+			// Avoid creating unnecessarily video stream from this album/cover art
+			if (avFormatCtx->streams[videoStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
 			{
-				avVideoCodecCtx = nullptr;
-				hr = E_FAIL; // Cannot open the video codec
+				videoStreamIndex = AVERROR_STREAM_NOT_FOUND;
+				avVideoCodec = nullptr;
 			}
 			else
 			{
-				// Detect video format and create video stream descriptor accordingly
-				hr = CreateVideoStreamDescriptor(forceVideoDecode);
-				if (SUCCEEDED(hr))
+				avVideoCodecCtx = avFormatCtx->streams[videoStreamIndex]->codec;
+				if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
 				{
-					hr = videoSampleProvider->AllocateResources();
+					avVideoCodecCtx = nullptr;
+					hr = E_FAIL; // Cannot open the video codec
+				}
+				else
+				{
+					// Detect video format and create video stream descriptor accordingly
+					hr = CreateVideoStreamDescriptor(forceVideoDecode);
 					if (SUCCEEDED(hr))
 					{
-						m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
+						hr = videoSampleProvider->AllocateResources();
+						if (SUCCEEDED(hr))
+						{
+							m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
+						}
 					}
 				}
 			}

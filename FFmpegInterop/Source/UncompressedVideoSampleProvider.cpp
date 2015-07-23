@@ -125,6 +125,13 @@ HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, 
 		DebugMessage(L"GetNextSample reaching EOF\n");
 		frameComplete = 1;
 	}
+	else
+	{
+		if (frameComplete)
+		{
+			avPacket->pts = m_pAvFrame->pkt_pts;
+		}
+	}
 
 	return frameComplete ? S_OK : S_FALSE;
 }

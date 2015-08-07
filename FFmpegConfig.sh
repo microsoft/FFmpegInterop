@@ -63,9 +63,6 @@ if [ "$1" == "Win10" ]; then
         --enable-thumb \
         --enable-shared \
         --enable-cross-compile \
-        --disable-decoder=avrn \
-        --disable-decoder=mjpeg \
-        --disable-encoder=mjpeg \
         --target-os=win32 \
         --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00 -D__ARM_PCS_VFP" \
         --extra-ldflags="-APPCONTAINER WindowsApp.lib" \

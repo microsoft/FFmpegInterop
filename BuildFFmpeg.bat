@@ -85,9 +85,6 @@ if not defined VS140COMNTOOLS (
     goto Cleanup
 )
 
-:: Get Windows 10 SDK version
-for /F "tokens=3* delims= " %%V in ('reg query "HKLM\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0" /v ProductVersion /reg:32') do set UCRTSdkVer=%%V.0
-
 :Win10x86
 if %BUILD.x86%==N goto Win10x64
 echo Building FFmpeg for Windows 10 apps x86...
@@ -95,9 +92,9 @@ echo:
 
 setlocal
 call "%VS140COMNTOOLS%..\..\VC\vcvarsall.bat" x86 store
-set LIB=%VSINSTALLDIR%VC\lib\store;%VSINSTALLDIR%VC\atlmfc\lib;%UniversalCRTSdkDir%lib\%UCRTSdkVer%\ucrt\x86;;%UniversalCRTSdkDir%lib\%UCRTSdkVer%\um\x86;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\x86;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\x86
+set LIB=%VSINSTALLDIR%VC\lib\store;%VSINSTALLDIR%VC\atlmfc\lib;%UniversalCRTSdkDir%lib\%UCRTVersion%\ucrt\x86;;%UniversalCRTSdkDir%lib\%UCRTVersion%\um\x86;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\x86;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\x86
 set LIBPATH=%VSINSTALLDIR%VC\atlmfc\lib;%VSINSTALLDIR%VC\lib;
-set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\ucrt;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\um;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\shared;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
+set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
 
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 x86
 endlocal
@@ -109,9 +106,9 @@ echo:
 
 setlocal
 call "%VS140COMNTOOLS%..\..\VC\vcvarsall.bat" x64 store
-set LIB=%VSINSTALLDIR%VC\lib\store\amd64;%VSINSTALLDIR%VC\atlmfc\lib\amd64;%UniversalCRTSdkDir%lib\%UCRTSdkVer%\ucrt\x64;;%UniversalCRTSdkDir%lib\%UCRTSdkVer%\um\x64;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\x64;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\x64
+set LIB=%VSINSTALLDIR%VC\lib\store\amd64;%VSINSTALLDIR%VC\atlmfc\lib\amd64;%UniversalCRTSdkDir%lib\%UCRTVersion%\ucrt\x64;;%UniversalCRTSdkDir%lib\%UCRTVersion%\um\x64;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\x64;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\x64
 set LIBPATH=%VSINSTALLDIR%VC\atlmfc\lib\amd64;%VSINSTALLDIR%VC\lib\amd64;
-set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\ucrt;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\um;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\shared;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
+set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
 
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 x64
 endlocal
@@ -123,9 +120,9 @@ echo:
 
 setlocal
 call "%VS140COMNTOOLS%..\..\VC\vcvarsall.bat" x86_arm store
-set LIB=%VSINSTALLDIR%VC\lib\store\ARM;%VSINSTALLDIR%VC\atlmfc\lib\ARM;%UniversalCRTSdkDir%lib\%UCRTSdkVer%\ucrt\arm;;%UniversalCRTSdkDir%lib\%UCRTSdkVer%\um\arm;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\arm;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\arm
+set LIB=%VSINSTALLDIR%VC\lib\store\ARM;%VSINSTALLDIR%VC\atlmfc\lib\ARM;%UniversalCRTSdkDir%lib\%UCRTVersion%\ucrt\arm;;%UniversalCRTSdkDir%lib\%UCRTVersion%\um\arm;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\arm;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\arm
 set LIBPATH=%VSINSTALLDIR%VC\atlmfc\lib\ARM;%VSINSTALLDIR%VC\lib\ARM;
-set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\ucrt;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\um;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\shared;%UniversalCRTSdkDir%Include\%UCRTSdkVer%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
+set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
 
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 ARM
 endlocal

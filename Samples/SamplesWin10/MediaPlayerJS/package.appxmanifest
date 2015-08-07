@@ -19,7 +19,7 @@
   </Properties>
 
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.10069.0" MaxVersionTested="10.0.10069.0" />
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.0.0" MaxVersionTested="10.0.0.0" />
   </Dependencies>
 
   <Resources>
@@ -27,17 +27,18 @@
   </Resources>
 
   <Applications>
-    <Application
+    <Application 
       Id="App"
       StartPage="default.html">
 
       <uap:VisualElements
         DisplayName="MediaPlayerJS"
         Description="MediaPlayerJS"
-        BackgroundColor="#464646"
-        Square150x150Logo="images\Logo.png"
-        Square44x44Logo="images\SmallLogo.png">
+        BackgroundColor="transparent"
+        Square150x150Logo="images\Square150x150Logo.png"
+        Square44x44Logo="images\Square44x44Logo.png">
 
+        <uap:DefaultTile Wide310x150Logo="images\Wide310x150Logo.png"/>
         <uap:SplashScreen Image="images\splashscreen.png" />
 
       </uap:VisualElements>

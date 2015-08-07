@@ -23,46 +23,22 @@
 #uriBox {
     width: 210px;
     vertical-align: top;
+    margin-top: 15px;
+}
+
+body {
+    font-family: "Segoe UI Command"
 }
 
 .commands {
-    margin-top: 50px;
+    margin-top: 70px;
     margin-left: 10px;
 }
 
-/*SplitView pane show button style*/
-button.win-splitview-button {
+.toggleButton {
     position: absolute;
     left: 10px;
     top: 10px;
     z-index: 3;
-    box-sizing: border-box;
-    height: 30px;
-    width: 30px;
-    min-height: 0;
-    min-width: 0;
-    padding: 0;
-    border: 1px dotted transparent;
-    margin: 0;
-    outline: none;
-    background-color: transparent;
 }
 
-html.win-hoverable button.win-splitview-button:hover {
-    background-color: rgba(255,255,255, 0.1);
-}
-
-button.win-splitview-button.win-splitview-button:active,
-button.win-splitview-button.win-splitview-button:hover:active {
-    background-color: rgba(255,255,255, 0.2);
-}
-
-button.win-splitview-button.win-keyboard:focus {
-    border-color: rgb(255, 255, 255);
-}
-
-button.win-splitview-button:after {
-    font-size: 20px;
-    font-family: 'Segoe MDL2 Assets', 'Symbols';
-    content: "\E700";
-}

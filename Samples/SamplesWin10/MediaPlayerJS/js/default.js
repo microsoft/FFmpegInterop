@@ -26,7 +26,6 @@
 	app.onready = function (args) {
 	    // Initialize all UI control
 	    splitView = document.getElementById("splitter").winControl;
-	    document.getElementById("toggleButton").addEventListener("click", togglePane, false);
 	    document.getElementById("openFileButton").addEventListener("click", openLocalFile, false);
 
 	    uriBox = document.getElementById("uriBox");
@@ -34,9 +33,6 @@
 	    uriBox.addEventListener("focusin", uriBoxFocusIn, false);
 	    uriBox.addEventListener("focusout", uriBoxFocusOut, false);
 	    uriBox.addEventListener("keyup", uriBoxKeyUp, false);
-
-	    // Show the control panel on startup so user can start opening media
-	    splitView.paneHidden = false;
 	};
 
 	function openLocalFile() {
@@ -70,7 +66,7 @@
                                     mediaElement.play();
 
                                     // Close control panel after file open
-                                    splitView.paneHidden = true;
+                                    splitView.closePane();
 
                                 } else {
                                     displayErrorMessage(); // mss
@@ -109,7 +105,7 @@
 	                    mediaElement.play();
 
 	                    // Close control panel after file open
-	                    splitView.paneHidden = true;
+	                    splitView.closePane();
 
 	                } else {
 	                    displayErrorMessage(); // mss
@@ -136,12 +132,6 @@
 	    // Put the prompt in the URI text box when user leave the URI box empty
 	    if (uriBox.value === "") {
 	        uriBox.value = uriBoxPrompt;
-	    }
-	}
-
-	function togglePane() {
-	    if (splitView) {
-	        splitView.paneHidden = !splitView.paneHidden;
 	    }
 	}
 

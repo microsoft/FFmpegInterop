@@ -8,18 +8,6 @@
       <UniqueIdentifier>0bb4a647-f146-47f5-aa40-3e282b14193d</UniqueIdentifier>
       <Extensions>bmp;fbx;gif;jpg;jpeg;tga;tiff;tif;png</Extensions>
     </Filter>
-    <Image Include="Assets\Logo.scale-100.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\SmallLogo.scale-100.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\StoreLogo.scale-100.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\SplashScreen.scale-100.png">
-      <Filter>Assets</Filter>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
@@ -35,7 +23,25 @@
     <ClInclude Include="MainPage.xaml.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Assets\WideLogo.scale-100.png">
+    <Image Include="Assets\LockScreenLogo.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\SplashScreen.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Square150x150Logo.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Square44x44Logo.scale-200.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\StoreLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Wide310x150Logo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>
@@ -43,6 +49,13 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avcodec-56.dll" />
+    <None Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avdevice-56.dll" />
+    <None Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avfilter-5.dll" />
+    <None Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avformat-56.dll" />
+    <None Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avutil-54.dll" />
+    <None Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-1.dll" />
+    <None Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-3.dll" />
     <None Include="MediaPlayerCPP_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>

@@ -1,11 +1,16 @@
 ﻿/*!
-  Copyright (c) Microsoft Open Technologies, Inc.  All Rights Reserved. Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-  Build: 4.0.0.winjs.2014.12.16
+  Copyright (c) Microsoft Corporation.  All Rights Reserved. Licensed under the MIT License. See License.txt in the project root for license information.
+  Build: 4.0.0.winjs.2015.5.7
   Version: WinJS.4.0
 */
 
-(function (global) {
-    global.strings = global.strings || {};
+(function () {
+    var globalObject =
+        typeof window !== 'undefined' ? window :
+        typeof self !== 'undefined' ? self :
+        typeof global !== 'undefined' ? global :
+        {};
+    globalObject.strings = globalObject.strings || {};
 
     var appxVersion = "WinJS.4.0";
     var developerPrefix = "Developer.";
@@ -15,13 +20,14 @@
 
     function addStrings(keyPrefix,  strings) {
         Object.keys(strings).forEach(function (key) {
-            global.strings[keyPrefix + key.replace("\\", "/")] = strings[key];
+            globalObject.strings[keyPrefix + key.replace("\\", "/")] = strings[key];
         });
     }
     addStrings("ms-resource://"+appxVersion+"/ui/",
 {
     "appBarAriaLabel": "App Bar",
     "appBarCommandAriaLabel": "App Bar Item",
+	"appBarOverflowButtonAriaLabel": "View more",
     "autoSuggestBoxAriaLabel": "Autosuggestbox",
     "autoSuggestBoxAriaLabelInputNoPlaceHolder": "Autosuggestbox, enter to submit query, esc to clear text",
     "autoSuggestBoxAriaLabelInputPlaceHolder": "Autosuggestbox, {0}, enter to submit query, esc to clear text",
@@ -33,24 +39,75 @@
     "_autoSuggestBoxAriaLabelResult.comment": "Result: text, detailed text (example: Result: contoso, www.contoso.com)",
     "averageRating": "Average Rating",
     "backbuttonarialabel": "Back",
+    "chapterSkipBackMediaCommandDisplayText": "Chapter back",
+    "chapterSkipForwardMediaCommandDisplayText": "Chapter forward",
     "clearYourRating" : "Clear your rating",
+    "closedCaptionsLabelNone": "Off",
+    "closedCaptionsMediaCommandDisplayText": "Closed captioning",
     "closeOverlay" : "Close",
+    "commandingSurfaceAriaLabel": "CommandingSurface",
+    "commandingSurfaceOverflowButtonAriaLabel": "View more",
     "datePicker": "Date Picker",
+    "fastForwardMediaCommandDisplayText": "Fast forward",
+    "fastForwardFeedbackDisplayText": " {0}X",
+    "fastForwardFeedbackSlowMotionDisplayText": "0.5X",
     "flipViewPanningContainerAriaLabel": "Scrolling Container",
     "flyoutAriaLabel": "Flyout",
+    "goToFullScreenButtonLabel": "Go full screen",
+    "goToLiveMediaCommandDisplayText": "LIVE",
     "hubViewportAriaLabel": "Scrolling Container",
     "listViewViewportAriaLabel": "Scrolling Container",
+    "mediaErrorAborted": "Playback was interrupted. Please try again.",
+    "mediaErrorNetwork": "There was a network connection error.",
+    "mediaErrorDecode": "The content could not be decoded",
+    "mediaErrorSourceNotSupported": "This content type is not supported.",
+    "mediaErrorUnknown": "There was an unknown error.",
+    "mediaPlayerAudioTracksButtonLabel": "Audio tracks",
+    "mediaPlayerCastButtonLabel": "Cast",
+    "mediaPlayerChapterSkipBackButtonLabel": "Previous",
+    "mediaPlayerChapterSkipForwardButtonLabel": "Next",
+    "mediaPlayerClosedCaptionsButtonLabel": "Closed captions",
+    "mediaPlayerFastForwardButtonLabel": "Fast forward",
+    "mediaPlayerFullscreenButtonLabel": "Fullscreen",
+    "mediaPlayerLiveButtonLabel": "LIVE",
+    "mediaPlayerNextTrackButtonLabel": "Next",
+    "mediaPlayerOverlayActiveOptionIndicator": "(On)",
+    "mediaPlayerPauseButtonLabel": "Pause",
+    "mediaPlayerPlayButtonLabel": "Play",
+    "mediaPlayerPlayFromBeginningButtonLabel": "Replay",
+    "mediaPlayerPlayRateButtonLabel": "Playback rate",
+    "mediaPlayerPreviousTrackButtonLabel": "Previous",
+    "mediaPlayerRewindButtonLabel": "Rewind",
+    "mediaPlayerStopButtonLabel": "Stop",
+    "mediaPlayerTimeSkipBackButtonLabel": "8 second replay",   
+    "mediaPlayerTimeSkipForwardButtonLabel": "30 second skip",
+    "mediaPlayerToggleSnapButtonLabel": "Snap",
+    "mediaPlayerVolumeButtonLabel": "Volume",
+    "mediaPlayerZoomButtonLabel": "Zoom",
     "menuCommandAriaLabel": "Menu Item",
     "menuAriaLabel": "Menu",
     "navBarContainerViewportAriaLabel": "Scrolling Container",
+    "nextTrackMediaCommandDisplayText": "Next track",
     "off" : "Off",
     "on" : "On",
+    "pauseMediaCommandDisplayText": "Pause",
+    "playFromBeginningMediaCommandDisplayText": "Play again",
+    "playbackRateHalfSpeedLabel": "0.5x",
+    "playbackRateNormalSpeedLabel": "Normal",
+    "playbackRateOneAndHalfSpeedLabel": "1.5x",
+    "playbackRateDoubleSpeedLabel": "2x",
+    "playMediaCommandDisplayText": "Play",
     "pivotAriaLabel": "Pivot",
     "pivotViewportAriaLabel": "Scrolling Container",
+    "replayMediaCommandDisplayText": "Play again",
+    "rewindMediaCommandDisplayText": "Rewind",
+    "rewindFeedbackDisplayText": " {0}X",
+    "rewindFeedbackSlowMotionDisplayText": "0.5X",
     "searchBoxAriaLabel": "Searchbox",
     "searchBoxAriaLabelInputNoPlaceHolder": "Searchbox, enter to submit query, esc to clear text",
     "searchBoxAriaLabelInputPlaceHolder": "Searchbox, {0}, enter to submit query, esc to clear text",
     "searchBoxAriaLabelButton": "Click to submit query",
+    "seeMore":  "See more",
     "selectAMPM": "Select A.M P.M",
     "selectDay": "Select Day",
     "selectHour": "Select Hour",
@@ -58,12 +115,17 @@
     "selectMonth": "Select Month",
     "selectYear": "Select Year",
     "settingsFlyoutAriaLabel": "Settings Flyout",
+    "stopMediaCommandDisplayText": "Stop",
     "tentativeRating": "Tentative Rating",
     "timePicker": "Time Picker",
+    "timeSeparator": ":",
+    "timeSkipBackMediaCommandDisplayText": "Skip back",
+    "timeSkipForwardMediaCommandDisplayText": "Skip forward",
     "toolbarAriaLabel": "ToolBar",
     "toolbarOverflowButtonAriaLabel": "View more",
     "unrated": "Unrated",
     "userRating": "User Rating",
+    "zoomMediaCommandDisplayText": "Zoom",
     // AppBar Icons follow, the format of the ui.js and ui.resjson differ for
     // the AppBarIcon namespace.  The remainder of the file therefore differs.
     // Code point comments are the icon glyphs in the 'Segoe UI Symbol' font.
@@ -455,11 +517,13 @@
     "_appBarIcons\\threebars.comment":                  "{Locked:qps-ploc,qps-plocm}",
     "appBarIcons\\fourbars":                            "\uE1E9", //  group:System
     "_appBarIcons\\fourbars.comment":                   "{Locked:qps-ploc,qps-plocm}",
-    "appBarIcons\\scan":               			"\uE294", //  group:General
-    "_appBarIcons\\scan.comment":                   	"{Locked:qps-ploc,qps-plocm}",
-    "appBarIcons\\preview":            			"\uE295", //  group:General
-    "_appBarIcons\\preview.comment":                   	"{Locked:qps-ploc,qps-plocm}"
+    "appBarIcons\\scan":                                "\uE294", //  group:General
+    "_appBarIcons\\scan.comment":                       "{Locked:qps-ploc,qps-plocm}",
+    "appBarIcons\\preview":                             "\uE295", //  group:General
+    "_appBarIcons\\preview.comment":                    "{Locked:qps-ploc,qps-plocm}",
+    "appBarIcons\\hamburger":                           "\uE700", //  group:General
+    "_appBarIcons\\hamburger.comment":                  "{Locked:qps-ploc,qps-plocm}"
 }
 
 );
-}(this));
+}());

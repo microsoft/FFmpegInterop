@@ -25,7 +25,8 @@
 
     <!-- WinJS references -->
     <link href="WinJS/css/ui-dark.css" rel="stylesheet" />
-    <script src="WinJS/js/WinJS.js"></script>
+    <script src="WinJS/js/base.js"></script>
+    <script src="WinJS/js/ui.js"></script>
 
     <!-- MediaPlayerJS references -->
     <link href="/css/default.css" rel="stylesheet" />
@@ -35,12 +36,20 @@
     <div id="splitter" class="splitView"
         data-win-control="WinJS.UI.SplitView"
         data-win-options="{
-            shownDisplayMode: 'overlay',
-            hiddenDisplayMode: 'none'
+            openedDisplayMode: 'overlay',
+            closedDisplayMode: 'none',
+            paneOpened: true
         }">
 
-        <!-- Control panel -->
+        <!-- Pane area -->
         <div>
+            <div class="toggleButton">
+                <button class="win-splitviewpanetoggle"
+                    data-win-control="WinJS.UI.SplitViewPaneToggle"
+                    data-win-options="{ splitView: select('.splitView') }"
+                ></button>
+            </div>
+
             <div class="commands">
                 <p>Open Local File or URI</p>
                 <div class="horizontalStackPanel">
@@ -72,15 +81,23 @@
                      }">
                 </div>
             </div>
+
         </div>
 
-        <!-- Main content -->
+        <!-- Content area -->
         <div data-win-control="MediaPlayer">
             <video id="mediaElement" controls="controls"></video>
         </div>
+
     </div>
 
     <!-- Control panel toggle button -->
-    <button id="toggleButton" type="button" class="win-splitview-button"></button>
+    <div class="toggleButton">
+        <button class="win-splitviewpanetoggle"
+            data-win-control="WinJS.UI.SplitViewPaneToggle"
+            data-win-options="{ splitView: select('.splitView') }"
+        ></button>
+    </div>
+
 </body>
 </html>

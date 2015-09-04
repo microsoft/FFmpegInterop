@@ -67,13 +67,13 @@
     <Content Include="WinJS\js\en-US\ui.strings.js" />
     <Content Include="WinJS\js\base.js" />
     <Content Include="WinJS\js\ui.js" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avcodec-56.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avdevice-56.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avfilter-5.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avformat-56.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avutil-54.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-1.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-3.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avcodec-56.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avdevice-56.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avfilter-5.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avformat-56.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avutil-54.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-1.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-3.dll" />
     <None Include="MediaPlayerJS_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>

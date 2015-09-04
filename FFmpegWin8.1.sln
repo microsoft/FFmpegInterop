@@ -3,52 +3,52 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FFmpegInterop", "..\FFmpegInterop", "{69A759E9-483B-4B19-813B-7F8D5B376F99}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FFmpegInterop", "FFmpegInterop", "{69A759E9-483B-4B19-813B-7F8D5B376F99}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFmpegInterop.Shared", "..\FFmpegInterop\Win8.1\FFmpegInterop.Shared\FFmpegInterop.Shared.vcxitems", "{B290D2CE-E857-4ACE-8541-D80A3B9AB04E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFmpegInterop.Shared", "FFmpegInterop\Win8.1\FFmpegInterop.Shared\FFmpegInterop.Shared.vcxitems", "{B290D2CE-E857-4ACE-8541-D80A3B9AB04E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFmpegInterop.Windows", "..\FFmpegInterop\Win8.1\FFmpegInterop.Windows\FFmpegInterop.Windows.vcxproj", "{97248E49-6262-4C37-B118-224FF3B98FD0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFmpegInterop.Windows", "FFmpegInterop\Win8.1\FFmpegInterop.Windows\FFmpegInterop.Windows.vcxproj", "{97248E49-6262-4C37-B118-224FF3B98FD0}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFmpegInterop.WindowsPhone", "..\FFmpegInterop\Win8.1\FFmpegInterop.WindowsPhone\FFmpegInterop.WindowsPhone.vcxproj", "{EBC5CA98-87F1-4A01-A48D-69659C103E72}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FFmpegInterop.WindowsPhone", "FFmpegInterop\Win8.1\FFmpegInterop.WindowsPhone\FFmpegInterop.WindowsPhone.vcxproj", "{EBC5CA98-87F1-4A01-A48D-69659C103E72}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MediaPlayerCPP", "MediaPlayerCPP", "{BA8DDB98-6D34-465B-8171-6B7D5E8D3945}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaPlayerCPP.Shared", "SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Shared\MediaPlayerCPP.Shared.vcxitems", "{742FF46F-3031-433B-858E-75AC90E968F1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaPlayerCPP.Shared", "Samples\SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Shared\MediaPlayerCPP.Shared.vcxitems", "{742FF46F-3031-433B-858E-75AC90E968F1}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaPlayerCPP.Windows", "SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Windows\MediaPlayerCPP.Windows.vcxproj", "{CBB8BB5F-D071-4090-9AB8-7397FF4FB46E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaPlayerCPP.Windows", "Samples\SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Windows\MediaPlayerCPP.Windows.vcxproj", "{CBB8BB5F-D071-4090-9AB8-7397FF4FB46E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaPlayerCPP.WindowsPhone", "SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.WindowsPhone\MediaPlayerCPP.WindowsPhone.vcxproj", "{72DE715C-26E4-4774-A4C2-327B4F213008}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaPlayerCPP.WindowsPhone", "Samples\SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.WindowsPhone\MediaPlayerCPP.WindowsPhone.vcxproj", "{72DE715C-26E4-4774-A4C2-327B4F213008}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MediaPlayerCS", "MediaPlayerCS", "{C2A0037E-3BEE-4CDE-B3F7-1A733F61180F}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "MediaPlayerCS.Shared", "SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Shared\MediaPlayerCS.Shared.shproj", "{711E68BA-5ED1-46B3-B2B4-1621310D4245}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "MediaPlayerCS.Shared", "Samples\SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Shared\MediaPlayerCS.Shared.shproj", "{711E68BA-5ED1-46B3-B2B4-1621310D4245}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPlayerCS.Windows", "SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Windows\MediaPlayerCS.Windows.csproj", "{E87BB8D4-8AAB-47EA-9028-901B2E2C199A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPlayerCS.Windows", "Samples\SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Windows\MediaPlayerCS.Windows.csproj", "{E87BB8D4-8AAB-47EA-9028-901B2E2C199A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPlayerCS.WindowsPhone", "SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.WindowsPhone\MediaPlayerCS.WindowsPhone.csproj", "{2D50AE6E-8F2C-4CAE-999A-CF19BCCF24DE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPlayerCS.WindowsPhone", "Samples\SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.WindowsPhone\MediaPlayerCS.WindowsPhone.csproj", "{2D50AE6E-8F2C-4CAE-999A-CF19BCCF24DE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MediaPlayerJS", "MediaPlayerJS", "{1D40D4AF-76F2-4FAB-8E9B-87C7DFA2E3DC}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "MediaPlayerJS.Shared", "SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Shared\MediaPlayerJS.Shared.shproj", "{90F2954A-8C3B-4905-84D7-EC29BC2CA297}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "MediaPlayerJS.Shared", "Samples\SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Shared\MediaPlayerJS.Shared.shproj", "{90F2954A-8C3B-4905-84D7-EC29BC2CA297}"
 EndProject
-Project("{262852C6-CD72-467D-83FE-5EEB1973A190}") = "MediaPlayerJS.Windows", "SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Windows\MediaPlayerJS.Windows.jsproj", "{A7A9A1F4-9F82-49AE-B900-67A2956E23DC}"
+Project("{262852C6-CD72-467D-83FE-5EEB1973A190}") = "MediaPlayerJS.Windows", "Samples\SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Windows\MediaPlayerJS.Windows.jsproj", "{A7A9A1F4-9F82-49AE-B900-67A2956E23DC}"
 EndProject
-Project("{262852C6-CD72-467D-83FE-5EEB1973A190}") = "MediaPlayerJS.WindowsPhone", "SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.WindowsPhone\MediaPlayerJS.WindowsPhone.jsproj", "{92679B2C-887E-4B11-A889-A96334C0D37C}"
+Project("{262852C6-CD72-467D-83FE-5EEB1973A190}") = "MediaPlayerJS.WindowsPhone", "Samples\SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.WindowsPhone\MediaPlayerJS.WindowsPhone.jsproj", "{92679B2C-887E-4B11-A889-A96334C0D37C}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\FFmpegInterop\Win8.1\FFmpegInterop.Shared\FFmpegInterop.Shared.vcxitems*{b290d2ce-e857-4ace-8541-d80a3b9ab04e}*SharedItemsImports = 9
-		SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Shared\MediaPlayerJS.Shared.projitems*{92679b2c-887e-4b11-a889-a96334c0d37c}*SharedItemsImports = 5
-		..\FFmpegInterop\Win8.1\FFmpegInterop.Shared\FFmpegInterop.Shared.vcxitems*{97248e49-6262-4c37-b118-224ff3b98fd0}*SharedItemsImports = 4
-		SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Shared\MediaPlayerJS.Shared.projitems*{90f2954a-8c3b-4905-84d7-ec29bc2ca297}*SharedItemsImports = 13
-		SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Shared\MediaPlayerCS.Shared.projitems*{e87bb8d4-8aab-47ea-9028-901b2e2c199a}*SharedItemsImports = 4
-		..\FFmpegInterop\Win8.1\FFmpegInterop.Shared\FFmpegInterop.Shared.vcxitems*{ebc5ca98-87f1-4a01-a48d-69659c103e72}*SharedItemsImports = 4
-		SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Shared\MediaPlayerCPP.Shared.vcxitems*{742ff46f-3031-433b-858e-75ac90e968f1}*SharedItemsImports = 9
-		SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Shared\MediaPlayerCS.Shared.projitems*{711e68ba-5ed1-46b3-b2b4-1621310d4245}*SharedItemsImports = 13
-		SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Shared\MediaPlayerJS.Shared.projitems*{a7a9a1f4-9f82-49ae-b900-67a2956e23dc}*SharedItemsImports = 5
-		SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Shared\MediaPlayerCPP.Shared.vcxitems*{72de715c-26e4-4774-a4c2-327b4f213008}*SharedItemsImports = 4
-		SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Shared\MediaPlayerCPP.Shared.vcxitems*{cbb8bb5f-d071-4090-9ab8-7397ff4fb46e}*SharedItemsImports = 4
-		SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Shared\MediaPlayerCS.Shared.projitems*{2d50ae6e-8f2c-4cae-999a-cf19bccf24de}*SharedItemsImports = 4
+		FFmpegInterop\Win8.1\FFmpegInterop.Shared\FFmpegInterop.Shared.vcxitems*{b290d2ce-e857-4ace-8541-d80a3b9ab04e}*SharedItemsImports = 9
+		Samples\SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Shared\MediaPlayerJS.Shared.projitems*{92679b2c-887e-4b11-a889-a96334c0d37c}*SharedItemsImports = 5
+		FFmpegInterop\Win8.1\FFmpegInterop.Shared\FFmpegInterop.Shared.vcxitems*{97248e49-6262-4c37-b118-224ff3b98fd0}*SharedItemsImports = 4
+		Samples\SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Shared\MediaPlayerJS.Shared.projitems*{90f2954a-8c3b-4905-84d7-ec29bc2ca297}*SharedItemsImports = 13
+		Samples\SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Shared\MediaPlayerCS.Shared.projitems*{e87bb8d4-8aab-47ea-9028-901b2e2c199a}*SharedItemsImports = 4
+		FFmpegInterop\Win8.1\FFmpegInterop.Shared\FFmpegInterop.Shared.vcxitems*{ebc5ca98-87f1-4a01-a48d-69659c103e72}*SharedItemsImports = 4
+		Samples\SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Shared\MediaPlayerCPP.Shared.vcxitems*{742ff46f-3031-433b-858e-75ac90e968f1}*SharedItemsImports = 9
+		Samples\SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Shared\MediaPlayerCS.Shared.projitems*{711e68ba-5ed1-46b3-b2b4-1621310d4245}*SharedItemsImports = 13
+		Samples\SamplesWin8.1\MediaPlayerJS\MediaPlayerJS.Shared\MediaPlayerJS.Shared.projitems*{a7a9a1f4-9f82-49ae-b900-67a2956e23dc}*SharedItemsImports = 5
+		Samples\SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Shared\MediaPlayerCPP.Shared.vcxitems*{72de715c-26e4-4774-a4c2-327b4f213008}*SharedItemsImports = 4
+		Samples\SamplesWin8.1\MediaPlayerCPP\MediaPlayerCPP.Shared\MediaPlayerCPP.Shared.vcxitems*{cbb8bb5f-d071-4090-9ab8-7397ff4fb46e}*SharedItemsImports = 4
+		Samples\SamplesWin8.1\MediaPlayerCS\MediaPlayerCS.Shared\MediaPlayerCS.Shared.projitems*{2d50ae6e-8f2c-4cae-999a-cf19bccf24de}*SharedItemsImports = 4
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM

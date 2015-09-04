@@ -54,13 +54,13 @@
     <Content Include="images\storelogo.png" />
     <Content Include="css\default.css" />
     <Content Include="js\default.js" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avcodec-56.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avdevice-56.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avfilter-5.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avformat-56.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avutil-54.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swresample-1.dll" />
-    <Content Include="$(SolutionDir)..\ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swscale-3.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avcodec-56.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avdevice-56.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avfilter-5.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avformat-56.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avutil-54.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swresample-1.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swscale-3.dll" />
     <None Include="MediaPlayerJS_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>

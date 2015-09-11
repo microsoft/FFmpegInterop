@@ -27,6 +27,7 @@ Your `FFmpegInterop` folder should look as follows
 	    ffmpeg\              - ffmpeg source code from the latest release in git://github.com/FFmpeg/FFmpeg.git
 	    FFmpegInterop\       - FFmpegInterop WinRT component
 	    Samples\             - Sample Media Player applications in C++, C#, and JavaScript
+	    Tests\               - Unit tests for FFmpegInterop
 	    BuildFFmpeg.bat      - Helper script to build FFmpeg libraries as described in https://trac.ffmpeg.org/wiki/CompilationGuide/WinRT
 	    FFmpegConfig.sh      - Internal script that contains FFmpeg configure options
 	    FFmpegWin8.1.sln     - Microsoft Visual Studio 2013 solution file for Windows 8.1 and Windows Phone 8.1 apps development

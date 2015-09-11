@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPlayerCS", "Samples\Sa
 EndProject
 Project("{262852C6-CD72-467D-83FE-5EEB1973A190}") = "MediaPlayerJS", "Samples\SamplesWin10\MediaPlayerJS\MediaPlayerJS.jsproj", "{C09EF0AC-5F4D-4207-B4C2-77658A9E5365}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest", "Tests\Win10\UnitTest\UnitTest.csproj", "{F1ECBD62-71FE-47FB-B588-1E331A375B59}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -88,6 +90,24 @@ Global
 		{C09EF0AC-5F4D-4207-B4C2-77658A9E5365}.Release|x86.ActiveCfg = Release|x86
 		{C09EF0AC-5F4D-4207-B4C2-77658A9E5365}.Release|x86.Build.0 = Release|x86
 		{C09EF0AC-5F4D-4207-B4C2-77658A9E5365}.Release|x86.Deploy.0 = Release|x86
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|ARM.ActiveCfg = Debug|ARM
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|ARM.Build.0 = Debug|ARM
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|ARM.Deploy.0 = Debug|ARM
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|x64.ActiveCfg = Debug|x64
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|x64.Build.0 = Debug|x64
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|x64.Deploy.0 = Debug|x64
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|x86.ActiveCfg = Debug|x86
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|x86.Build.0 = Debug|x86
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Debug|x86.Deploy.0 = Debug|x86
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|ARM.ActiveCfg = Release|ARM
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|ARM.Build.0 = Release|ARM
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|ARM.Deploy.0 = Release|ARM
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|x64.ActiveCfg = Release|x64
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|x64.Build.0 = Release|x64
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|x64.Deploy.0 = Release|x64
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|x86.ActiveCfg = Release|x86
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|x86.Build.0 = Release|x86
+		{F1ECBD62-71FE-47FB-B588-1E331A375B59}.Release|x86.Deploy.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

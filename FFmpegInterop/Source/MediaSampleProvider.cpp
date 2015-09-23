@@ -100,12 +100,6 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		// Write the packet out
 		hr = WriteAVPacketToStream(dataWriter, &avPacket);
 
-		// Use decoding timestamp if presentation timestamp is not valid
-		if (avPacket.pts == AV_NOPTS_VALUE && avPacket.dts != AV_NOPTS_VALUE)
-		{
-			avPacket.pts = avPacket.dts;
-		}
-
 		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.pts) };
 		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.duration) };
 

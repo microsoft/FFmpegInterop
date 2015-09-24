@@ -122,14 +122,14 @@ HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, 
 	int frameComplete = 0;
 	if (avcodec_decode_video2(m_pAvCodecCtx, m_pAvFrame, &frameComplete, avPacket) < 0)
 	{
-		DebugMessage(L"GetNextSample reaching EOF\n");
+		DebugMessage(L"DecodeAVPacket Failed\n");
 		frameComplete = 1;
 	}
 	else
 	{
 		if (frameComplete)
 		{
-			avPacket->pts = m_pAvFrame->pkt_pts;
+			avPacket->pts = av_frame_get_best_effort_timestamp(m_pAvFrame);
 		}
 	}
 

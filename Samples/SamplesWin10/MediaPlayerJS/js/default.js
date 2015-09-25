@@ -92,9 +92,16 @@
 	            var forceDecodeAudio = document.getElementById("toggleSwitchAudioDecode").winControl.checked;
 	            var forceDecodeVideo = document.getElementById("toggleSwitchVideoDecode").winControl.checked;
 
+	            // Set FFmpeg specific options. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
+	            var options = new Windows.Foundation.Collections.PropertySet();
+
+	            // Below are some sample options that you can set to configure RTSP streaming
+	            // options.insert("rtsp_flags", "prefer_tcp");
+	            // options.insert("stimeout", 100000);
+
 	            // Instantiate FFmpegInteropMSS using the URI
 	            mediaElement.pause();
-	            var FFmpegMSS = FFmpegInterop.FFmpegInteropMSS.createFFmpegInteropMSSFromUri(uriBox.value, forceDecodeAudio, forceDecodeVideo);
+	            var FFmpegMSS = FFmpegInterop.FFmpegInteropMSS.createFFmpegInteropMSSFromUri(uriBox.value, forceDecodeAudio, forceDecodeVideo, options);
 
 	            if (FFmpegMSS) {
 	                var mss = FFmpegMSS.getMediaStreamSource();

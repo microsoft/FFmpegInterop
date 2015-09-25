@@ -123,9 +123,16 @@ void MainPage::URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::K
 		bool forceDecodeAudio = toggleSwitchAudioDecode->IsOn;
 		bool forceDecodeVideo = toggleSwitchVideoDecode->IsOn;
 
+		// Set FFmpeg specific options. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
+		PropertySet^ options = ref new PropertySet();
+
+		// Below are some sample options that you can set to configure RTSP streaming
+		// options->Insert("rtsp_flags", "prefer_tcp");
+		// options->Insert("stimeout", 100000);
+
 		// Instantiate FFmpegInteropMSS using the URI
 		mediaElement->Stop();
-		FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(uri, forceDecodeAudio, forceDecodeVideo);
+		FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(uri, forceDecodeAudio, forceDecodeVideo, options);
 		if (FFmpegMSS != nullptr)
 		{
 			MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();

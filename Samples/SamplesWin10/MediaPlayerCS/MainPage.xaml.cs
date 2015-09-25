@@ -116,9 +116,16 @@ namespace MediaPlayerCS
                     bool forceDecodeAudio = toggleSwitchAudioDecode.IsOn;
                     bool forceDecodeVideo = toggleSwitchVideoDecode.IsOn;
 
+                    // Set FFmpeg specific options. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
+                    PropertySet options = new PropertySet();
+
+                    // Below are some sample options that you can set to configure RTSP streaming
+                    // options.Add("rtsp_flags", "prefer_tcp");
+                    // options.Add("stimeout", 100000);
+
                     // Instantiate FFmpegInteropMSS using the URI
                     mediaElement.Stop();
-                    FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(uri, forceDecodeAudio, forceDecodeVideo);
+                    FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(uri, forceDecodeAudio, forceDecodeVideo, options);
                     if (FFmpegMSS != null)
                     {
                         MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();

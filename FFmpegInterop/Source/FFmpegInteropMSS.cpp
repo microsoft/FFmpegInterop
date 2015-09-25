@@ -45,7 +45,8 @@ static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
 
 // Initialize an FFmpegInteropObject
 FFmpegInteropMSS::FFmpegInteropMSS()
-	: avIOCtx(nullptr)
+	: avDict(nullptr)
+	, avIOCtx(nullptr)
 	, avFormatCtx(nullptr)
 	, avAudioCodecCtx(nullptr)
 	, avVideoCodecCtx(nullptr)
@@ -77,16 +78,35 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 		m_pReader = nullptr;
 	}
 
-	avcodec_close(avAudioCodecCtx);
 	avcodec_close(avVideoCodecCtx);
+	avcodec_close(avAudioCodecCtx);
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
+	av_dict_free(&avDict);
 }
+
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
+{
+	auto interopMSS = ref new FFmpegInteropMSS();
+	if (FAILED(interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode, ffmpegOptions)))
+	{
+		// We failed to initialize, clear the variable to return failure
+		interopMSS = nullptr;
+	}
+
+	return interopMSS;
+}
+
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
 {
+	return CreateFFmpegInteropMSSFromStream(stream, forceAudioDecode, forceVideoDecode, nullptr);
+}
+
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
+{
 	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode)))
+	if (FAILED(interopMSS->CreateMediaStreamSource(uri, forceAudioDecode, forceVideoDecode, ffmpegOptions)))
 	{
 		// We failed to initialize, clear the variable to return failure
 		interopMSS = nullptr;
@@ -97,14 +117,7 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAcce
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode)
 {
-	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(uri, forceAudioDecode, forceVideoDecode)))
-	{
-		// We failed to initialize, clear the variable to return failure
-		interopMSS = nullptr;
-	}
-
-	return interopMSS;
+	return CreateFFmpegInteropMSSFromUri(uri, forceAudioDecode, forceVideoDecode, nullptr);
 }
 
 MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
@@ -112,7 +125,7 @@ MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
 	return mss;
 }
 
-HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode)
+HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
 {
 	HRESULT hr = S_OK;
 	const char* charStr = nullptr;
@@ -132,15 +145,28 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 
 	if (SUCCEEDED(hr))
 	{
+		// Populate AVDictionary avDict based on PropertySet ffmpegOptions. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
+		hr = ParseOptions(ffmpegOptions);
+	}
+
+	if (SUCCEEDED(hr))
+	{
 		std::wstring uriW(uri->Begin());
 		std::string uriA(uriW.begin(), uriW.end());
 		charStr = uriA.c_str();
 
-		// Open media file using custom IO setup above instead of using file name. Opening a file using file name will invoke fopen C API call that only have
-		// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
-		if (avformat_open_input(&avFormatCtx, charStr, NULL, NULL) < 0)
+		// Open media in the given URI using the specified options
+		if (avformat_open_input(&avFormatCtx, charStr, NULL, &avDict) < 0)
 		{
 			hr = E_FAIL; // Error opening file
+		}
+
+		// avDict is not NULL only when there is an issue with the given ffmpegOptions such as invalid key, value type etc. Iterate through it to see which one is causing the issue.
+		if (avDict != nullptr)
+		{
+			DebugMessage(L"Invalid FFmpeg option(s)");
+			av_dict_free(&avDict);
+			avDict = nullptr;
 		}
 	}
 
@@ -152,7 +178,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 	return hr;
 }
 
-HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
+HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
 {
 	HRESULT hr = S_OK;
 	if (!stream)
@@ -197,14 +223,28 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 
 	if (SUCCEEDED(hr))
 	{
+		// Populate AVDictionary avDict based on PropertySet ffmpegOptions. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
+		hr = ParseOptions(ffmpegOptions);
+	}
+
+	if (SUCCEEDED(hr))
+	{
 		avFormatCtx->pb = avIOCtx;
 		avFormatCtx->flags |= AVFMT_FLAG_CUSTOM_IO;
 
 		// Open media file using custom IO setup above instead of using file name. Opening a file using file name will invoke fopen C API call that only have
 		// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
-		if (avformat_open_input(&avFormatCtx, "", NULL, NULL) < 0)
+		if (avformat_open_input(&avFormatCtx, "", NULL, &avDict) < 0)
 		{
 			hr = E_FAIL; // Error opening file
+		}
+
+		// avDict is not NULL only when there is an issue with the given ffmpegOptions such as invalid key, value type etc. Iterate through it to see which one is causing the issue.
+		if (avDict != nullptr)
+		{
+			DebugMessage(L"Invalid FFmpeg option(s)");
+			av_dict_free(&avDict);
+			avDict = nullptr;
 		}
 	}
 
@@ -413,6 +453,42 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 
 	return (videoStreamDescriptor != nullptr && videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
+}
+
+HRESULT FFmpegInteropMSS::ParseOptions(PropertySet^ ffmpegOptions)
+{
+	HRESULT hr = S_OK;
+
+	// Convert FFmpeg options given in PropertySet to AVDictionary. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
+	if (ffmpegOptions != nullptr)
+	{
+		auto options = ffmpegOptions->First();
+
+		while (options->HasCurrent)
+		{
+			String^ key = options->Current->Key;
+			std::wstring keyW(key->Begin());
+			std::string keyA(keyW.begin(), keyW.end());
+			const char* keyChar = keyA.c_str();
+
+			// Convert value from Object^ to const char*. avformat_open_input will internally convert value from const char* to the correct type
+			String^ value = options->Current->Value->ToString();
+			std::wstring valueW(value->Begin());
+			std::string valueA(valueW.begin(), valueW.end());
+			const char* valueChar = valueA.c_str();
+
+			// Add key and value pair entry
+			if (av_dict_set(&avDict, keyChar, valueChar, 0) < 0)
+			{
+				hr = E_INVALIDARG;
+				break;
+			}
+
+			options->MoveNext();
+		}
+	}
+
+	return hr;
 }
 
 void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args)

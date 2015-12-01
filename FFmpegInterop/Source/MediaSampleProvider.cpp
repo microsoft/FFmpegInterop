@@ -23,6 +23,8 @@
 
 using namespace FFmpegInterop;
 
+int64 StartOffset = 0;
+
 MediaSampleProvider::MediaSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
@@ -32,19 +34,27 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
 {
+	DebugMessage(L"MediaSampleProvider\n");
+	StartOffset = 0;
+
 }
 
 HRESULT MediaSampleProvider::AllocateResources()
 {
+	DebugMessage(L"AllocateResources\n");
+	StartOffset = 0;
 	return S_OK;
 }
 
 MediaSampleProvider::~MediaSampleProvider()
 {
+	StartOffset = 0;
+	DebugMessage(L"~MediaSampleProvider\n");
 }
 
 void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 {
+	DebugMessage(L"SetCurrentStreamIndex\n");
 	if (m_pAvCodecCtx != nullptr && m_pAvFormatCtx->nb_streams > (unsigned int)streamIndex)
 	{
 		m_streamIndex = streamIndex;
@@ -54,6 +64,7 @@ void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 		m_streamIndex = AVERROR_STREAM_NOT_FOUND;
 	}
 }
+
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample()
 {
@@ -100,7 +111,15 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		// Write the packet out
 		hr = WriteAVPacketToStream(dataWriter, &avPacket);
 
-		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.pts) };
+		if (StartOffset == 0) {
+			//if we havent set StartOffset already
+			DebugMessage(L"Saving startoffset\n");
+			
+			//in some real-time streams avPacket.pts is less than 0 so we need to make sure StartOffset is never negative
+			StartOffset = avPacket.pts < 0 ? 0 : avPacket.pts;
+		}
+
+		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (avPacket.pts - StartOffset)) };
 		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.duration) };
 
 		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
@@ -154,11 +173,9 @@ AVPacket MediaSampleProvider::PopPacket()
 
 void MediaSampleProvider::Flush()
 {
+	DebugMessage(L"Flush\n");
 	while (!m_packetQueue.empty())
 	{
 		av_free_packet(&PopPacket());
 	}
 }
-
-
-

@@ -31,7 +31,12 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvFormatCtx(avFormatCtx)
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
+	, m_startTime(0)
 {
+
+	// Convert media start offset from AV_TIME_BASE to TimeSpan unit
+	m_startTime = avFormatCtx->start_time * 10000000 / double(AV_TIME_BASE);
+
 }
 
 HRESULT MediaSampleProvider::AllocateResources()
@@ -100,8 +105,11 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		// Write the packet out
 		hr = WriteAVPacketToStream(dataWriter, &avPacket);
 
-		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.pts) };
-		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.duration) };
+		LONGLONG lPts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.pts);
+		LONGLONG lDuration = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.duration);
+
+		Windows::Foundation::TimeSpan pts = { lPts - m_startTime };
+		Windows::Foundation::TimeSpan dur = { lDuration };
 
 		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
 		sample->Duration = dur;

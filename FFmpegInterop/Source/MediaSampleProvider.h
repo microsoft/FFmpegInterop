@@ -47,6 +47,7 @@ namespace FFmpegInterop
 	private:
 		std::queue<AVPacket> m_packetQueue;
 		int m_streamIndex;
+		LONGLONG m_startTime;
 
 	internal:
 		// The FFmpeg context. Because they are complex types

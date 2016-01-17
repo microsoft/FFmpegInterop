@@ -35,7 +35,7 @@ MediaSampleProvider::MediaSampleProvider(
 {
 
 	// Convert media start offset from AV_TIME_BASE to TimeSpan unit
-	m_startTime = avFormatCtx->start_time * 10000000 / double(AV_TIME_BASE);
+	m_startTime = LONGLONG(avFormatCtx->start_time * 10000000 / double(AV_TIME_BASE));
 
 }
 

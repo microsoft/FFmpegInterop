@@ -45,7 +45,7 @@
     <TargetPlatformMinVersion>10.0.10240.0</TargetPlatformMinVersion>
     <MinimumVisualStudioVersion>$(VersionNumberMajor).$(VersionNumberMinor)</MinimumVisualStudioVersion>
     <DefaultLanguage>en-US</DefaultLanguage>
-    <PackageCertificateKeyFile>MediaPlayerJS_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateKeyFile>$(SolutionDir)FFmpegInterop.pfx</PackageCertificateKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <AppxManifest Include="package.appxmanifest">
@@ -74,7 +74,7 @@
     <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avutil-54.dll" />
     <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-1.dll" />
     <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-3.dll" />
-    <None Include="MediaPlayerJS_TemporaryKey.pfx" />
+    <None Include="$(SolutionDir)FFmpegInterop.pfx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\FFmpegInterop\Win10\FFmpegInterop\FFmpegInterop.vcxproj" />

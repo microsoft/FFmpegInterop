@@ -37,12 +37,12 @@
     <Page Include="MainPage.xaml" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avcodec-56.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avdevice-56.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avfilter-5.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avformat-56.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avutil-54.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\swresample-1.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\swscale-3.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avcodec-57.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avdevice-57.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avfilter-6.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avformat-57.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\avutil-55.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\swresample-2.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone81\$(Platform)\bin\swscale-4.dll" />
   </ItemGroup>
 </Project>

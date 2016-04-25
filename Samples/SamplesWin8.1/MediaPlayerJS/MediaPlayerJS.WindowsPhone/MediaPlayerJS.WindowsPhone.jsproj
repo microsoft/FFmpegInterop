@@ -52,13 +52,13 @@
     <Content Include="css\ui-themed.theme-dark.css" />
     <Content Include="css\ui-themed.theme-light.css" />
     <Content Include="js\default.js" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avcodec-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avdevice-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avfilter-5.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avformat-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avutil-54.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\swresample-1.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\swscale-3.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avcodec-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avdevice-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avfilter-6.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avformat-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avutil-55.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\swresample-2.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\swscale-4.dll" />
   </ItemGroup>
   <ItemGroup>
     <SDKReference Include="Microsoft.Phone.WinJS.2.1, Version=1.0" />

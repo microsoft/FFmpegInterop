@@ -15,7 +15,7 @@
     <FileAlignment>512</FileAlignment>
     <SynthesizeLinkMetadata>true</SynthesizeLinkMetadata>
     <ProjectTypeGuids>{BC8A1FFA-BEE3-4634-8014-F334798102B3};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <PackageCertificateKeyFile>MediaPlayerCS.Windows_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateKeyFile>$(SolutionDir)FFmpegInterop.pfx</PackageCertificateKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
     <DebugSymbols>true</DebugSymbols>
@@ -93,20 +93,20 @@
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>
-    <None Include="MediaPlayerCS.Windows_TemporaryKey.pfx" />
+    <None Include="$(SolutionDir)FFmpegInterop.pfx" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\Logo.scale-100.png" />
     <Content Include="Assets\SmallLogo.scale-100.png" />
     <Content Include="Assets\SplashScreen.scale-100.png" />
     <Content Include="Assets\StoreLogo.scale-100.png" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avcodec-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avdevice-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avfilter-5.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avformat-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avutil-54.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swresample-1.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swscale-3.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avcodec-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avdevice-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avfilter-6.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avformat-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avutil-55.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swresample-2.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swscale-4.dll" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainPage.xaml">

@@ -41,7 +41,7 @@
     <RequiredPlatformVersion>8.1</RequiredPlatformVersion>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <DefaultLanguage>en-US</DefaultLanguage>
-    <PackageCertificateKeyFile>MediaPlayerJS_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateKeyFile>$(SolutionDir)FFmpegInterop.pfx</PackageCertificateKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <AppxManifest Include="package.appxmanifest">
@@ -54,14 +54,14 @@
     <Content Include="images\storelogo.png" />
     <Content Include="css\default.css" />
     <Content Include="js\default.js" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avcodec-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avdevice-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avfilter-5.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avformat-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avutil-54.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swresample-1.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swscale-3.dll" />
-    <None Include="MediaPlayerJS_TemporaryKey.pfx" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avcodec-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avdevice-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avfilter-6.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avformat-57.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\avutil-55.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swresample-2.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\Windows8.1\$(PlatformTarget)\bin\swscale-4.dll" />
+    <None Include="$(SolutionDir)FFmpegInterop.pfx" />
   </ItemGroup>
   <ItemGroup>
     <SDKReference Include="Microsoft.WinJS.2.0, Version=1.0" />

@@ -60,7 +60,7 @@ int FFmpegReader::ReadPacket()
 	else
 	{
 		DebugMessage(L"Ignoring unused stream\n");
-		av_free_packet(&avPacket);
+		av_packet_unref(&avPacket);
 	}
 
 	return ret;

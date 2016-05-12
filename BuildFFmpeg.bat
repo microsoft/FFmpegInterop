@@ -12,6 +12,9 @@ set BUILD.win10=N
 set BUILD.win8.1=N
 set BUILD.phone8.1=N
 
+:: Export full current PATH from environment into MSYS2
+set MSYS2_PATH_TYPE=inherit
+
 :: Iterate through arguments and set the right configuration
 for %%a in (%*) do (
     if /I "%%a"=="ARM" (

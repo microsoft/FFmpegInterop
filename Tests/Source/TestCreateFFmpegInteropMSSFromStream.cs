@@ -17,6 +17,7 @@ namespace UnitTest.Windows
     {
         static string _UriSource = "http://video.ch9.ms/ch9/1fb8/cf59a951-45df-4aee-ae26-c87d37d01fb8/IntegrativeMomandWindowsPhoneAppStudio_mid.mp4";
         static int _UriLength = 89328;
+
         [TestMethod]
         public void CreateFromStream_Null()
         {

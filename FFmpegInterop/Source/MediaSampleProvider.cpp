@@ -107,7 +107,7 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		sample->Duration = dur;
 	}
 
-	av_free_packet(&avPacket);
+	av_packet_unref(&avPacket);
 
 	return sample;
 }
@@ -156,9 +156,6 @@ void MediaSampleProvider::Flush()
 {
 	while (!m_packetQueue.empty())
 	{
-		av_free_packet(&PopPacket());
+		av_packet_unref(&PopPacket());
 	}
 }
-
-
-

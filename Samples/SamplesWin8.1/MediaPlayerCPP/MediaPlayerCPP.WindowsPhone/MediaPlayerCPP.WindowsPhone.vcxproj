@@ -120,43 +120,43 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avcodec-56.dll">
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avcodec-57.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</DeploymentContent>
     </None>
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avdevice-56.dll">
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avdevice-57.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</DeploymentContent>
     </None>
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avfilter-5.dll">
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avfilter-6.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</DeploymentContent>
     </None>
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avformat-56.dll">
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avformat-57.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</DeploymentContent>
     </None>
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avutil-54.dll">
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\avutil-55.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</DeploymentContent>
     </None>
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\swresample-1.dll">
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\swresample-2.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</DeploymentContent>
     </None>
-    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\swscale-3.dll">
+    <None Include="$(SolutionDir)ffmpeg\Build\WindowsPhone8.1\$(PlatformTarget)\bin\swscale-4.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</DeploymentContent>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>

@@ -31,7 +31,7 @@ namespace FFmpegInterop
 	{
 	public:
 		virtual ~UncompressedVideoSampleProvider();
-
+		virtual MediaStreamSample^ GetNextSample() override;
 	internal:
 		UncompressedVideoSampleProvider(
 			FFmpegReader^ reader,
@@ -46,6 +46,8 @@ namespace FFmpegInterop
 		SwsContext* m_pSwsCtx;
 		int m_rgVideoBufferLineSize[4];
 		uint8_t* m_rgVideoBufferData[4];
+		bool m_interlaced_frame;
+		bool m_top_field_first;
 	};
 }
 

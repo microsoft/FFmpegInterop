@@ -18,6 +18,7 @@
 
 #include "pch.h"
 #include "UncompressedVideoSampleProvider.h"
+#include <mfapi.h>
 
 extern "C"
 {
@@ -100,6 +101,27 @@ UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
 	}
 }
 
+MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
+{
+	MediaStreamSample^ sample = MediaSampleProvider::GetNextSample();
+
+	if (sample != nullptr)
+	{
+		if (m_interlaced_frame)
+		{
+			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, TRUE);
+			sample->ExtendedProperties->Insert(MFSampleExtension_BottomFieldFirst, m_top_field_first ? FALSE : TRUE);
+			sample->ExtendedProperties->Insert(MFSampleExtension_RepeatFirstField, FALSE);
+		}
+		else
+		{
+			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, FALSE);
+		}
+	}
+
+	return sample;
+}
+
 HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
 {
 	// Convert decoded video pixel format to NV12 using FFmpeg software scaler
@@ -130,6 +152,8 @@ HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, 
 		if (frameComplete)
 		{
 			avPacket->pts = av_frame_get_best_effort_timestamp(m_pAvFrame);
+			m_interlaced_frame = m_pAvFrame->interlaced_frame == 1;
+			m_top_field_first = m_pAvFrame->top_field_first == 1;
 		}
 	}
 

@@ -284,7 +284,23 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		audioStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &avAudioCodec, 0);
 		if (audioStreamIndex != AVERROR_STREAM_NOT_FOUND && avAudioCodec)
 		{
-			avAudioCodecCtx = avFormatCtx->streams[audioStreamIndex]->codec;
+			/** allocate a new decoding context */
+			avAudioCodecCtx = avcodec_alloc_context3(avAudioCodec);
+			if (!avAudioCodecCtx) {
+				fprintf(stderr, "Could not allocate a decoding context\n");
+				avformat_close_input(&avFormatCtx);
+				return AVERROR(ENOMEM);
+				
+			}
+			
+			 /** initialize the stream parameters with demuxer information */
+			int error = avcodec_parameters_to_context(avAudioCodecCtx, avFormatCtx->streams[audioStreamIndex]->codecpar);
+			if (error < 0) {
+				avformat_close_input(&avFormatCtx);
+				avcodec_free_context(&avAudioCodecCtx);
+				return error;
+			}
+
 			if (avcodec_open2(avAudioCodecCtx, avAudioCodec, NULL) < 0)
 			{
 				avAudioCodecCtx = nullptr;
@@ -322,7 +338,22 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			}
 			else
 			{
-				avVideoCodecCtx = avFormatCtx->streams[videoStreamIndex]->codec;
+				/** allocate a new decoding context */
+				avVideoCodecCtx = avcodec_alloc_context3(avVideoCodec);
+				if (!avVideoCodecCtx) {
+					fprintf(stderr, "Could not allocate a decoding context\n");
+					avformat_close_input(&avFormatCtx);
+					return AVERROR(ENOMEM);
+
+				}
+
+				/** initialize the stream parameters with demuxer information */
+				int error = avcodec_parameters_to_context(avVideoCodecCtx, avFormatCtx->streams[videoStreamIndex]->codecpar);
+				if (error < 0) {
+					avformat_close_input(&avFormatCtx);
+					avcodec_free_context(&avVideoCodecCtx);
+					return error;
+				}
 				if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
 				{
 					avVideoCodecCtx = nullptr;

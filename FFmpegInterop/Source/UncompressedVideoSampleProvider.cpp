@@ -119,19 +119,19 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 
 HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket)
 {
-	int frameComplete = 0;
-	if (avcodec_decode_video2(m_pAvCodecCtx, m_pAvFrame, &frameComplete, avPacket) < 0)
+	if (avcodec_send_packet(m_pAvCodecCtx, avPacket) < 0)
 	{
 		DebugMessage(L"DecodeAVPacket Failed\n");
-		frameComplete = 1;
+		return S_FALSE;
 	}
 	else
 	{
-		if (frameComplete)
+		if (avcodec_receive_frame(m_pAvCodecCtx, m_pAvFrame) >= 0)
 		{
 			avPacket->pts = av_frame_get_best_effort_timestamp(m_pAvFrame);
+			return S_OK;
 		}
 	}
 
-	return frameComplete ? S_OK : S_FALSE;
+	return S_FALSE;
 }

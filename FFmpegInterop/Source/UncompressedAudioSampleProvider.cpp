@@ -101,44 +101,31 @@ HRESULT UncompressedAudioSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 HRESULT UncompressedAudioSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket)
 {
 	HRESULT hr = S_OK;
-	int frameComplete = 0;
-	// Each audio packet may contain multiple frames which requires calling avcodec_decode_audio4 for each frame. Loop through the entire packet data
-	while (avPacket->size > 0)
+	int frameComplete = avcodec_send_packet(m_pAvCodecCtx, avPacket);
+	if (frameComplete < 0)
 	{
-		frameComplete = 0;
-		int decodedBytes = avcodec_decode_audio4(m_pAvCodecCtx, m_pAvFrame, &frameComplete, avPacket);
+		DebugMessage(L"Fail To Decode!\n");
+		hr = E_FAIL;
+		return hr;
+	}
 
-		if (decodedBytes < 0)
-		{
-			DebugMessage(L"Fail To Decode!\n");
-			hr = E_FAIL;
-			break; // Skip broken frame
-		}
-
-		if (SUCCEEDED(hr) && frameComplete)
-		{
-			// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
-			uint8_t *resampledData = nullptr;
-			unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-			int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-			auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
-			dataWriter->WriteBytes(aBuffer);
-			av_freep(&resampledData);
-			av_frame_unref(m_pAvFrame);
-		}
-
-		if (SUCCEEDED(hr))
-		{
-			// Advance to the next frame data that have not been decoded if any
-			avPacket->size -= decodedBytes;
-			avPacket->data += decodedBytes;
-		}
+	frameComplete = avcodec_receive_frame(m_pAvCodecCtx, m_pAvFrame);
+	if (SUCCEEDED(hr) && frameComplete >= 0)
+	{
+		// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
+		uint8_t *resampledData = nullptr;
+		unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+		int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
+		auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
+		dataWriter->WriteBytes(aBuffer);
+		av_freep(&resampledData);
+		av_frame_unref(m_pAvFrame);
 	}
 
 	if (SUCCEEDED(hr))
 	{
 		// We've completed the packet. Return S_FALSE to indicate an incomplete frame
-		hr = (frameComplete != 0) ? S_OK : S_FALSE;
+		hr = (frameComplete >= 0) ? S_OK : S_FALSE;
 	}
 
 	return hr;

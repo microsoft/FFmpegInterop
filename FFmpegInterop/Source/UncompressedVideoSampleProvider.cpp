@@ -31,8 +31,7 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_pAvFrame(nullptr)
+	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
 	, m_pSwsCtx(nullptr)
 {
 	for (int i = 0; i < 4; i++)
@@ -45,7 +44,7 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 HRESULT UncompressedVideoSampleProvider::AllocateResources()
 {
 	HRESULT hr = S_OK;
-	hr = MediaSampleProvider::AllocateResources();
+	hr = UncompressedSampleProvider::AllocateResources();
 	if (SUCCEEDED(hr))
 	{
 		// Setup software scaler to convert any decoder pixel format (e.g. YUV420P) to NV12 that is supported in Windows & Windows Phone MediaElement
@@ -100,6 +99,21 @@ UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
 	}
 }
 
+HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration)
+{
+	HRESULT hr = S_OK;
+	hr = UncompressedSampleProvider::DecodeAVPacket(dataWriter, avPacket, framePts, frameDuration);
+
+	// Don't set a timestamp on S_FALSE
+	if (hr == S_OK)
+	{
+		// Try to get the best effort timestamp for the frame.
+		framePts = av_frame_get_best_effort_timestamp(m_pAvFrame);
+	}
+
+	return hr;
+}
+
 HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
 {
 	// Convert decoded video pixel format to NV12 using FFmpeg software scaler
@@ -115,23 +129,4 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	av_frame_unref(m_pAvFrame);
 
 	return S_OK;
-}
-
-HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket)
-{
-	if (avcodec_send_packet(m_pAvCodecCtx, avPacket) < 0)
-	{
-		DebugMessage(L"DecodeAVPacket Failed\n");
-		return S_FALSE;
-	}
-	else
-	{
-		if (avcodec_receive_frame(m_pAvCodecCtx, m_pAvFrame) >= 0)
-		{
-			avPacket->pts = av_frame_get_best_effort_timestamp(m_pAvFrame);
-			return S_OK;
-		}
-	}
-
-	return S_FALSE;
 }

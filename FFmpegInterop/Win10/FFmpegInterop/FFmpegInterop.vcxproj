@@ -231,6 +231,7 @@
     <ClInclude Include="..\..\Source\H264SampleProvider.h" />
     <ClInclude Include="..\..\Source\MediaSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
+    <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedVideoSampleProvider.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
@@ -241,6 +242,7 @@
     <ClCompile Include="..\..\Source\H264SampleProvider.cpp" />
     <ClCompile Include="..\..\Source\MediaSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedAudioSampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\UncompressedSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedVideoSampleProvider.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

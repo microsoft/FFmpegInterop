@@ -17,6 +17,7 @@
 //*****************************************************************************
 
 #include "pch.h"
+
 #include "UncompressedAudioSampleProvider.h"
 
 using namespace FFmpegInterop;
@@ -25,8 +26,7 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_pAvFrame(nullptr)
+	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
 	, m_pSwrCtx(nullptr)
 {
 }
@@ -34,7 +34,7 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 HRESULT UncompressedAudioSampleProvider::AllocateResources()
 {
 	HRESULT hr = S_OK;
-	hr = MediaSampleProvider::AllocateResources();
+	hr = UncompressedSampleProvider::AllocateResources();
 	if (SUCCEEDED(hr))
 	{
 		// Set default channel layout when the value is unknown (0)
@@ -98,35 +98,16 @@ HRESULT UncompressedAudioSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	return S_OK;
 }
 
-HRESULT UncompressedAudioSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWriter)
 {
-	HRESULT hr = S_OK;
-	int frameComplete = avcodec_send_packet(m_pAvCodecCtx, avPacket);
-	if (frameComplete < 0)
-	{
-		DebugMessage(L"Fail To Decode!\n");
-		hr = E_FAIL;
-		return hr;
-	}
+	// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
+	uint8_t *resampledData = nullptr;
+	unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+	int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
+	auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
+	dataWriter->WriteBytes(aBuffer);
+	av_freep(&resampledData);
+	av_frame_unref(m_pAvFrame);
 
-	frameComplete = avcodec_receive_frame(m_pAvCodecCtx, m_pAvFrame);
-	if (SUCCEEDED(hr) && frameComplete >= 0)
-	{
-		// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
-		uint8_t *resampledData = nullptr;
-		unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-		int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-		auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
-		dataWriter->WriteBytes(aBuffer);
-		av_freep(&resampledData);
-		av_frame_unref(m_pAvFrame);
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		// We've completed the packet. Return S_FALSE to indicate an incomplete frame
-		hr = (frameComplete >= 0) ? S_OK : S_FALSE;
-	}
-
-	return hr;
+	return S_OK;
 }

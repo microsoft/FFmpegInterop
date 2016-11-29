@@ -41,11 +41,12 @@ namespace FFmpegInterop
 		virtual void SetCurrentStreamIndex(int streamIndex);
 
 	internal:
-		void PushPacket(AVPacket packet);
+		void QueuePacket(AVPacket packet);
+		void HeadQueuePacket(AVPacket packet);
 		AVPacket PopPacket();
 
 	private:
-		std::queue<AVPacket> m_packetQueue;
+		std::vector<AVPacket> m_packetQueue;
 		int m_streamIndex;
 
 	internal:
@@ -63,6 +64,6 @@ namespace FFmpegInterop
 			AVCodecContext* avCodecCtx);
 		virtual HRESULT AllocateResources();
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket);
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket);
+		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration);
 	};
 }

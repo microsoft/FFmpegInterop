@@ -51,11 +51,11 @@ int FFmpegReader::ReadPacket()
 	// Push the packet to the appropriate
 	if (avPacket.stream_index == m_audioStreamIndex && m_audioSampleProvider != nullptr)
 	{
-		m_audioSampleProvider->PushPacket(avPacket);
+		m_audioSampleProvider->QueuePacket(avPacket);
 	}
 	else if (avPacket.stream_index == m_videoStreamIndex && m_videoSampleProvider != nullptr)
 	{
-		m_videoSampleProvider->PushPacket(avPacket);
+		m_videoSampleProvider->QueuePacket(avPacket);
 	}
 	else
 	{

@@ -58,7 +58,7 @@ if [ "$1" == "Win10" ]; then
         --disable-d3d11va \
         --disable-dxva2 \
         --arch=arm \
-        --as=armasm \
+        --as=armasm.exe \
         --cpu=armv7 \
         --enable-thumb \
         --enable-shared \
@@ -129,7 +129,7 @@ elif [ "$1" == "Win8.1" ]; then
         --disable-d3d11va \
         --disable-dxva2 \
         --arch=arm \
-        --as=armasm \
+        --as=armasm.exe \
         --cpu=armv7 \
         --enable-thumb \
         --enable-shared \
@@ -158,7 +158,7 @@ elif [ "$1" == "Phone8.1" ]; then
         --disable-d3d11va \
         --disable-dxva2 \
         --arch=arm \
-        --as=armasm \
+        --as=armasm.exe \
         --cpu=armv7 \
         --enable-thumb \
         --enable-shared \

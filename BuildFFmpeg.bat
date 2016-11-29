@@ -11,6 +11,7 @@ set BUILD.x64=N
 set BUILD.win10=N
 set BUILD.win8.1=N
 set BUILD.phone8.1=N
+set BUILD.wsl=N
 
 :: Export full current PATH from environment into MSYS2
 set MSYS2_PATH_TYPE=inherit
@@ -29,6 +30,8 @@ for %%a in (%*) do (
         set BUILD.win8.1=Y
     ) else if /I "%%a"=="phone8.1" (
         set BUILD.phone8.1=Y
+	) else if /I "%%a"=="wsl" (
+	    set BUILD.wsl=Y
     ) else (
         goto Usage
     )
@@ -63,6 +66,8 @@ if not exist configure (
     goto Cleanup
 )
 popd
+
+if %BUILD.wsl%==Y goto Win10
 
 :: Check for required tools
 if defined MSYS2_BIN (
@@ -99,7 +104,13 @@ set LIB=%VSINSTALLDIR%VC\lib\store;%VSINSTALLDIR%VC\atlmfc\lib;%UniversalCRTSdkD
 set LIBPATH=%VSINSTALLDIR%VC\atlmfc\lib;%VSINSTALLDIR%VC\lib;
 set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
 
-%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 x86
+if %BUILD.wsl%==N (
+    %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 x86
+) else (
+    pushd %~dp0
+    bash -c "./FFmpegConfig.sh Win10 x86"
+    popd
+)
 endlocal
 
 :Win10x64
@@ -113,7 +124,13 @@ set LIB=%VSINSTALLDIR%VC\lib\store\amd64;%VSINSTALLDIR%VC\atlmfc\lib\amd64;%Univ
 set LIBPATH=%VSINSTALLDIR%VC\atlmfc\lib\amd64;%VSINSTALLDIR%VC\lib\amd64;
 set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
 
-%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 x64
+if %BUILD.wsl%==N (
+    %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 x64
+) else (
+    pushd %~dp0
+    bash -c "./FFmpegConfig.sh Win10 x64"
+    popd
+)
 endlocal
 
 :Win10ARM
@@ -127,7 +144,13 @@ set LIB=%VSINSTALLDIR%VC\lib\store\ARM;%VSINSTALLDIR%VC\atlmfc\lib\ARM;%Universa
 set LIBPATH=%VSINSTALLDIR%VC\atlmfc\lib\ARM;%VSINSTALLDIR%VC\lib\ARM;
 set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
 
-%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 ARM
+if %BUILD.wsl%==N (
+    %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win10 ARM
+) else (
+    pushd %~dp0
+    bash -c "./FFmpegConfig.sh Win10 ARM"
+    popd
+)
 endlocal
 
 :: Build and deploy Windows 8.1 library
@@ -152,7 +175,13 @@ set LIB=%VSINSTALLDIR%VC\lib\store;%VSINSTALLDIR%VC\atlmfc\lib;%WindowsSdkDir%li
 set LIBPATH=%WindowsSdkDir%References\CommonConfiguration\Neutral;;%VSINSTALLDIR%VC\atlmfc\lib;%VSINSTALLDIR%VC\lib;
 set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%WindowsSdkDir%Include\um;%WindowsSdkDir%Include\shared;%WindowsSdkDir%Include\winrt;;
 
-%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win8.1 x86
+if %BUILD.wsl%==N (
+    %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win8.1 x86
+) else (
+    pushd %~dp0
+    bash -c "./FFmpegConfig.sh Win8.1 x86"
+    popd
+)
 endlocal
 
 :Win8.1x64
@@ -166,7 +195,13 @@ set LIB=%VSINSTALLDIR%VC\lib\store\amd64;%VSINSTALLDIR%VC\atlmfc\lib\amd64;%Wind
 set LIBPATH=%WindowsSdkDir%References\CommonConfiguration\Neutral;;%VSINSTALLDIR%VC\atlmfc\lib\amd64;%VSINSTALLDIR%VC\lib\amd64;
 set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%WindowsSdkDir%Include\um;%WindowsSdkDir%Include\shared;%WindowsSdkDir%Include\winrt;;
 
-%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win8.1 x64
+if %BUILD.wsl%==N (
+    %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win8.1 x64
+) else (
+    pushd %~dp0
+    bash -c "./FFmpegConfig.sh Win8.1 x64"
+    popd
+)
 endlocal
 
 :Win8.1ARM
@@ -180,7 +215,13 @@ set LIB=%VSINSTALLDIR%VC\lib\store\ARM;%VSINSTALLDIR%VC\atlmfc\lib\ARM;%WindowsS
 set LIBPATH=%WindowsSdkDir%References\CommonConfiguration\Neutral;;%VSINSTALLDIR%VC\atlmfc\lib\ARM;%VSINSTALLDIR%VC\lib\ARM;
 set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%WindowsSdkDir%Include\um;%WindowsSdkDir%Include\shared;%WindowsSdkDir%Include\winrt;;
 
-%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win8.1 ARM
+if %BUILD.wsl%==N (
+    %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win8.1 ARM
+) else (
+    pushd %~dp0
+    bash -c "./FFmpegConfig.sh Win8.1 ARM"
+    popd
+)
 endlocal
 
 :: Build and deploy Windows Phone 8.1 library
@@ -205,7 +246,13 @@ set LIB=%VSINSTALLDIR%VC\lib\store\ARM;%VSINSTALLDIR%VC\atlmfc\lib\ARM;%WindowsS
 set LIBPATH=%VSINSTALLDIR%VC\atlmfc\lib\ARM;%VSINSTALLDIR%VC\lib\ARM
 set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include\abi;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include\mincore;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include\minwin;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include\wrl;
 
-%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Phone8.1 ARM
+if %BUILD.wsl%==N (
+    %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Phone8.1 ARM
+) else (
+    pushd %~dp0
+    bash -c "./FFmpegConfig.sh Phone8.1 ARM"
+    popd
+)
 endlocal
 
 :Phone8.1x86
@@ -219,7 +266,13 @@ set LIB=%VSINSTALLDIR%VC\lib\store;%VSINSTALLDIR%VC\atlmfc\lib;%WindowsSdkDir%..
 set LIBPATH=%VSINSTALLDIR%VC\atlmfc\lib;%VSINSTALLDIR%VC\lib
 set INCLUDE=%VSINSTALLDIR%VC\INCLUDE;%VSINSTALLDIR%VC\ATLMFC\INCLUDE;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include\abi;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include\mincore;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include\minwin;%WindowsSdkDir%..\..\Windows Phone Kits\8.1\Include\wrl;
 
-%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Phone8.1 x86
+if %BUILD.wsl%==N (
+    %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Phone8.1 x86
+) else (
+    pushd %~dp0
+    bash -c "./FFmpegConfig.sh Phone8.1 x86"
+    popd
+)
 endlocal
 
 goto Cleanup
@@ -228,15 +281,16 @@ goto Cleanup
 :Usage
 echo The correct usage is:
 echo:
-echo     %0 [target platform] [architecture]
+echo     %0 [wsl] [target platform] [architecture]
 echo:
 echo where
 echo:
+echo [wsl] if included, builds using WSL (Windows Subsystem for Linux) instead of MSYS2
 echo [target platform] is: win10 ^| win8.1 ^| phone8.1 (at least one)
 echo [architecture]    is: x86 ^| x64 ^| ARM (optional)
 echo:
 echo For example:
-echo     %0 win10                     - Build for Windows 10 ARM, x64, and x86
+echo     %0 wsl win10                 - Build for Windows 10 ARM, x64, and x86 using WSL
 echo     %0 phone8.1 ARM              - Build for Windows Phone 8.1 ARM only
 echo     %0 win8.1 x86 x64            - Build for Windows 8.1 x86 and x64 only
 echo     %0 phone8.1 win10 ARM        - Build for Windows 10 and Windows Phone 8.1 ARM only

@@ -1,0 +1,140 @@
+From ed26d996e9ac549ad15ddf06f8e6f7f580754522 Mon Sep 17 00:00:00 2001
+From: Gilles Khouzam <gillesk@microsoft.com>
+Date: Mon, 28 Nov 2016 23:10:37 -0800
+Subject: [PATCH] Updating scripts to run under WSL
+
+---
+ .gitattributes         |  1 +
+ compat/windows/makedef |  6 +++---
+ compat/windows/mslink  |  2 +-
+ configure              | 23 +++++++++++++----------
+ 4 files changed, 18 insertions(+), 14 deletions(-)
+
+diff --git a/.gitattributes b/.gitattributes
+index a900528..d89b687 100644
+--- a/.gitattributes
++++ b/.gitattributes
+@@ -1 +1,2 @@
+ *.pnm -diff -text
++* text eol=lf
+diff --git a/compat/windows/makedef b/compat/windows/makedef
+index fcaf108..e1f871d 100755
+--- a/compat/windows/makedef
++++ b/compat/windows/makedef
+@@ -45,7 +45,7 @@ libname=$(mktemp -u "library").lib
+ 
+ trap 'rm -f -- $libname' EXIT
+ 
+-lib -out:${libname} $@ >/dev/null
++lib.exe -out:${libname} $@ >/dev/null
+ if [ $? != 0 ]; then
+     echo "Could not create temporary library." >&2
+     exit 1
+@@ -57,7 +57,7 @@ IFS='
+ # Determine if we're building for x86 or x86_64 and
+ # set the symbol prefix accordingly.
+ prefix=""
+-arch=$(dumpbin -headers ${libname} |
++arch=$(dumpbin.exe -headers ${libname} |
+        tr '\t' ' ' |
+        grep '^ \+.\+machine \+(.\+)' |
+        head -1 |
+@@ -112,7 +112,7 @@ for line in $(cat ${vscript} | tr '\t' ' '); do
+ '
+ done
+ 
+-dump=$(dumpbin -linkermember:1 ${libname})
++dump=$(dumpbin.exe -linkermember:1 ${libname})
+ 
+ rm ${libname}
+ 
+diff --git a/compat/windows/mslink b/compat/windows/mslink
+index 07b2b3e..429d012 100755
+--- a/compat/windows/mslink
++++ b/compat/windows/mslink
+@@ -1,6 +1,6 @@
+ #!/bin/sh
+ 
+-LINK_EXE_PATH=$(dirname "$(command -v cl)")/link
++LINK_EXE_PATH=$(dirname "$(command -v cl.exe)")/link.exe
+ if [ -x "$LINK_EXE_PATH" ]; then
+     "$LINK_EXE_PATH" $@
+ else
+diff --git a/configure b/configure
+index 5b069eb..8b8a92f 100755
+--- a/configure
++++ b/configure
+@@ -3504,18 +3504,18 @@ case "$toolchain" in
+         # behaviour if the regexp was unable to match anything, since this
+         # successfully parses the version number of existing supported
+         # versions that require the converter (MSVC 2010 and 2012).
+-        cl_major_ver=$(cl 2>&1 | sed -n 's/.*Version \([[:digit:]]\{1,\}\)\..*/\1/p')
++        cl_major_ver=$(cl.exe 2>&1 | sed -n 's/.*Version \([[:digit:]]\{1,\}\)\..*/\1/p')
+         if [ -z "$cl_major_ver" ] || [ $cl_major_ver -ge 18 ]; then
+-            cc_default="cl"
++            cc_default="cl.exe"
+         else
+-            cc_default="c99wrap cl"
++            cc_default="c99wrap.exe cl.exe"
+         fi
+         ld_default="$source_path/compat/windows/mslink"
+-        nm_default="dumpbin -symbols"
+-        ar_default="lib"
++        nm_default="dumpbin.exe -symbols"
++        ar_default="lib.exe"
+         case "$arch" in
+         arm*)
+-            as_default="armasm"
++            as_default="armasm.exe"
+             ;;
+         esac
+         target_os_default="win32"
+@@ -3968,7 +3968,7 @@ probe_cc(){
+         _cflags_noopt="-O"
+         _flags_filter=pgi_flags
+     elif $_cc 2>&1 | grep -q 'Microsoft.*ARM.*Assembler'; then
+-        _type=armasm
++        _type=armasm.exe
+         _ident=$($_cc | head -n1)
+         # 4509: "This form of conditional instruction is deprecated"
+         _flags="-nologo -ignore 4509"
+@@ -4870,6 +4870,9 @@ fi
+ rm -r "$link_dest"
+ rm -r "$link_name"
+ 
++# Fix source linking
++source_link="`realpath --relative-to=. $source_path`"
++
+ # determine libc flavour
+ 
+ probe_libc(){
+@@ -4984,7 +4987,7 @@ check_compile_assert flt_lim "float.h limits.h" "DBL_MAX == (double)DBL_MAX" ||
+     add_cppflags '-I\$(SRC_PATH)/compat/float'
+ 
+ esc(){
+-    echo "$*" | sed 's/%/%25/g;s/:/%3a/g'
++    echo "$*" | sed 's/%/%25/g;s/:/%3a/g;s/\r//g'
+ }
+ 
+ echo "config:$arch:$subarch:$cpu:$target_os:$(esc $cc_ident):$(esc $FFMPEG_CONFIGURATION)" >config.fate
+@@ -6484,7 +6487,7 @@ SRC_LINK=$source_link
+ ifndef MAIN_MAKEFILE
+ SRC_PATH:=\$(SRC_PATH:.%=..%)
+ endif
+-CC_IDENT=$cc_ident
++CC_IDENT=$(esc $cc_ident)
+ ARCH=$arch
+ INTRINSICS=$intrinsics
+ CC=$cc
+@@ -6621,7 +6624,7 @@ cat > $TMPH <<EOF
+ #define CONFIG_THIS_YEAR 2016
+ #define FFMPEG_DATADIR "$(eval c_escape $datadir)"
+ #define AVCONV_DATADIR "$(eval c_escape $datadir)"
+-#define CC_IDENT "$(c_escape ${cc_ident:-Unknown compiler})"
++#define CC_IDENT "$(c_escape $(esc ${cc_ident:-Unknown compiler}))"
+ #define av_restrict $_restrict
+ #define EXTERN_PREFIX "${extern_prefix}"
+ #define EXTERN_ASM ${extern_prefix}
+-- 
+2.9.2.windows.1
+

@@ -127,7 +127,7 @@ HRESULT MediaSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPac
 HRESULT MediaSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket *avPacket, int64_t &framePts, int64_t &frameDuration)
 {
 	// For the simple case of compressed samples, each packet is a sample
-	if(avPacket != nullptr)
+	if (avPacket != nullptr && avPacket->pts != AV_NOPTS_VALUE)
 	{
 		framePts = avPacket->pts;
 		frameDuration = avPacket->duration;
@@ -146,7 +146,11 @@ void MediaSampleProvider::HeadQueuePacket(AVPacket packet)
 {
 	DebugMessage(L" - HeadQueuePacket\n");
 
-	m_packetQueue.insert(m_packetQueue.begin(), packet);
+	// Add a reference to the packet since we're pushing it back into the queue
+	AVPacket temp;
+	av_init_packet(&temp);
+	av_packet_ref(&temp, &packet);
+	m_packetQueue.insert(m_packetQueue.begin(), temp);
 }
 
 AVPacket MediaSampleProvider::PopPacket()
@@ -163,7 +167,6 @@ AVPacket MediaSampleProvider::PopPacket()
 		avPacket = m_packetQueue.front();
 		m_packetQueue.erase(m_packetQueue.begin());
 	}
-
 
 	return avPacket;
 }

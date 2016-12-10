@@ -30,7 +30,7 @@ namespace FFmpegInterop
 	{
 	internal:
 		// Try to get a frame from FFmpeg, otherwise, feed a frame to start decoding
-		virtual HRESULT GetFrameFromFFmpegDecoder(AVPacket* avPacket, bool& consumed);
+		virtual HRESULT GetFrameFromFFmpegDecoder(AVPacket* avPacket);
 		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
 		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter);
 		UncompressedSampleProvider(

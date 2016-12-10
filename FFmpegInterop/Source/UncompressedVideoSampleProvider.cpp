@@ -127,6 +127,7 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	dataWriter->WriteBytes(YBuffer);
 	dataWriter->WriteBytes(UVBuffer);
 	av_frame_unref(m_pAvFrame);
+	av_freep(m_pAvFrame);
 
 	return S_OK;
 }

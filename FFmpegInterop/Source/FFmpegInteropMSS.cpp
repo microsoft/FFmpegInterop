@@ -30,7 +30,6 @@ extern "C"
 #include <libavutil/imgutils.h>
 }
 
-
 using namespace concurrency;
 using namespace FFmpegInterop;
 using namespace Platform;

@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //
 //	Copyright 2015 Microsoft Corporation
 //
@@ -29,6 +29,7 @@ extern "C"
 {
 #include <libavutil/imgutils.h>
 }
+
 
 using namespace concurrency;
 using namespace FFmpegInterop;
@@ -83,6 +84,7 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
 	av_dict_free(&avDict);
+	fileStreamData->Release();
 }
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)

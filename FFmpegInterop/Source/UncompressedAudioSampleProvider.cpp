@@ -68,15 +68,6 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 		}
 	}
 
-	if (SUCCEEDED(hr))
-	{
-		m_pAvFrame = av_frame_alloc();
-		if (!m_pAvFrame)
-		{
-			hr = E_OUTOFMEMORY;
-		}
-	}
-
 	return hr;
 }
 
@@ -108,6 +99,7 @@ HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWri
 	dataWriter->WriteBytes(aBuffer);
 	av_freep(&resampledData);
 	av_frame_unref(m_pAvFrame);
+	av_freep(m_pAvFrame);
 
 	return S_OK;
 }

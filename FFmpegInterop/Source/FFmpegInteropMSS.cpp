@@ -284,22 +284,44 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		audioStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &avAudioCodec, 0);
 		if (audioStreamIndex != AVERROR_STREAM_NOT_FOUND && avAudioCodec)
 		{
-			avAudioCodecCtx = avFormatCtx->streams[audioStreamIndex]->codec;
-			if (avcodec_open2(avAudioCodecCtx, avAudioCodec, NULL) < 0)
+			// allocate a new decoding context
+			avAudioCodecCtx = avcodec_alloc_context3(avAudioCodec);
+			if (!avAudioCodecCtx)
 			{
-				avAudioCodecCtx = nullptr;
-				hr = E_FAIL;
+				hr = E_OUTOFMEMORY;
+				DebugMessage(L"Could not allocate a decoding context\n");
+				avformat_close_input(&avFormatCtx);
 			}
-			else
+
+			if (SUCCEEDED(hr))
 			{
-				// Detect audio format and create audio stream descriptor accordingly
-				hr = CreateAudioStreamDescriptor(forceAudioDecode);
+				// initialize the stream parameters with demuxer information
+				if (avcodec_parameters_to_context(avAudioCodecCtx, avFormatCtx->streams[audioStreamIndex]->codecpar) < 0)
+				{
+					hr = E_FAIL;
+					avformat_close_input(&avFormatCtx);
+					avcodec_free_context(&avAudioCodecCtx);
+				}
+
 				if (SUCCEEDED(hr))
 				{
-					hr = audioSampleProvider->AllocateResources();
-					if (SUCCEEDED(hr))
+					if (avcodec_open2(avAudioCodecCtx, avAudioCodec, NULL) < 0)
 					{
-						m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
+						avAudioCodecCtx = nullptr;
+						hr = E_FAIL;
+					}
+					else
+					{
+						// Detect audio format and create audio stream descriptor accordingly
+						hr = CreateAudioStreamDescriptor(forceAudioDecode);
+						if (SUCCEEDED(hr))
+						{
+							hr = audioSampleProvider->AllocateResources();
+							if (SUCCEEDED(hr))
+							{
+								m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
+							}
+						}
 					}
 				}
 			}
@@ -322,22 +344,44 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			}
 			else
 			{
-				avVideoCodecCtx = avFormatCtx->streams[videoStreamIndex]->codec;
-				if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
+				// allocate a new decoding context
+				avVideoCodecCtx = avcodec_alloc_context3(avVideoCodec);
+				if (!avVideoCodecCtx)
 				{
-					avVideoCodecCtx = nullptr;
-					hr = E_FAIL; // Cannot open the video codec
+					DebugMessage(L"Could not allocate a decoding context\n");
+					avformat_close_input(&avFormatCtx);
+					hr = E_OUTOFMEMORY;
 				}
-				else
+
+				if (SUCCEEDED(hr))
 				{
-					// Detect video format and create video stream descriptor accordingly
-					hr = CreateVideoStreamDescriptor(forceVideoDecode);
-					if (SUCCEEDED(hr))
+					// initialize the stream parameters with demuxer information
+					if (avcodec_parameters_to_context(avVideoCodecCtx, avFormatCtx->streams[videoStreamIndex]->codecpar) < 0)
 					{
-						hr = videoSampleProvider->AllocateResources();
+						avformat_close_input(&avFormatCtx);
+						avcodec_free_context(&avVideoCodecCtx);
+						hr = E_FAIL;
+					}
+				}
+
+				if (SUCCEEDED(hr))
+				{
+					if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
+					{
+						avVideoCodecCtx = nullptr;
+						hr = E_FAIL; // Cannot open the video codec
+					}
+					else
+					{
+						// Detect video format and create video stream descriptor accordingly
+						hr = CreateVideoStreamDescriptor(forceVideoDecode);
 						if (SUCCEEDED(hr))
 						{
-							m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
+							hr = videoSampleProvider->AllocateResources();
+							if (SUCCEEDED(hr))
+							{
+								m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
+							}
 						}
 					}
 				}
@@ -396,17 +440,17 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 	{
 		if (avAudioCodecCtx->extradata_size == 0)
 		{
-			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateAacAdts(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int) avAudioCodecCtx->bit_rate));
+			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateAacAdts(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int)avAudioCodecCtx->bit_rate));
 		}
 		else
 		{
-			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateAac(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int) avAudioCodecCtx->bit_rate));
+			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateAac(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int)avAudioCodecCtx->bit_rate));
 		}
 		audioSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
 	}
 	else if (avAudioCodecCtx->codec_id == AV_CODEC_ID_MP3 && !forceAudioDecode)
 	{
-		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateMp3(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int) avAudioCodecCtx->bit_rate));
+		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateMp3(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int)avAudioCodecCtx->bit_rate));
 		audioSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
 	}
 	else
@@ -465,7 +509,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		videoProperties->FrameRate->Denominator = avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.den;
 	}
 
-	videoProperties->Bitrate = (unsigned int) avVideoCodecCtx->bit_rate;
+	videoProperties->Bitrate = (unsigned int)avVideoCodecCtx->bit_rate;
 	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 
 	return (videoStreamDescriptor != nullptr && videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;

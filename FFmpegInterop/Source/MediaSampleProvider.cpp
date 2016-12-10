@@ -70,6 +70,7 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 
 	bool frameComplete = false;
 	bool decodeSuccess = true;
+	int64_t framePts = 0, frameDuration = 0;
 
 	while (SUCCEEDED(hr) && !frameComplete)
 	{
@@ -88,9 +89,11 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		{
 			// Pick the packets from the queue one at a time
 			avPacket = PopPacket();
+			framePts = avPacket.pts;
+			frameDuration = avPacket.duration;
 
-			// Decode the packet if necessary
-			hr = DecodeAVPacket(dataWriter, &avPacket);
+			// Decode the packet if necessary, it will update the presentation time if necessary
+			hr = DecodeAVPacket(dataWriter, &avPacket, framePts, frameDuration);
 			frameComplete = (hr == S_OK);
 		}
 	}
@@ -100,8 +103,8 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		// Write the packet out
 		hr = WriteAVPacketToStream(dataWriter, &avPacket);
 
-		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.pts) };
-		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * avPacket.duration) };
+		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) };
+		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration) };
 
 		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
 		sample->Duration = dur;
@@ -121,17 +124,33 @@ HRESULT MediaSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPac
 	return S_OK;
 }
 
-HRESULT MediaSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket *avPacket)
+HRESULT MediaSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket *avPacket, int64_t &framePts, int64_t &frameDuration)
 {
 	// For the simple case of compressed samples, each packet is a sample
+	if (avPacket != nullptr && avPacket->pts != AV_NOPTS_VALUE)
+	{
+		framePts = avPacket->pts;
+		frameDuration = avPacket->duration;
+	}
 	return S_OK;
 }
 
-void MediaSampleProvider::PushPacket(AVPacket packet)
+void MediaSampleProvider::QueuePacket(AVPacket packet)
 {
-	DebugMessage(L" - PushPacket\n");
+	DebugMessage(L" - QueuePacket\n");
 
-	m_packetQueue.push(packet);
+	m_packetQueue.push_back(packet);
+}
+
+void MediaSampleProvider::HeadQueuePacket(AVPacket packet)
+{
+	DebugMessage(L" - HeadQueuePacket\n");
+
+	// Add a reference to the packet since we're pushing it back into the queue
+	AVPacket temp;
+	av_init_packet(&temp);
+	av_packet_ref(&temp, &packet);
+	m_packetQueue.insert(m_packetQueue.begin(), temp);
 }
 
 AVPacket MediaSampleProvider::PopPacket()
@@ -146,7 +165,7 @@ AVPacket MediaSampleProvider::PopPacket()
 	if (!m_packetQueue.empty())
 	{
 		avPacket = m_packetQueue.front();
-		m_packetQueue.pop();
+		m_packetQueue.erase(m_packetQueue.begin());
 	}
 
 	return avPacket;

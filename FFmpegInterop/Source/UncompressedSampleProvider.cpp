@@ -81,8 +81,12 @@ HRESULT UncompressedSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPac
 
 	bool consumed = false;
 	hr = GetFrameFromFFmpegDecoder(avPacket, consumed);
-	framePts = m_pAvFrame->pkt_pts;
-	frameDuration = m_pAvFrame->pkt_duration;
+	// Update the timestamp if the packet has one
+	if (m_pAvFrame->pts != AV_NOPTS_VALUE)
+	{
+		framePts = m_pAvFrame->pts;
+		frameDuration = m_pAvFrame->pkt_duration;
+	}
 
 	// If we didn't consume the packet, put it back in the queue
 	if (!consumed)

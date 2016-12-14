@@ -45,6 +45,36 @@ namespace FFmpegInterop
 		MediaStreamSource^ GetMediaStreamSource();
 		virtual ~FFmpegInteropMSS();
 
+		// Properties
+		property AudioStreamDescriptor^ AudioDescriptor
+		{
+			AudioStreamDescriptor^ get()
+			{
+				return audioStreamDescriptor;
+			};
+		};
+		property VideoStreamDescriptor^ VideoDescriptor
+		{
+			VideoStreamDescriptor^ get()
+			{
+				return videoStreamDescriptor;
+			};
+		};
+		property TimeSpan Duration
+		{
+			TimeSpan get()
+			{
+				return mediaDuration;
+			};
+		};
+		property String^ CodecName
+		{
+			String^ get()
+			{
+				return codecName;
+			};
+		};
+
 	internal:
 		int ReadPacket();
 
@@ -80,6 +110,7 @@ namespace FFmpegInterop
 		MediaSampleProvider^ audioSampleProvider;
 		MediaSampleProvider^ videoSampleProvider;
 
+		String^ codecName;
 		TimeSpan mediaDuration;
 		IStream* fileStreamData;
 		unsigned char* fileStreamBuffer;

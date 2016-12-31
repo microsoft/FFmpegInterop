@@ -142,17 +142,6 @@ void MediaSampleProvider::QueuePacket(AVPacket packet)
 	m_packetQueue.push_back(packet);
 }
 
-void MediaSampleProvider::HeadQueuePacket(AVPacket packet)
-{
-	DebugMessage(L" - HeadQueuePacket\n");
-
-	// Add a reference to the packet since we're pushing it back into the queue
-	AVPacket temp;
-	av_init_packet(&temp);
-	av_packet_ref(&temp, &packet);
-	m_packetQueue.insert(m_packetQueue.begin(), temp);
-}
-
 AVPacket MediaSampleProvider::PopPacket()
 {
 	DebugMessage(L" - PopPacket\n");

@@ -42,7 +42,6 @@ namespace FFmpegInterop
 
 	internal:
 		void QueuePacket(AVPacket packet);
-		void HeadQueuePacket(AVPacket packet);
 		AVPacket PopPacket();
 
 	private:

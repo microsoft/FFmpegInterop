@@ -51,6 +51,14 @@ App::App()
 {
 	InitializeComponent();
 	Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
+
+	FFmpegInterop::FFmpegInteropLogging::SetLogLevel(FFmpegInterop::LogLevel::Info);
+	FFmpegInterop::FFmpegInteropLogging::SetLogProvider(this);
+}
+
+void App::Log(FFmpegInterop::LogLevel level, String^ message)
+{
+	OutputDebugString(message->Data());
 }
 
 /// <summary>

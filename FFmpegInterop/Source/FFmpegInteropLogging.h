@@ -23,6 +23,7 @@ namespace FFmpegInterop
 {
 	public ref class FFmpegInteropLogging sealed
 	{
+	public:
 		static void SetLogLevel(LogLevel level);
 		static void SetLogProvider(ILogProvider^ logProvider);
 		static void SetDefaultLogProvider();

@@ -192,6 +192,53 @@ elif [ "$1" == "Phone8.1" ]; then
         popd
 
     fi
+
+elif [ "$1" == "Win7" ]; then
+    echo "Make Win7"
+
+    if [ "$2" == "x86" ]; then
+        echo "Make Win7 x86"
+        pushd $DIR/ffmpeg
+        rm -rf Output/Windows7/x86
+        mkdir -p Output/Windows7/x86
+        cd Output/Windows7/x86
+        ../../../configure \
+        --toolchain=msvc \
+        --disable-programs \
+        --disable-d3d11va \
+        --disable-dxva2 \
+        --arch=x86 \
+        --enable-shared \
+        --enable-cross-compile \
+        --target-os=win32 \
+        --extra-cflags="-MD -D_WINDLL" \
+        --extra-ldflags="-APPCONTAINER:NO -MACHINE:x86" \
+        --prefix=../../../Build/Windows7/x86
+        make install
+        popd
+
+    elif [ "$2" == "x64" ]; then
+        echo "Make Win7 x64"
+        pushd $DIR/ffmpeg
+        rm -rf Output/Windows7/x64
+        mkdir -p Output/Windows7/x64
+        cd Output/Windows7/x64
+        ../../../configure \
+        --toolchain=msvc \
+        --disable-programs \
+        --disable-d3d11va \
+        --disable-dxva2 \
+        --arch=amd64 \
+        --enable-shared \
+        --enable-cross-compile \
+        --target-os=win32 \
+        --extra-cflags="-MD -D_WINDLL" \
+        --extra-ldflags="-APPCONTAINER:NO -MACHINE:x64" \
+        --prefix=../../../Build/Windows7/x64
+        make install
+        popd
+
+    fi
 fi
 
 exit 0

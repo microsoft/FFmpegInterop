@@ -60,6 +60,7 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 
 FFmpegInteropMSS::~FFmpegInteropMSS()
 {
+	mutexGuard.lock();
 	if (mss)
 	{
 		mss->Starting -= startingRequestedToken;
@@ -88,6 +89,7 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	{
 		fileStreamData->Release();
 	}
+	mutexGuard.unlock();
 }
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
@@ -349,6 +351,16 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			}
 			else
 			{
+				AVDictionaryEntry *rotate_tag = av_dict_get(avFormatCtx->streams[videoStreamIndex]->metadata, "rotate", NULL, 0);
+				if (rotate_tag != NULL)
+				{
+					rotateVideo = true;
+					rotationAngle = atoi(rotate_tag->value);
+				}
+				else
+				{
+					rotateVideo = false;
+				}
 				// allocate a new decoding context
 				avVideoCodecCtx = avcodec_alloc_context3(avVideoCodec);
 				if (!avVideoCodecCtx)
@@ -500,7 +512,16 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 			videoProperties->PixelAspectRatio->Denominator = avVideoCodecCtx->sample_aspect_ratio.den;
 		}
 	}
-
+	if (rotateVideo)
+	{
+		Platform::String^ MF_MT_VIDEO_ROTATION_STR("{C380465D-2271-428C-9B83-ECEA3B4A85C1}");
+		GUID rawguid;
+		HRESULT hr = IIDFromString(MF_MT_VIDEO_ROTATION_STR->Data(), &rawguid);
+		if (SUCCEEDED(hr)) {
+			Platform::Guid MF_MT_VIDEO_ROTATION(rawguid);
+			videoProperties->Properties->Insert(MF_MT_VIDEO_ROTATION, (uint32)rotationAngle);
+		}
+	}
 	// Detect the correct framerate
 	if (avVideoCodecCtx->framerate.num != 0 || avVideoCodecCtx->framerate.den != 1)
 	{
@@ -600,18 +621,23 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 
 void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)
 {
-	if (args->Request->StreamDescriptor == audioStreamDescriptor && audioSampleProvider != nullptr)
+	mutexGuard.lock();
+	if (mss != nullptr)
 	{
-		args->Request->Sample = audioSampleProvider->GetNextSample();
+		if (args->Request->StreamDescriptor == audioStreamDescriptor && audioSampleProvider != nullptr)
+		{
+			args->Request->Sample = audioSampleProvider->GetNextSample();
+		}
+		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoSampleProvider != nullptr)
+		{
+			args->Request->Sample = videoSampleProvider->GetNextSample();
+		}
+		else
+		{
+			args->Request->Sample = nullptr;
+		}
 	}
-	else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoSampleProvider != nullptr)
-	{
-		args->Request->Sample = videoSampleProvider->GetNextSample();
-	}
-	else
-	{
-		args->Request->Sample = nullptr;
-	}
+	mutexGuard.unlock();
 }
 
 // Static function to read file stream and pass data to FFmpeg. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context

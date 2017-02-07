@@ -514,13 +514,8 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	}
 	if (rotateVideo)
 	{
-		Platform::String^ MF_MT_VIDEO_ROTATION_STR("{C380465D-2271-428C-9B83-ECEA3B4A85C1}");
-		GUID rawguid;
-		HRESULT hr = IIDFromString(MF_MT_VIDEO_ROTATION_STR->Data(), &rawguid);
-		if (SUCCEEDED(hr)) {
-			Platform::Guid MF_MT_VIDEO_ROTATION(rawguid);
-			videoProperties->Properties->Insert(MF_MT_VIDEO_ROTATION, (uint32)rotationAngle);
-		}
+		Platform::Guid MF_MT_VIDEO_ROTATION(0xC380465D, 0x2271, 0x428C, 0x9B, 0x83, 0xEC, 0xEA, 0x3B, 0x4A, 0x85, 0xC1);
+		videoProperties->Properties->Insert(MF_MT_VIDEO_ROTATION, (uint32)rotationAngle);
 	}
 	// Detect the correct framerate
 	if (avVideoCodecCtx->framerate.num != 0 || avVideoCodecCtx->framerate.den != 1)

@@ -373,14 +373,6 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					}
 					else
 					{
-						// Convert codec name from const char* to Platform::String
-						auto codecNameChars = avVideoCodec->name;
-						size_t newsize = strlen(avVideoCodec->name) + 1;
-						wchar_t * wcstring = new wchar_t[newsize];
-						size_t convertedChars = 0;
-						mbstowcs_s(&convertedChars, wcstring, newsize, codecNameChars, _TRUNCATE);
-						codecName = ref new Platform::String(wcstring);
-						delete[] wcstring;
 						// Detect video format and create video stream descriptor accordingly
 						hr = CreateVideoStreamDescriptor(forceVideoDecode);
 						if (SUCCEEDED(hr))
@@ -389,6 +381,31 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 							if (SUCCEEDED(hr))
 							{
 								m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
+							}
+						}
+
+						if (SUCCEEDED(hr))
+						{
+							// Convert codec name from const char* to Platform::String
+							auto codecNameChars = avVideoCodec->name;
+							size_t newsize = strlen(avVideoCodec->name) + 1;
+							wchar_t * wcstring = nullptr;
+
+							try
+							{
+								wcstring = new wchar_t[newsize];
+							}
+							catch (std::bad_alloc&)
+							{
+								hr = E_FAIL; // couldn't allocate memory for video codec name
+							}
+
+							if (SUCCEEDED(hr))
+							{
+								size_t convertedChars = 0;
+								mbstowcs_s(&convertedChars, wcstring, newsize, codecNameChars, _TRUNCATE);
+								codecName = ref new Platform::String(wcstring);
+								delete[] wcstring;
 							}
 						}
 					}

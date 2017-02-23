@@ -8,6 +8,7 @@ if "%~1" == "" goto Usage
 set BUILD.ARM=N
 set BUILD.x86=N
 set BUILD.x64=N
+set BUILD.win7=N
 set BUILD.win10=N
 set BUILD.win8.1=N
 set BUILD.phone8.1=N
@@ -23,6 +24,8 @@ for %%a in (%*) do (
         set BUILD.x86=Y
     ) else if /I "%%a"=="x64" (
         set BUILD.x64=Y
+    ) else if /I "%%a"=="win7" (
+        set BUILD.win7=Y
     ) else if /I "%%a"=="win10" (
         set BUILD.win10=Y
     ) else if /I "%%a"=="win8.1" (
@@ -49,7 +52,9 @@ if %BUILD.ARM%==N (
 if %BUILD.win10%==N (
     if %BUILD.win8.1%==N (
         if %BUILD.phone8.1%==N (
-            goto Usage
+            if %BUILD.win7%==N (
+                goto Usage
+            )
         )
     )
 )
@@ -185,7 +190,7 @@ endlocal
 
 :: Build and deploy Windows Phone 8.1 library
 :Phone8.1
-if %BUILD.phone8.1%==N goto Cleanup
+if %BUILD.phone8.1%==N goto Win7
 
 :: Check for required tools
 if not defined VS120COMNTOOLS (
@@ -209,7 +214,7 @@ set INCLUDE=%VSINSTALLDIR%VC\include;%VSINSTALLDIR%VC\atlmfc\include;%WindowsSdk
 endlocal
 
 :Phone8.1x86
-if %BUILD.x86%==N goto Cleanup
+if %BUILD.x86%==N goto Win7
 echo Building FFmpeg for Windows Phone 8.1 apps x86...
 echo:
 
@@ -222,6 +227,45 @@ set INCLUDE=%VSINSTALLDIR%VC\INCLUDE;%VSINSTALLDIR%VC\ATLMFC\INCLUDE;%WindowsSdk
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Phone8.1 x86
 endlocal
 
+:: Build and deploy Windows 7 library
+:Win7
+if %BUILD.win7%==N goto Cleanup
+
+:: Check for required tools
+if not defined VS120COMNTOOLS (
+    echo:
+    echo VS120COMNTOOLS environment variable is not found. Check your Visual Studio 2013 installation
+    goto Cleanup
+)
+
+:Win7x86
+if %BUILD.x86%==N goto Win7x64
+echo Building FFmpeg for Windows 7 desktop x86...
+echo:
+
+setlocal
+call "%VS120COMNTOOLS%..\..\VC\vcvarsall.bat" x86
+set LIB=%VSINSTALLDIR%VC\lib;%VSINSTALLDIR%VC\atlmfc\lib;%WindowsSdkDir%lib\winv6.3\um\x86;
+set LIBPATH=%WindowsSdkDir%References\CommonConfiguration\Neutral;%VSINSTALLDIR%VC\lib;
+set INCLUDE=%VSINSTALLDIR%VC\include;%WindowsSdkDir%Include\um;%WindowsSdkDir%Include\shared;
+
+%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win7 x86
+endlocal
+
+:Win7x64
+if %BUILD.x64%==N goto Cleanup
+echo Building FFmpeg for Windows 7 desktop x64...
+echo:
+
+setlocal
+call "%VS120COMNTOOLS%..\..\VC\vcvarsall.bat" x64
+set LIB=%VSINSTALLDIR%VC\lib\amd64;%VSINSTALLDIR%VC\atlmfc\lib\amd64;%WindowsSdkDir%lib\winv6.3\um\x64;
+set LIBPATH=%WindowsSdkDir%References\CommonConfiguration\Neutral;%VSINSTALLDIR%VC\lib\amd64;
+set INCLUDE=%VSINSTALLDIR%VC\include;%WindowsSdkDir%Include\um;%WindowsSdkDir%Include\shared;
+
+%MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh Win7 x64
+endlocal
+
 goto Cleanup
 
 :: Display help message
@@ -232,13 +276,14 @@ echo     %0 [target platform] [architecture]
 echo:
 echo where
 echo:
-echo [target platform] is: win10 ^| win8.1 ^| phone8.1 (at least one)
+echo [target platform] is: win10 ^| win8.1 ^| phone8.1 ^| win7 (at least one)
 echo [architecture]    is: x86 ^| x64 ^| ARM (optional)
 echo:
 echo For example:
 echo     %0 win10                     - Build for Windows 10 ARM, x64, and x86
 echo     %0 phone8.1 ARM              - Build for Windows Phone 8.1 ARM only
 echo     %0 win8.1 x86 x64            - Build for Windows 8.1 x86 and x64 only
+echo     %0 win7 x86 x64              - Build for Windows 7 x86 and x64 only
 echo     %0 phone8.1 win10 ARM        - Build for Windows 10 and Windows Phone 8.1 ARM only
 echo     %0 win8.1 phone8.1 win10     - Build all architecture for all target platform
 goto :eof

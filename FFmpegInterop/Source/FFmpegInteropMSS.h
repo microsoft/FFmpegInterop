@@ -67,11 +67,18 @@ namespace FFmpegInterop
 				return mediaDuration;
 			};
 		};
-		property String^ CodecName
+		property String^ VideoCodecName
 		{
 			String^ get()
 			{
-				return codecName;
+				return videoCodecName;
+			};
+		};
+		property String^ AudioCodecName
+		{
+			String^ get()
+			{
+				return audioCodecName;
 			};
 		};
 
@@ -86,6 +93,7 @@ namespace FFmpegInterop
 		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
 		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
 		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode);
+		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
@@ -114,7 +122,8 @@ namespace FFmpegInterop
 		MediaSampleProvider^ audioSampleProvider;
 		MediaSampleProvider^ videoSampleProvider;
 
-		String^ codecName;
+		String^ videoCodecName;
+		String^ audioCodecName;
 		TimeSpan mediaDuration;
 		IStream* fileStreamData;
 		unsigned char* fileStreamBuffer;

@@ -18,6 +18,7 @@
 
 #pragma once
 #include <queue>
+#include <mutex>
 #include "MediaSampleProvider.h"
 #include "FFmpegReader.h"
 
@@ -45,6 +46,43 @@ namespace FFmpegInterop
 		MediaStreamSource^ GetMediaStreamSource();
 		virtual ~FFmpegInteropMSS();
 
+		// Properties
+		property AudioStreamDescriptor^ AudioDescriptor
+		{
+			AudioStreamDescriptor^ get()
+			{
+				return audioStreamDescriptor;
+			};
+		};
+		property VideoStreamDescriptor^ VideoDescriptor
+		{
+			VideoStreamDescriptor^ get()
+			{
+				return videoStreamDescriptor;
+			};
+		};
+		property TimeSpan Duration
+		{
+			TimeSpan get()
+			{
+				return mediaDuration;
+			};
+		};
+		property String^ VideoCodecName
+		{
+			String^ get()
+			{
+				return videoCodecName;
+			};
+		};
+		property String^ AudioCodecName
+		{
+			String^ get()
+			{
+				return audioCodecName;
+			};
+		};
+
 	internal:
 		int ReadPacket();
 
@@ -56,6 +94,7 @@ namespace FFmpegInterop
 		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
 		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
 		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode);
+		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
@@ -84,6 +123,8 @@ namespace FFmpegInterop
 		MediaSampleProvider^ audioSampleProvider;
 		MediaSampleProvider^ videoSampleProvider;
 
+		String^ videoCodecName;
+		String^ audioCodecName;
 		TimeSpan mediaDuration;
 		IStream* fileStreamData;
 		unsigned char* fileStreamBuffer;

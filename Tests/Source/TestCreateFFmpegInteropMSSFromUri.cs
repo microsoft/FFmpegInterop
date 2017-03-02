@@ -13,9 +13,6 @@ namespace UnitTest.Windows
     [TestClass]
     public class CreateFFmpegInteropMSSFromUri
     {
-        static string _UriSource = "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov";
-        static int _UriLength = 596458;
-
         [TestMethod]
         public void CreateFromUri_Null()
         {
@@ -40,8 +37,12 @@ namespace UnitTest.Windows
         public void CreateFromUri_Default()
         {
             // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(_UriSource, false, false);
+            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, false, false);
             Assert.IsNotNull(FFmpegMSS);
+
+            // Validate the metadata
+            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
+            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
             Assert.IsNotNull(mss);
@@ -49,15 +50,19 @@ namespace UnitTest.Windows
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
             Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(_UriLength, mss.Duration.TotalMilliseconds);
+            Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
         }
 
         [TestMethod]
         public void CreateFromUri_Force_Audio()
         {
             // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(_UriSource, true, false);
+            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, true, false);
             Assert.IsNotNull(FFmpegMSS);
+
+            // Validate the metadata
+            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
+            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
             Assert.IsNotNull(mss);
@@ -65,15 +70,19 @@ namespace UnitTest.Windows
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
             Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(_UriLength, mss.Duration.TotalMilliseconds);
+            Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
         }
 
         [TestMethod]
         public void CreateFromUri_Force_Video()
         {
             // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(_UriSource, false, true);
+            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, false, true);
             Assert.IsNotNull(FFmpegMSS);
+
+            // Validate the metadata
+            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
+            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
             Assert.IsNotNull(mss);
@@ -81,15 +90,19 @@ namespace UnitTest.Windows
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
             Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(_UriLength, mss.Duration.TotalMilliseconds);
+            Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
         }
 
         [TestMethod]
         public void CreateFromUri_Force_Audio_Video()
         {
             // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(_UriSource, true, true);
+            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, true, true);
             Assert.IsNotNull(FFmpegMSS);
+
+            // Validate the metadata
+            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
+            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
             Assert.IsNotNull(mss);
@@ -97,7 +110,7 @@ namespace UnitTest.Windows
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
             Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(_UriLength, mss.Duration.TotalMilliseconds);
+            Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
         }
 
         [TestMethod]
@@ -110,8 +123,12 @@ namespace UnitTest.Windows
             Assert.IsNotNull(options);
 
             // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(_UriSource, false, false, options);
+            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, false, false, options);
             Assert.IsNotNull(FFmpegMSS);
+
+            // Validate the metadata
+            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
+            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
             Assert.IsNotNull(mss);
@@ -119,15 +136,19 @@ namespace UnitTest.Windows
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
             Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(_UriLength, mss.Duration.TotalMilliseconds);
+            Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
         }
 
         [TestMethod]
         public void CreateFromUri_Destructor()
         {
             // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(_UriSource, false, false);
+            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, false, false);
             Assert.IsNotNull(FFmpegMSS);
+
+            // Validate the metadata
+            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
+            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
             Assert.IsNotNull(mss);
@@ -135,7 +156,7 @@ namespace UnitTest.Windows
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
             Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(_UriLength, mss.Duration.TotalMilliseconds);
+            Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
 
             // Keep original reference and ensure object are not destroyed until each reference is released by setting it to nullptr
             FFmpegInteropMSS OriginalFFmpegMSS = FFmpegMSS;

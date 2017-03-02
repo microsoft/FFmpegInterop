@@ -329,6 +329,12 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 								m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
 							}
 						}
+
+						if (SUCCEEDED(hr))
+						{
+							// Convert audio codec name for property
+							hr = ConvertCodecName(avAudioCodec->name, &audioCodecName);
+						}
 					}
 				}
 			}
@@ -400,6 +406,12 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 								m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
 							}
 						}
+
+						if (SUCCEEDED(hr))
+						{
+							// Convert video codec name for property
+							hr = ConvertCodecName(avVideoCodec->name, &videoCodecName);
+						}
 					}
 				}
 			}
@@ -446,6 +458,35 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		{
 			hr = E_OUTOFMEMORY;
 		}
+	}
+
+	return hr;
+}
+
+HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outputCodecName)
+{
+	HRESULT hr = S_OK;
+
+	// Convert codec name from const char* to Platform::String
+	auto codecNameChars = codecName;
+	size_t newsize = strlen(codecNameChars) + 1;
+	wchar_t * wcstring = nullptr;
+
+	try
+	{
+		wcstring = new wchar_t[newsize];
+	}
+	catch (std::bad_alloc&)
+	{
+		hr = E_FAIL; // couldn't allocate memory for codec name
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		size_t convertedChars = 0;
+		mbstowcs_s(&convertedChars, wcstring, newsize, codecNameChars, _TRUNCATE);
+		*outputCodecName = ref new Platform::String(wcstring);
+		delete[] wcstring;
 	}
 
 	return hr;

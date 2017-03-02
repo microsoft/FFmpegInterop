@@ -18,6 +18,7 @@
 
 #pragma once
 #include <queue>
+#include <mutex>
 #include "MediaSampleProvider.h"
 #include "FFmpegReader.h"
 

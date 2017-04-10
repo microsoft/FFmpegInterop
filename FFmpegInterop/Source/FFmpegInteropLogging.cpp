@@ -42,15 +42,18 @@ void FFmpegInteropLogging::SetLogProvider(ILogProvider^ logProvider)
 	s_pLogProvider = logProvider;
 	av_log_set_callback([](void*avcl, int level, const char *fmt, va_list vl)->void
 	{
-		if (s_pLogProvider != nullptr)
+		if (level <= av_log_get_level())
 		{
-			char pLine[1000];
-			int printPrefix = 1;
-			av_log_format_line(avcl, level, fmt, vl, pLine, sizeof(pLine), &printPrefix);
+			if (s_pLogProvider != nullptr)
+			{
+				char pLine[1000];
+				int printPrefix = 1;
+				av_log_format_line(avcl, level, fmt, vl, pLine, sizeof(pLine), &printPrefix);
 
-			wchar_t wLine[sizeof(pLine)];
-			MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine));
-			s_pLogProvider->Log((LogLevel)level, ref new String(wLine));
+				wchar_t wLine[sizeof(pLine)];
+				MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine));
+				s_pLogProvider->Log((LogLevel)level, ref new String(wLine));
+			}
 		}
 	});
 }

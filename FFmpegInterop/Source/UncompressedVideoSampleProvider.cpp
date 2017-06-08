@@ -90,7 +90,7 @@ UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
 {
 	if (m_pAvFrame)
 	{
-		av_freep(m_pAvFrame);
+		av_frame_free(&m_pAvFrame);
 	}
 
 	if (m_rgVideoBufferData)
@@ -127,7 +127,7 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	dataWriter->WriteBytes(YBuffer);
 	dataWriter->WriteBytes(UVBuffer);
 	av_frame_unref(m_pAvFrame);
-	av_freep(m_pAvFrame);
+	av_frame_free(&m_pAvFrame);
 
 	return S_OK;
 }

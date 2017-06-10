@@ -67,13 +67,13 @@ HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVPacket* avPacket
 			// return S_FALSE to indicate a partial frame
 			hr = S_FALSE;
 			av_frame_unref(pFrame);
-			av_freep(pFrame);
+			av_frame_free(&pFrame);
 		}
 		else if (decodeFrame < 0)
 		{
 			hr = E_FAIL;
 			av_frame_unref(pFrame);
-			av_freep(pFrame);
+			av_frame_free(&pFrame);
 			DebugMessage(L"Failed to get a frame from the decoder\n");
 		}
 		else

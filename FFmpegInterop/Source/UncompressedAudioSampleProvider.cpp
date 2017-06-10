@@ -75,7 +75,7 @@ UncompressedAudioSampleProvider::~UncompressedAudioSampleProvider()
 {
 	if (m_pAvFrame)
 	{
-		av_freep(m_pAvFrame);
+		av_frame_free(&m_pAvFrame);
 	}
 
 	// Free 
@@ -99,7 +99,7 @@ HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWri
 	dataWriter->WriteBytes(aBuffer);
 	av_freep(&resampledData);
 	av_frame_unref(m_pAvFrame);
-	av_freep(m_pAvFrame);
+	av_frame_free(&m_pAvFrame);
 
 	return S_OK;
 }

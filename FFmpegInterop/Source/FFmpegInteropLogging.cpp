@@ -1,3 +1,4 @@
+
 //*****************************************************************************
 //
 //	Copyright 2017 Microsoft Corporation
@@ -51,8 +52,10 @@ void FFmpegInteropLogging::SetLogProvider(ILogProvider^ logProvider)
 				av_log_format_line(avcl, level, fmt, vl, pLine, sizeof(pLine), &printPrefix);
 
 				wchar_t wLine[sizeof(pLine)];
-				MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine));
-				s_pLogProvider->Log((LogLevel)level, ref new String(wLine));
+				if (MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine)) != 0)
+				{
+					s_pLogProvider->Log((LogLevel)level, ref new String(wLine));
+				}
 			}
 		}
 	});

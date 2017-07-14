@@ -30,7 +30,8 @@ namespace MediaPlayerCPP
 	/// <summary>
 	/// Provides application-specific behavior to supplement the default Application class.
 	/// </summary>
-	ref class App sealed
+	ref class App sealed :
+		public FFmpegInterop::ILogProvider
 	{
 	public:
 		App();
@@ -39,6 +40,9 @@ namespace MediaPlayerCPP
 #if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
 		virtual void OnActivated(Windows::ApplicationModel::Activation::IActivatedEventArgs^ e) override;
 #endif
+
+	public:
+		virtual void Log(FFmpegInterop::LogLevel level, Platform::String^ message);
 
 	private:
 #if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP

@@ -14,10 +14,12 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropLogging.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegReader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\H264AVCSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\H264SampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\ILogProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\MediaSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedSampleProvider.h" />
@@ -25,6 +27,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropLogging.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropMSS.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegReader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\H264AVCSampleProvider.cpp" />

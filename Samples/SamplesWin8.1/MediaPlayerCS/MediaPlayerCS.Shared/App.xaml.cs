@@ -16,6 +16,7 @@
 //
 //*****************************************************************************
 
+using FFmpegInterop;
 using System;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
@@ -31,7 +32,7 @@ namespace MediaPlayerCS
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
-    public sealed partial class App : Application
+    public sealed partial class App : Application, ILogProvider
     {
 #if WINDOWS_PHONE_APP
         private TransitionCollection transitions;
@@ -45,6 +46,13 @@ namespace MediaPlayerCS
         {
             this.InitializeComponent();
             this.Suspending += this.OnSuspending;
+            FFmpegInteropLogging.SetLogLevel(LogLevel.Info);
+            FFmpegInteropLogging.SetLogProvider(this);
+        }
+
+        public void Log(LogLevel level, string message)
+        {
+            System.Diagnostics.Debug.WriteLine("FFmpeg ({0}): {1}", level, message);
         }
 
         /// <summary>

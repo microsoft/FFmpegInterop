@@ -93,10 +93,10 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	mutexGuard.unlock();
 }
 
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
 {
 	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode, ffmpegOptions)))
+	if (FAILED(interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode, ffmpegOptions, mss)))
 	{
 		// We failed to initialize, clear the variable to return failure
 		interopMSS = nullptr;
@@ -105,6 +105,10 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAcce
 	return interopMSS;
 }
 
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
+{
+	return CreateFFmpegInteropMSSFromStream(stream, forceAudioDecode, forceVideoDecode, nullptr, nullptr);
+}
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
 {
@@ -180,13 +184,14 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 
 	if (SUCCEEDED(hr))
 	{
+		this->mss = nullptr;
 		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
 	}
 
 	return hr;
 }
 
-HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
+HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
 {
 	HRESULT hr = S_OK;
 	if (!stream)
@@ -258,6 +263,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 
 	if (SUCCEEDED(hr))
 	{
+		this->mss = mss;
 		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
 	}
 
@@ -428,16 +434,38 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		{
 			if (videoStreamDescriptor)
 			{
-				mss = ref new MediaStreamSource(videoStreamDescriptor, audioStreamDescriptor);
+				if (mss)
+				{
+					mss->AddStreamDescriptor(videoStreamDescriptor);
+					mss->AddStreamDescriptor(audioStreamDescriptor);
+				}
+				else
+				{
+					mss = ref new MediaStreamSource(videoStreamDescriptor, audioStreamDescriptor);
+				}
 			}
 			else
 			{
-				mss = ref new MediaStreamSource(audioStreamDescriptor);
+				if (mss)
+				{
+					mss->AddStreamDescriptor(audioStreamDescriptor);
+				}
+				else
+				{
+					mss = ref new MediaStreamSource(audioStreamDescriptor);
+				}
 			}
 		}
 		else if (videoStreamDescriptor)
 		{
-			mss = ref new MediaStreamSource(videoStreamDescriptor);
+			if (mss)
+			{
+				mss->AddStreamDescriptor(videoStreamDescriptor);
+			}
+			else
+			{
+				mss = ref new MediaStreamSource(videoStreamDescriptor);
+			}
 		}
 		if (mss)
 		{

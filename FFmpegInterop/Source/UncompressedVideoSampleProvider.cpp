@@ -18,6 +18,7 @@
 
 #include "pch.h"
 #include "UncompressedVideoSampleProvider.h"
+#include <mfapi.h>
 
 extern "C"
 {
@@ -109,9 +110,32 @@ HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, 
 	{
 		// Try to get the best effort timestamp for the frame.
 		framePts = av_frame_get_best_effort_timestamp(m_pAvFrame);
+		m_interlaced_frame = m_pAvFrame->interlaced_frame == 1;
+		m_top_field_first = m_pAvFrame->top_field_first == 1;
 	}
 
 	return hr;
+}
+
+MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
+{
+	MediaStreamSample^ sample = MediaSampleProvider::GetNextSample();
+
+	if (sample != nullptr)
+	{
+		if (m_interlaced_frame)
+		{
+			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, TRUE);
+			sample->ExtendedProperties->Insert(MFSampleExtension_BottomFieldFirst, m_top_field_first ? safe_cast<Platform::Object^>(FALSE) : TRUE);
+			sample->ExtendedProperties->Insert(MFSampleExtension_RepeatFirstField, safe_cast<Platform::Object^>(FALSE));
+		}
+		else
+		{
+			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
+		}
+	}
+
+	return sample;
 }
 
 HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)

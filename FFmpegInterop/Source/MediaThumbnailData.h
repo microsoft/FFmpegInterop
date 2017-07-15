@@ -31,5 +31,10 @@ namespace FFmpegInterop
 			this->_buffer = buffer;
 			this->_extension = extension;
 		}
+	private: ~MediaThumbnailData()
+		{
+			delete _buffer;
+			delete _extension;
+		}
 	};
 }

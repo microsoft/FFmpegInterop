@@ -399,7 +399,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			}
 			else
 			{
-				videoStreamIndex = AVERROR_STREAM_NOT_FOUND;
+				thumbnailStreamIndex = AVERROR_STREAM_NOT_FOUND;
 				AVDictionaryEntry *rotate_tag = av_dict_get(avFormatCtx->streams[videoStreamIndex]->metadata, "rotate", NULL, 0);
 				if (rotate_tag != NULL)
 				{

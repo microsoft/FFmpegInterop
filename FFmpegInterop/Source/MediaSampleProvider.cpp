@@ -32,19 +32,25 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
 {
+	DebugMessage(L"MediaSampleProvider\n");
+	m_startOffset = -1;
 }
 
 HRESULT MediaSampleProvider::AllocateResources()
 {
+	DebugMessage(L"AllocateResources\n");
+	m_startOffset = -1;
 	return S_OK;
 }
 
 MediaSampleProvider::~MediaSampleProvider()
 {
+	DebugMessage(L"~MediaSampleProvider\n");
 }
 
 void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 {
+	DebugMessage(L"SetCurrentStreamIndex\n");
 	if (m_pAvCodecCtx != nullptr && m_pAvFormatCtx->nb_streams > (unsigned int)streamIndex)
 	{
 		m_streamIndex = streamIndex;
@@ -54,6 +60,7 @@ void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 		m_streamIndex = AVERROR_STREAM_NOT_FOUND;
 	}
 }
+
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample()
 {
@@ -103,7 +110,16 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		// Write the packet out
 		hr = WriteAVPacketToStream(dataWriter, &avPacket);
 
-		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) };
+		if (m_startOffset == -1)
+		{
+			//if we havent set m_startOffset already
+			DebugMessage(L"Saving m_startOffset\n");
+
+			//in some real-time streams framePts is less than 0 so we need to make sure m_startOffset is never negative
+			m_startOffset = framePts < 0 ? 0 : framePts;
+		}
+
+		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (framePts - m_startOffset)) };
 		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration) };
 
 		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
@@ -162,6 +178,7 @@ AVPacket MediaSampleProvider::PopPacket()
 
 void MediaSampleProvider::Flush()
 {
+	DebugMessage(L"Flush\n");
 	while (!m_packetQueue.empty())
 	{
 		av_packet_unref(&PopPacket());

@@ -120,15 +120,15 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample(Windows::Foundation::TimeS
 		{
 			// Write the packet out
 			hr = WriteAVPacketToStream(dataWriter, &avPacket);
-      
-      if (m_startOffset == -1)
-		  {
-			  //if we havent set m_startOffset already
-			  DebugMessage(L"Saving m_startOffset\n");
 
-			  //in some real-time streams framePts is less than 0 so we need to make sure m_startOffset is never negative
-			  m_startOffset = framePts < 0 ? 0 : framePts;
-		  }
+			if (m_startOffset == -1)
+			{
+				//if we havent set m_startOffset already
+				DebugMessage(L"Saving m_startOffset\n");
+
+				//in some real-time streams framePts is less than 0 so we need to make sure m_startOffset is never negative
+				m_startOffset = framePts < 0 ? 0 : framePts;
+			}
 
 			if (pts.Duration == 0)
 			{

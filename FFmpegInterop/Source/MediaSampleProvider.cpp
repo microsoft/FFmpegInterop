@@ -124,10 +124,13 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample(Windows::Foundation::TimeS
 
 		av_packet_unref(&avPacket);
 
-	} while (dur.Duration < minDuration.Duration);
+	} while (SUCCEEDED(hr) && dur.Duration < minDuration.Duration);
 
-	sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
-	sample->Duration = dur;
+	if (dur.Duration > 0)
+	{
+		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
+		sample->Duration = dur;
+	}
 
 	return sample;
 }

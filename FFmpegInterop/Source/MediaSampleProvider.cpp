@@ -132,7 +132,7 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample(Windows::Foundation::TimeS
 
 			if (pts.Duration == 0)
 			{
-				pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) };
+				pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (framePts - m_startOffset)) };
 			}
 
 			dur = { dur.Duration + LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration) };

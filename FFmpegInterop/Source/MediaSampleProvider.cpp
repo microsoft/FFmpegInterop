@@ -57,60 +57,77 @@ void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample()
 {
+	return this->GetNextSample(Windows::Foundation::TimeSpan({ 50000 }));
+}
+
+MediaStreamSample^ MediaSampleProvider::GetNextSample(Windows::Foundation::TimeSpan minDuration)
+{
 	DebugMessage(L"GetNextSample\n");
 
 	HRESULT hr = S_OK;
 
 	MediaStreamSample^ sample;
 	AVPacket avPacket;
-	av_init_packet(&avPacket);
-	avPacket.data = NULL;
-	avPacket.size = 0;
 	DataWriter^ dataWriter = ref new DataWriter();
 
-	bool frameComplete = false;
-	bool decodeSuccess = true;
-	int64_t framePts = 0, frameDuration = 0;
+	Windows::Foundation::TimeSpan pts = { 0 };
+	Windows::Foundation::TimeSpan dur = { 0 };
 
-	while (SUCCEEDED(hr) && !frameComplete)
+	do
 	{
-		// Continue reading until there is an appropriate packet in the stream
-		while (m_packetQueue.empty())
+		av_init_packet(&avPacket);
+		avPacket.data = NULL;
+		avPacket.size = 0;
+
+		bool frameComplete = false;
+		bool decodeSuccess = true;
+		int64_t framePts = 0, frameDuration = 0;
+
+		while (SUCCEEDED(hr) && !frameComplete)
 		{
-			if (m_pReader->ReadPacket() < 0)
+			// Continue reading until there is an appropriate packet in the stream
+			while (m_packetQueue.empty())
 			{
-				DebugMessage(L"GetNextSample reaching EOF\n");
-				hr = E_FAIL;
-				break;
+				if (m_pReader->ReadPacket() < 0)
+				{
+					DebugMessage(L"GetNextSample reaching EOF\n");
+					hr = E_FAIL;
+					break;
+				}
+			}
+
+			if (!m_packetQueue.empty())
+			{
+				// Pick the packets from the queue one at a time
+				avPacket = PopPacket();
+				framePts = avPacket.pts;
+				frameDuration = avPacket.duration;
+
+				// Decode the packet if necessary, it will update the presentation time if necessary
+				hr = DecodeAVPacket(dataWriter, &avPacket, framePts, frameDuration);
+				frameComplete = (hr == S_OK);
 			}
 		}
 
-		if (!m_packetQueue.empty())
+		if (SUCCEEDED(hr))
 		{
-			// Pick the packets from the queue one at a time
-			avPacket = PopPacket();
-			framePts = avPacket.pts;
-			frameDuration = avPacket.duration;
+			// Write the packet out
+			hr = WriteAVPacketToStream(dataWriter, &avPacket);
 
-			// Decode the packet if necessary, it will update the presentation time if necessary
-			hr = DecodeAVPacket(dataWriter, &avPacket, framePts, frameDuration);
-			frameComplete = (hr == S_OK);
+			if (pts.Duration == 0)
+			{
+				pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) };
+			}
+
+			dur = { dur.Duration + LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration) };
 		}
-	}
 
-	if (SUCCEEDED(hr))
-	{
-		// Write the packet out
-		hr = WriteAVPacketToStream(dataWriter, &avPacket);
+		av_packet_unref(&avPacket);
 
-		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) };
-		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration) };
+	} while (dur.Duration < minDuration.Duration);
 
-		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
-		sample->Duration = dur;
-	}
-
-	av_packet_unref(&avPacket);
+	sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
+	sample->Duration = dur;
 
 	return sample;
 }

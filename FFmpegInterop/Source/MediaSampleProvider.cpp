@@ -57,7 +57,7 @@ void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample()
 {
-	return this->GetNextSample(Windows::Foundation::TimeSpan({ 50000 }));
+	return this->GetNextSample(Windows::Foundation::TimeSpan({ 0 }));
 }
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample(Windows::Foundation::TimeSpan minDuration)

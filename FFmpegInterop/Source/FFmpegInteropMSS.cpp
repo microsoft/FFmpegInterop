@@ -712,12 +712,25 @@ static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 {
 	IStream* pStream = reinterpret_cast<IStream*>(ptr);
 	ULONG bytesRead = 0;
-	HRESULT hr = pStream->Read(buf, bufSize, &bytesRead);
 
-	if (FAILED(hr))
+	// Here we make a temporary copy array, FFMPEG expects buf to remain unmodified on 0 bytesRead 
+	// We can't always guarantee this based on the implementation of IStream::Read 
+	uint8_t* temp = new uint8_t[bufSize];
+	if (temp == nullptr)
 	{
 		return -1;
 	}
+
+	HRESULT hr = pStream->Read(temp, bufSize, &bytesRead);
+
+	if (FAILED(hr))
+	{
+		free(temp);
+		return -1;
+	}
+
+	memcpy(buf, temp, bytesRead);
+	free(temp);
 
 	// If we succeed but don't have any bytes, assume end of file
 	if (bytesRead == 0)

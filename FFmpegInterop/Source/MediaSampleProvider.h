@@ -37,6 +37,7 @@ namespace FFmpegInterop
 	public:
 		virtual ~MediaSampleProvider();
 		virtual MediaStreamSample^ GetNextSample();
+		virtual MediaStreamSample^ GetNextSample(Windows::Foundation::TimeSpan minDuration);
 		virtual void Flush();
 		virtual void SetCurrentStreamIndex(int streamIndex);
 

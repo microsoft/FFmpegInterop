@@ -502,15 +502,10 @@ HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outpu
 	// Convert codec name from const char* to Platform::String
 	auto codecNameChars = codecName;
 	size_t newsize = strlen(codecNameChars) + 1;
-	wchar_t * wcstring = nullptr;
-
-	try
+	wchar_t * wcstring = new(std::nothrow) wchar_t[newsize];
+	if (wcstring == nullptr)
 	{
-		wcstring = new wchar_t[newsize];
-	}
-	catch (std::bad_alloc&)
-	{
-		hr = E_FAIL; // couldn't allocate memory for codec name
+		hr = E_OUTOFMEMORY;
 	}
 
 	if (SUCCEEDED(hr))

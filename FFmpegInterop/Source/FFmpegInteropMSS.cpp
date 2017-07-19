@@ -499,15 +499,10 @@ HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outpu
 	// Convert codec name from const char* to Platform::String
 	auto codecNameChars = codecName;
 	size_t newsize = strlen(codecNameChars) + 1;
-	wchar_t * wcstring = nullptr;
-
-	try
+	wchar_t * wcstring = new(std::nothrow) wchar_t[newsize];
+	if (wcstring == nullptr)
 	{
-		wcstring = new wchar_t[newsize];
-	}
-	catch (std::bad_alloc&)
-	{
-		hr = E_FAIL; // couldn't allocate memory for codec name
+		hr = E_OUTOFMEMORY;
 	}
 
 	if (SUCCEEDED(hr))
@@ -715,7 +710,7 @@ static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 
 	// Here we make a temporary copy array, FFMPEG expects buf to remain unmodified on 0 bytesRead 
 	// We can't always guarantee this based on the implementation of IStream::Read 
-	uint8_t* temp = new uint8_t[bufSize];
+	uint8_t* temp = new(std::nothrow) uint8_t[bufSize];
 	if (temp == nullptr)
 	{
 		return -1;

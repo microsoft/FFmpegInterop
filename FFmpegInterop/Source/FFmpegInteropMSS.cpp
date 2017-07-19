@@ -725,12 +725,12 @@ static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 
 	if (FAILED(hr))
 	{
-		free(temp);
+		delete[] temp;
 		return -1;
 	}
 
 	memcpy(buf, temp, bytesRead);
-	free(temp);
+	delete[] temp;
 
 	// If we succeed but don't have any bytes, assume end of file
 	if (bytesRead == 0)

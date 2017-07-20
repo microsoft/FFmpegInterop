@@ -56,6 +56,7 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 	, avVideoCodecCtx(nullptr)
 	, audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
+	, thumbnailStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, fileStreamData(nullptr)
 	, fileStreamBuffer(nullptr)
 {
@@ -362,11 +363,13 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			// Avoid creating unnecessarily video stream from this album/cover art
 			if (avFormatCtx->streams[videoStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
 			{
+				thumbnailStreamIndex = videoStreamIndex;
 				videoStreamIndex = AVERROR_STREAM_NOT_FOUND;
 				avVideoCodec = nullptr;
 			}
 			else
 			{
+				thumbnailStreamIndex = AVERROR_STREAM_NOT_FOUND;
 				AVDictionaryEntry *rotate_tag = av_dict_get(avFormatCtx->streams[videoStreamIndex]->metadata, "rotate", NULL, 0);
 				if (rotate_tag != NULL)
 				{
@@ -514,7 +517,6 @@ MediaThumbnailData ^ FFmpegInterop::FFmpegInteropMSS::ExtractThumbnail()
 			case AV_CODEC_ID_JPEGLS: extension = ".jpeg"; break;
 			case AV_CODEC_ID_PNG: extension = ".png"; break;
 			case AV_CODEC_ID_BMP: extension = ".bmp"; break;
-
 			}
 
 

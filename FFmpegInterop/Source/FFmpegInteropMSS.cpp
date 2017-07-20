@@ -56,6 +56,7 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 	, avVideoCodecCtx(nullptr)
 	, audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
+	, thumbnailStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, fileStreamData(nullptr)
 	, fileStreamBuffer(nullptr)
 {
@@ -362,11 +363,13 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			// Avoid creating unnecessarily video stream from this album/cover art
 			if (avFormatCtx->streams[videoStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
 			{
+				thumbnailStreamIndex = videoStreamIndex;
 				videoStreamIndex = AVERROR_STREAM_NOT_FOUND;
 				avVideoCodec = nullptr;
 			}
 			else
 			{
+				thumbnailStreamIndex = AVERROR_STREAM_NOT_FOUND;
 				AVDictionaryEntry *rotate_tag = av_dict_get(avFormatCtx->streams[videoStreamIndex]->metadata, "rotate", NULL, 0);
 				if (rotate_tag != NULL)
 				{
@@ -493,6 +496,39 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 	}
 
 	return hr;
+}
+
+MediaThumbnailData ^ FFmpegInterop::FFmpegInteropMSS::ExtractThumbnail()
+{
+	if (thumbnailStreamIndex != AVERROR_STREAM_NOT_FOUND)
+	{
+		// FFmpeg identifies album/cover art from a music file as a video stream
+		// Avoid creating unnecessarily video stream from this album/cover art
+		if (avFormatCtx->streams[thumbnailStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
+		{
+			auto imageStream = avFormatCtx->streams[thumbnailStreamIndex];
+			//save album art to file.
+			String^ extension = ".jpeg";
+			switch (imageStream->codecpar->codec_id)
+			{
+			case AV_CODEC_ID_MJPEG:
+			case AV_CODEC_ID_MJPEGB:
+			case AV_CODEC_ID_JPEG2000:
+			case AV_CODEC_ID_JPEGLS: extension = ".jpeg"; break;
+			case AV_CODEC_ID_PNG: extension = ".png"; break;
+			case AV_CODEC_ID_BMP: extension = ".bmp"; break;
+			}
+
+
+			auto vector = ref new Array<uint8_t>(imageStream->attached_pic.data, imageStream->attached_pic.size);
+			DataWriter^ writer = ref new DataWriter();
+			writer->WriteBytes(vector);
+
+			return (ref new MediaThumbnailData(writer->DetachBuffer(), extension));
+		}
+	}
+
+	return nullptr;
 }
 
 HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outputCodecName)

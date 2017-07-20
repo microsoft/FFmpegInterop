@@ -105,6 +105,7 @@
     </Compile>
     <Compile Include="$(SolutionDir)\Tests\Source\TestCreateFFmpegInteropMSSFromStream.cs" />
     <Compile Include="$(SolutionDir)\Tests\Source\TestCreateFFmpegInteropMSSFromUri.cs" />
+    <Compile Include="$(SolutionDir)\Tests\Source\TestExtractThumbnail.cs" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="UnitTestApp.xaml">
@@ -135,6 +136,7 @@
     <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-2.dll" />
     <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-4.dll" />
     <Content Include="$(SolutionDir)\Tests\TestFiles\test.txt" />
+    <Content Include="$(SolutionDir)\Tests\TestFiles\silence with album art.mp3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\FFmpegInterop\Win10\FFmpegInterop\FFmpegInterop.vcxproj">

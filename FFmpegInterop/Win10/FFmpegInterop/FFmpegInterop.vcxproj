@@ -232,6 +232,7 @@
     <ClInclude Include="..\..\Source\H264SampleProvider.h" />
     <ClInclude Include="..\..\Source\ILogProvider.h" />
     <ClInclude Include="..\..\Source\MediaSampleProvider.h" />
+    <ClInclude Include="..\..\Source\MediaThumbnailData.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedVideoSampleProvider.h" />

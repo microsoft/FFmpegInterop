@@ -19,8 +19,9 @@
 #pragma once
 #include <queue>
 #include <mutex>
-#include "MediaSampleProvider.h"
 #include "FFmpegReader.h"
+#include "MediaSampleProvider.h"
+#include "MediaThumbnailData.h"
 
 using namespace Platform;
 using namespace Windows::Foundation;
@@ -42,6 +43,7 @@ namespace FFmpegInterop
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
+		MediaThumbnailData^ ExtractThumbnail();
 
 		// Contructor
 		MediaStreamSource^ GetMediaStreamSource();
@@ -116,6 +118,7 @@ namespace FFmpegInterop
 		VideoStreamDescriptor^ videoStreamDescriptor;
 		int audioStreamIndex;
 		int videoStreamIndex;
+		int thumbnailStreamIndex;
 		
 		bool rotateVideo;
 		int rotationAngle;

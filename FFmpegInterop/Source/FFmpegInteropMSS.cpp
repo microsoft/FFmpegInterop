@@ -25,6 +25,7 @@
 #include "UncompressedVideoSampleProvider.h"
 #include "shcore.h"
 #include <mfapi.h>
+#include "collection.h"
 
 extern "C"
 {
@@ -39,6 +40,23 @@ using namespace Windows::Media::MediaProperties;
 
 // Size of the buffer when reading a stream
 const int FILESTREAMBUFFERSZ = 16384;
+
+// Mapping of FFMPEG codec types to Windows recognized subtype strings
+IMapView<int, String^>^ create_map()
+{
+	Platform::Collections::Map<int, String^>^ m = ref new Platform::Collections::Map<int, String^>();
+
+	// Audio codecs
+	m->Insert(AV_CODEC_ID_OPUS, "OPUS");
+	m->Insert(AV_CODEC_ID_FLAC, "FLAC");
+	m->Insert(AV_CODEC_ID_MP3, "MP3");
+
+	// Video codecs
+	m->Insert(AV_CODEC_ID_H264, "H264");
+
+	return m->GetView();
+}
+IMapView<int, String^>^ AvCodecMap = create_map();
 
 // Static functions passed to FFmpeg for stream interop
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
@@ -347,6 +365,42 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 				}
 			}
 		}
+		else if (!forceAudioDecode)
+		{
+			// FFMPEG doesn't have the codec but we can try to output the encoded type
+			audioStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
+			
+			if (audioStreamIndex != AVERROR_STREAM_NOT_FOUND)
+			{
+				// allocate decoding parameters
+				AVCodecParameters* avAudioCodecParams = avcodec_parameters_alloc();
+				if (!avAudioCodecParams)
+				{
+					hr = E_OUTOFMEMORY;
+					DebugMessage(L"Could not allocate decoding parameters\n");
+					avformat_close_input(&avFormatCtx);
+				}
+
+				if (avcodec_parameters_copy(avAudioCodecParams, avFormatCtx->streams[audioStreamIndex]->codecpar) < 0)
+				{
+					hr = E_FAIL;
+					avformat_close_input(&avFormatCtx);
+				}
+
+				// Create audio stream descriptor from parameters
+				hr = CreateAudioStreamDescriptorFromParameters(avAudioCodecParams);
+				if (SUCCEEDED(hr))
+				{
+					hr = audioSampleProvider->AllocateResources();
+					if (SUCCEEDED(hr))
+					{
+						m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
+					}
+				}
+
+				avcodec_parameters_free(&avAudioCodecParams);
+			}
+		}
 	}
 
 	if (SUCCEEDED(hr))
@@ -424,6 +478,42 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 						}
 					}
 				}
+			}
+		}
+		else if (!forceVideoDecode)
+		{
+			// FFMPEG doesn't have the codec but we can try to output the encoded type
+			videoStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
+
+			if (videoStreamIndex != AVERROR_STREAM_NOT_FOUND)
+			{
+				// allocate decoding parameters
+				AVCodecParameters* avVideoCodecParams = avcodec_parameters_alloc();
+				if (!avVideoCodecParams)
+				{
+					hr = E_OUTOFMEMORY;
+					DebugMessage(L"Could not allocate decoding parameters\n");
+					avformat_close_input(&avFormatCtx);
+				}
+
+				if (avcodec_parameters_copy(avVideoCodecParams, avFormatCtx->streams[videoStreamIndex]->codecpar) < 0)
+				{
+					hr = E_FAIL;
+					avformat_close_input(&avFormatCtx);
+				}
+
+				// Create video stream descriptor from parameters
+				hr = CreateVideoStreamDescriptorFromParameters(avVideoCodecParams);
+				if (SUCCEEDED(hr))
+				{
+					hr = videoSampleProvider->AllocateResources();
+					if (SUCCEEDED(hr))
+					{
+						m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
+					}
+				}
+
+				avcodec_parameters_free(&avVideoCodecParams);
 			}
 		}
 	}
@@ -553,7 +643,7 @@ HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outpu
 }
 
 HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
-{
+{	
 	if (avAudioCodecCtx->codec_id == AV_CODEC_ID_AAC && !forceAudioDecode)
 	{
 		if (avAudioCodecCtx->extradata_size == 0)
@@ -577,6 +667,25 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 16));
 		audioSampleProvider = ref new UncompressedAudioSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
 	}
+
+	return (audioStreamDescriptor != nullptr && audioSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
+}
+
+HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptorFromParameters(AVCodecParameters* avCodecParams)
+{
+	if (!AvCodecMap->HasKey(avCodecParams->codec_id))
+	{
+		return E_FAIL;
+	}
+
+	AudioEncodingProperties^ audioProperties = ref new AudioEncodingProperties();
+	audioProperties->SampleRate = avCodecParams->sample_rate;
+	audioProperties->ChannelCount = avCodecParams->channels;
+	audioProperties->Bitrate = avCodecParams->bit_rate;
+	audioProperties->Subtype = AvCodecMap->Lookup(avCodecParams->codec_id);
+
+	audioStreamDescriptor = ref new AudioStreamDescriptor(audioProperties);
+	audioSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, nullptr);
 
 	return (audioStreamDescriptor != nullptr && audioSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
 }
@@ -636,6 +745,11 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 
 	return (videoStreamDescriptor != nullptr && videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
+}
+
+HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptorFromParameters(AVCodecParameters* avCodecParams)
+{
+	return E_NOTIMPL;
 }
 
 HRESULT FFmpegInteropMSS::ParseOptions(PropertySet^ ffmpegOptions)
@@ -701,14 +815,20 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 				if (audioSampleProvider != nullptr)
 				{
 					audioSampleProvider->Flush();
-					avcodec_flush_buffers(avAudioCodecCtx);
+					if (avAudioCodecCtx != nullptr)
+					{
+						avcodec_flush_buffers(avAudioCodecCtx);
+					}
 				}
 
 				// Flush the VideoSampleProvider
 				if (videoSampleProvider != nullptr)
 				{
 					videoSampleProvider->Flush();
-					avcodec_flush_buffers(avVideoCodecCtx);
+					if (avVideoCodecCtx != nullptr)
+					{
+						avcodec_flush_buffers(avVideoCodecCtx);
+					}
 				}
 			}
 		}

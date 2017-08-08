@@ -51,7 +51,7 @@ MediaSampleProvider::~MediaSampleProvider()
 void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 {
 	DebugMessage(L"SetCurrentStreamIndex\n");
-	if (m_pAvCodecCtx != nullptr && m_pAvFormatCtx->nb_streams > (unsigned int)streamIndex)
+	if (m_pAvFormatCtx->nb_streams > (unsigned int)streamIndex)
 	{
 		m_streamIndex = streamIndex;
 	}

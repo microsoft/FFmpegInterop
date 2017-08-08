@@ -56,7 +56,7 @@ HRESULT H264SampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 {
 	HRESULT hr = S_OK;
 
-	if (m_pAvCodecCtx->extradata == nullptr && m_pAvCodecCtx->extradata_size < 8)
+	if (!m_pAvCodecCtx || (m_pAvCodecCtx->extradata == nullptr && m_pAvCodecCtx->extradata_size < 8))
 	{
 		// The data isn't present
 		hr = E_FAIL;

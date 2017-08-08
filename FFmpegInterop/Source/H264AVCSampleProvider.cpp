@@ -58,6 +58,11 @@ HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 	int spsLength = 0;
 	int ppsLength = 0;
 
+	if (!m_pAvCodecCtx)
+	{
+		return E_FAIL;
+	}
+
 	// Get the position of the SPS
 	if (m_pAvCodecCtx->extradata == nullptr && m_pAvCodecCtx->extradata_size < 8)
 	{

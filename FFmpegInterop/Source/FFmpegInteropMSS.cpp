@@ -40,9 +40,6 @@ using namespace Windows::Media::MediaProperties;
 // Size of the buffer when reading a stream
 const int FILESTREAMBUFFERSZ = 16384;
 
-// Minimum duration for audio samples (50 ms)
-const TimeSpan MINAUDIOSAMPLEDURATION = { 500000 };
-
 // Static functions passed to FFmpeg for stream interop
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
@@ -727,8 +724,7 @@ void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource
 	{
 		if (args->Request->StreamDescriptor == audioStreamDescriptor && audioSampleProvider != nullptr)
 		{
-			// We will force audio samples to be at least 50 ms long
-			args->Request->Sample = audioSampleProvider->GetNextSample(MINAUDIOSAMPLEDURATION);
+			args->Request->Sample = audioSampleProvider->GetNextSample();
 		}
 		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoSampleProvider != nullptr)
 		{

@@ -30,6 +30,7 @@ namespace FFmpegInterop
 	{
 	public:
 		virtual ~UncompressedAudioSampleProvider();
+		virtual MediaStreamSample^ GetNextSample() override;
 
 	internal:
 		UncompressedAudioSampleProvider(

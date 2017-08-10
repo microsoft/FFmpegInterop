@@ -122,39 +122,3 @@ HRESULT UncompressedSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPac
 	return hr;
 }
 
-MediaStreamSample^ UncompressedSampleProvider::GetNextSample(Windows::Foundation::TimeSpan minDuration)
-{
-	DebugMessage(L"GetNextSample\n");
-
-	HRESULT hr = S_OK;
-
-	MediaStreamSample^ sample;
-	DataWriter^ dataWriter = ref new DataWriter();
-
-	LONGLONG finalPts = -1;
-	LONGLONG finalDur = 0;
-
-	do
-	{
-		LONGLONG pts = 0;
-		LONGLONG dur = 0;
-
-		hr = GetNextPacket(dataWriter, pts, dur);
-
-		if (finalPts == -1)
-		{
-			finalPts = pts;
-		}
-		finalDur += dur;
-
-	} while (SUCCEEDED(hr) && finalDur < minDuration.Duration);
-
-	if (finalDur > 0)
-	{
-		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
-		sample->Duration = { finalDur };
-	}
-
-	return sample;
-}
-

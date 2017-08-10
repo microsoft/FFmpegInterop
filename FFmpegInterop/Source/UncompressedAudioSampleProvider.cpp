@@ -22,6 +22,9 @@
 
 using namespace FFmpegInterop;
 
+// Minimum duration for uncompressed audio samples (50 ms)
+const LONGLONG MINAUDIOSAMPLEDURATION = 500000;
+
 UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
@@ -102,4 +105,42 @@ HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWri
 	av_frame_free(&m_pAvFrame);
 
 	return S_OK;
+}
+
+MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
+{
+	// Similar to GetNextSample in MediaSampleProvider, 
+	// but we concatenate samples until reaching a minimum duration
+	DebugMessage(L"GetNextSample\n");
+
+	HRESULT hr = S_OK;
+
+	MediaStreamSample^ sample;
+	DataWriter^ dataWriter = ref new DataWriter();
+
+	LONGLONG finalPts = -1;
+	LONGLONG finalDur = 0;
+
+	do
+	{
+		LONGLONG pts = 0;
+		LONGLONG dur = 0;
+
+		hr = GetNextPacket(dataWriter, pts, dur);
+
+		if (finalPts == -1)
+		{
+			finalPts = pts;
+		}
+		finalDur += dur;
+
+	} while (SUCCEEDED(hr) && finalDur < MINAUDIOSAMPLEDURATION);
+
+	if (finalDur > 0)
+	{
+		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
+		sample->Duration = { finalDur };
+	}
+
+	return sample;
 }

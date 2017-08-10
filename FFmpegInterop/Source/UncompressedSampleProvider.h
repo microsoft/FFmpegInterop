@@ -28,9 +28,6 @@ namespace FFmpegInterop
 {
 	ref class UncompressedSampleProvider abstract : public MediaSampleProvider
 	{
-	public:
-		virtual MediaStreamSample^ GetNextSample(Windows::Foundation::TimeSpan minDuration) override;
-
 	internal:
 		// Try to get a frame from FFmpeg, otherwise, feed a frame to start decoding
 		virtual HRESULT GetFrameFromFFmpegDecoder(AVPacket* avPacket);

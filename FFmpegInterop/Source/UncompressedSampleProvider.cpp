@@ -121,4 +121,3 @@ HRESULT UncompressedSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPac
 
 	return hr;
 }
-

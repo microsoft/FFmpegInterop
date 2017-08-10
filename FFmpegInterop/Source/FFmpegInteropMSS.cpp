@@ -727,16 +727,8 @@ void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource
 	{
 		if (args->Request->StreamDescriptor == audioStreamDescriptor && audioSampleProvider != nullptr)
 		{
-			if (dynamic_cast<UncompressedSampleProvider^>(audioSampleProvider) != nullptr)
-			{
-				// We will force audio samples to be at least 50 ms long
-				args->Request->Sample = audioSampleProvider->GetNextSample(MINAUDIOSAMPLEDURATION);
-			}
-			else
-			{
-				// If they are compressed, then the sample still have to remain seperate
-				args->Request->Sample = audioSampleProvider->GetNextSample();
-			}
+			// We will force audio samples to be at least 50 ms long
+			args->Request->Sample = audioSampleProvider->GetNextSample(MINAUDIOSAMPLEDURATION);
 		}
 		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoSampleProvider != nullptr)
 		{

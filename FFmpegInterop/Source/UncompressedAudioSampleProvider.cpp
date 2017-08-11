@@ -128,11 +128,14 @@ MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
 
 		hr = GetNextPacket(dataWriter, pts, dur);
 
-		if (finalPts == -1)
+		if (SUCCEEDED(hr))
 		{
-			finalPts = pts;
+			if (finalPts == -1)
+			{
+				finalPts = pts;
+			}
+			finalDur += dur;
 		}
-		finalDur += dur;
 
 	} while (SUCCEEDED(hr) && finalDur < MINAUDIOSAMPLEDURATION);
 

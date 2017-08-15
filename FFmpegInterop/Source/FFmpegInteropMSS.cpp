@@ -58,6 +58,23 @@ IMapView<int, String^>^ create_map()
 }
 IMapView<int, String^>^ AvCodecMap = create_map();
 
+// Mapping of FFMPEG codec types to Windows recognized subtype strings
+IMapView<int, String^>^ create_map()
+{
+	Platform::Collections::Map<int, String^>^ m = ref new Platform::Collections::Map<int, String^>();
+
+	// Audio codecs
+	m->Insert(AV_CODEC_ID_OPUS, "OPUS");
+	m->Insert(AV_CODEC_ID_FLAC, "FLAC");
+	m->Insert(AV_CODEC_ID_MP3, "MP3");
+
+	// Video codecs
+	m->Insert(AV_CODEC_ID_H264, "H264");
+
+	return m->GetView();
+}
+IMapView<int, String^>^ AvCodecMap = create_map();
+
 // Static functions passed to FFmpeg for stream interop
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);

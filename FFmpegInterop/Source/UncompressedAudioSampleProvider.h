@@ -31,7 +31,8 @@ namespace FFmpegInterop
 	public:
 		virtual ~UncompressedAudioSampleProvider();
 		virtual MediaStreamSample^ GetNextSample() override;
-
+		long long  blockAlign;
+		long long avgBytesPerSec;
 	internal:
 		UncompressedAudioSampleProvider(
 			FFmpegReader^ reader,

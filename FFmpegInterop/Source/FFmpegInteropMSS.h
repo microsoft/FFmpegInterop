@@ -98,7 +98,6 @@ namespace FFmpegInterop
 		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
 		HRESULT CreateAudioStreamDescriptorFromParameters(AVCodecParameters* avCodecParams);
 		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode);
-		HRESULT CreateVideoStreamDescriptorFromParameters(AVCodecParameters* avCodecParams);
 		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);

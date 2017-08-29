@@ -48,28 +48,6 @@ IMapView<int, String^>^ create_map()
 
 	// Audio codecs
 	m->Insert(AV_CODEC_ID_OPUS, "OPUS");
-	m->Insert(AV_CODEC_ID_FLAC, "FLAC");
-	m->Insert(AV_CODEC_ID_MP3, "MP3");
-
-	// Video codecs
-	m->Insert(AV_CODEC_ID_H264, "H264");
-
-	return m->GetView();
-}
-IMapView<int, String^>^ AvCodecMap = create_map();
-
-// Mapping of FFMPEG codec types to Windows recognized subtype strings
-IMapView<int, String^>^ create_map()
-{
-	Platform::Collections::Map<int, String^>^ m = ref new Platform::Collections::Map<int, String^>();
-
-	// Audio codecs
-	m->Insert(AV_CODEC_ID_OPUS, "OPUS");
-	m->Insert(AV_CODEC_ID_FLAC, "FLAC");
-	m->Insert(AV_CODEC_ID_MP3, "MP3");
-
-	// Video codecs
-	m->Insert(AV_CODEC_ID_H264, "H264");
 
 	return m->GetView();
 }
@@ -497,42 +475,6 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 				}
 			}
 		}
-		else if (!forceVideoDecode)
-		{
-			// FFMPEG doesn't have the codec but we can try to output the encoded type
-			videoStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
-
-			if (videoStreamIndex != AVERROR_STREAM_NOT_FOUND)
-			{
-				// allocate decoding parameters
-				AVCodecParameters* avVideoCodecParams = avcodec_parameters_alloc();
-				if (!avVideoCodecParams)
-				{
-					hr = E_OUTOFMEMORY;
-					DebugMessage(L"Could not allocate decoding parameters\n");
-					avformat_close_input(&avFormatCtx);
-				}
-
-				if (avcodec_parameters_copy(avVideoCodecParams, avFormatCtx->streams[videoStreamIndex]->codecpar) < 0)
-				{
-					hr = E_FAIL;
-					avformat_close_input(&avFormatCtx);
-				}
-
-				// Create video stream descriptor from parameters
-				hr = CreateVideoStreamDescriptorFromParameters(avVideoCodecParams);
-				if (SUCCEEDED(hr))
-				{
-					hr = videoSampleProvider->AllocateResources();
-					if (SUCCEEDED(hr))
-					{
-						m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
-					}
-				}
-
-				avcodec_parameters_free(&avVideoCodecParams);
-			}
-		}
 	}
 
 	if (SUCCEEDED(hr))
@@ -762,11 +704,6 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 
 	return (videoStreamDescriptor != nullptr && videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
-}
-
-HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptorFromParameters(AVCodecParameters* avCodecParams)
-{
-	return E_NOTIMPL;
 }
 
 HRESULT FFmpegInteropMSS::ParseOptions(PropertySet^ ffmpegOptions)

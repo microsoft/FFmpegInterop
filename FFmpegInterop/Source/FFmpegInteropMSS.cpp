@@ -48,11 +48,6 @@ IMapView<int, String^>^ create_map()
 
 	// Audio codecs
 	m->Insert(AV_CODEC_ID_OPUS, "OPUS");
-	m->Insert(AV_CODEC_ID_FLAC, "FLAC");
-	m->Insert(AV_CODEC_ID_MP3, "MP3");
-
-	// Video codecs
-	m->Insert(AV_CODEC_ID_H264, "H264");
 
 	return m->GetView();
 }
@@ -607,7 +602,7 @@ HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outpu
 }
 
 HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
-{
+{	
 	if (avAudioCodecCtx->codec_id == AV_CODEC_ID_AAC && !forceAudioDecode)
 	{
 		if (avAudioCodecCtx->extradata_size == 0)

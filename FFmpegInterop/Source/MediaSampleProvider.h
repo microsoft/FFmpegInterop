@@ -47,7 +47,8 @@ namespace FFmpegInterop
 	private:
 		std::vector<AVPacket> m_packetQueue;
 		int m_streamIndex;
-		int64 m_startOffset = 0;
+		int64 m_startOffset;
+		int64 m_currentPts;
 
 	internal:
 		// The FFmpeg context. Because they are complex types

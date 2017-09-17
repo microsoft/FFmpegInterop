@@ -31,15 +31,17 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvFormatCtx(avFormatCtx)
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
+	, m_startOffset(AV_NOPTS_VALUE)
+	, m_currentPts(0)
 {
 	DebugMessage(L"MediaSampleProvider\n");
-	m_startOffset = -1;
 }
 
 HRESULT MediaSampleProvider::AllocateResources()
 {
 	DebugMessage(L"AllocateResources\n");
-	m_startOffset = -1;
+	m_startOffset = AV_NOPTS_VALUE;
+	m_currentPts = 0;
 	return S_OK;
 }
 
@@ -96,10 +98,19 @@ HRESULT MediaSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPac
 HRESULT MediaSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket *avPacket, int64_t &framePts, int64_t &frameDuration)
 {
 	// For the simple case of compressed samples, each packet is a sample
-	if (avPacket != nullptr && avPacket->pts != AV_NOPTS_VALUE)
+	if (avPacket != nullptr)
 	{
-		framePts = avPacket->pts;
 		frameDuration = avPacket->duration;
+		if (avPacket->pts != AV_NOPTS_VALUE)
+		{
+			framePts = avPacket->pts;
+			m_currentPts = framePts;
+		}
+		else
+		{
+			framePts = m_currentPts;
+			m_currentPts += frameDuration;
+		}
 	}
 	return S_OK;
 }
@@ -173,7 +184,7 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 		// Write the packet out
 		hr = WriteAVPacketToStream(writer, &avPacket);
 
-		if (m_startOffset == -1)
+		if (m_startOffset == AV_NOPTS_VALUE)
 		{
 			//if we havent set m_startOffset already
 			DebugMessage(L"Saving m_startOffset\n");

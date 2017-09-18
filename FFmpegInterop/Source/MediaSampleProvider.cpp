@@ -32,7 +32,7 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_startOffset(AV_NOPTS_VALUE)
-	, m_currentPts(0)
+	, m_nextFramePts(0)
 {
 	DebugMessage(L"MediaSampleProvider\n");
 }
@@ -41,7 +41,7 @@ HRESULT MediaSampleProvider::AllocateResources()
 {
 	DebugMessage(L"AllocateResources\n");
 	m_startOffset = AV_NOPTS_VALUE;
-	m_currentPts = 0;
+	m_nextFramePts = 0;
 	return S_OK;
 }
 
@@ -104,12 +104,14 @@ HRESULT MediaSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket *av
 		if (avPacket->pts != AV_NOPTS_VALUE)
 		{
 			framePts = avPacket->pts;
-			m_currentPts = framePts;
+			// Set the PTS for the next sample if it doesn't one.
+			m_nextFramePts = framePts + frameDuration;
 		}
 		else
 		{
-			framePts = m_currentPts;
-			m_currentPts += frameDuration;
+			framePts = m_nextFramePts;
+			// Set the PTS for the next sample if it doesn't one.
+			m_nextFramePts += frameDuration;
 		}
 	}
 	return S_OK;

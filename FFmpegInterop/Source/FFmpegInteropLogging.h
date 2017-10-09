@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2015 Microsoft Corporation
+//	Copyright 2017 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -17,32 +17,21 @@
 //*****************************************************************************
 
 #pragma once
-#include "UncompressedSampleProvider.h"
-
-extern "C"
-{
-#include <libswresample/swresample.h>
-}
+#include "ILogProvider.h"
 
 namespace FFmpegInterop
 {
-	ref class UncompressedAudioSampleProvider: UncompressedSampleProvider
+	public ref class FFmpegInteropLogging sealed
 	{
 	public:
-		virtual ~UncompressedAudioSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
-
-	internal:
-		UncompressedAudioSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter) override;
-		virtual HRESULT AllocateResources() override;
+		static void SetLogLevel(LogLevel level);
+		static void SetLogProvider(ILogProvider^ logProvider);
+		static void SetDefaultLogProvider();
 
 	private:
-		SwrContext* m_pSwrCtx;
+		FFmpegInteropLogging();
+
+		static ILogProvider^ s_pLogProvider;
 	};
 }
 

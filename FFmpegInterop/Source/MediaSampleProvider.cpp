@@ -31,20 +31,28 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvFormatCtx(avFormatCtx)
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
+	, m_startOffset(AV_NOPTS_VALUE)
+	, m_nextFramePts(0)
 {
+	DebugMessage(L"MediaSampleProvider\n");
 }
 
 HRESULT MediaSampleProvider::AllocateResources()
 {
+	DebugMessage(L"AllocateResources\n");
+	m_startOffset = AV_NOPTS_VALUE;
+	m_nextFramePts = 0;
 	return S_OK;
 }
 
 MediaSampleProvider::~MediaSampleProvider()
 {
+	DebugMessage(L"~MediaSampleProvider\n");
 }
 
 void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 {
+	DebugMessage(L"SetCurrentStreamIndex\n");
 	if (m_pAvCodecCtx != nullptr && m_pAvFormatCtx->nb_streams > (unsigned int)streamIndex)
 	{
 		m_streamIndex = streamIndex;
@@ -62,55 +70,18 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 	HRESULT hr = S_OK;
 
 	MediaStreamSample^ sample;
-	AVPacket avPacket;
-	av_init_packet(&avPacket);
-	avPacket.data = NULL;
-	avPacket.size = 0;
 	DataWriter^ dataWriter = ref new DataWriter();
 
-	bool frameComplete = false;
-	bool decodeSuccess = true;
-	int64_t framePts = 0, frameDuration = 0;
+	LONGLONG pts = 0;
+	LONGLONG dur = 0;
 
-	while (SUCCEEDED(hr) && !frameComplete)
+	hr = GetNextPacket(dataWriter, pts, dur);
+
+	if (hr == S_OK)
 	{
-		// Continue reading until there is an appropriate packet in the stream
-		while (m_packetQueue.empty())
-		{
-			if (m_pReader->ReadPacket() < 0)
-			{
-				DebugMessage(L"GetNextSample reaching EOF\n");
-				hr = E_FAIL;
-				break;
-			}
-		}
-
-		if (!m_packetQueue.empty())
-		{
-			// Pick the packets from the queue one at a time
-			avPacket = PopPacket();
-			framePts = avPacket.pts;
-			frameDuration = avPacket.duration;
-
-			// Decode the packet if necessary, it will update the presentation time if necessary
-			hr = DecodeAVPacket(dataWriter, &avPacket, framePts, frameDuration);
-			frameComplete = (hr == S_OK);
-		}
+		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
+		sample->Duration = { dur };
 	}
-
-	if (SUCCEEDED(hr))
-	{
-		// Write the packet out
-		hr = WriteAVPacketToStream(dataWriter, &avPacket);
-
-		Windows::Foundation::TimeSpan pts = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) };
-		Windows::Foundation::TimeSpan dur = { LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration) };
-
-		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), pts);
-		sample->Duration = dur;
-	}
-
-	av_packet_unref(&avPacket);
 
 	return sample;
 }
@@ -127,10 +98,21 @@ HRESULT MediaSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPac
 HRESULT MediaSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket *avPacket, int64_t &framePts, int64_t &frameDuration)
 {
 	// For the simple case of compressed samples, each packet is a sample
-	if (avPacket != nullptr && avPacket->pts != AV_NOPTS_VALUE)
+	if (avPacket != nullptr)
 	{
-		framePts = avPacket->pts;
 		frameDuration = avPacket->duration;
+		if (avPacket->pts != AV_NOPTS_VALUE)
+		{
+			framePts = avPacket->pts;
+			// Set the PTS for the next sample if it doesn't one.
+			m_nextFramePts = framePts + frameDuration;
+		}
+		else
+		{
+			framePts = m_nextFramePts;
+			// Set the PTS for the next sample if it doesn't one.
+			m_nextFramePts += frameDuration;
+		}
 	}
 	return S_OK;
 }
@@ -160,8 +142,72 @@ AVPacket MediaSampleProvider::PopPacket()
 	return avPacket;
 }
 
+HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, LONGLONG & pts, LONGLONG & dur)
+{
+	HRESULT hr = S_OK;
+
+	AVPacket avPacket;
+	av_init_packet(&avPacket);
+	avPacket.data = NULL;
+	avPacket.size = 0;
+
+	bool frameComplete = false;
+	bool decodeSuccess = true;
+	int64_t framePts = 0, frameDuration = 0;
+
+	while (SUCCEEDED(hr) && !frameComplete)
+	{
+		// Continue reading until there is an appropriate packet in the stream
+		while (m_packetQueue.empty())
+		{
+			if (m_pReader->ReadPacket() < 0)
+			{
+				DebugMessage(L"GetNextSample reaching EOF\n");
+				hr = E_FAIL;
+				break;
+			}
+		}
+
+		if (!m_packetQueue.empty())
+		{
+			// Pick the packets from the queue one at a time
+			avPacket = PopPacket();
+			framePts = avPacket.pts;
+			frameDuration = avPacket.duration;
+
+			// Decode the packet if necessary, it will update the presentation time if necessary
+			hr = DecodeAVPacket(writer, &avPacket, framePts, frameDuration);
+			frameComplete = (hr == S_OK);
+		}
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		// Write the packet out
+		hr = WriteAVPacketToStream(writer, &avPacket);
+
+		if (m_startOffset == AV_NOPTS_VALUE)
+		{
+			//if we havent set m_startOffset already
+			DebugMessage(L"Saving m_startOffset\n");
+
+			//in some real-time streams framePts is less than 0 so we need to make sure m_startOffset is never negative
+			m_startOffset = framePts < 0 ? 0 : framePts;
+		}
+
+		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (framePts - m_startOffset));
+
+		dur = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration);
+	}
+
+	av_packet_unref(&avPacket);
+
+	return hr;
+}
+
 void MediaSampleProvider::Flush()
 {
+	DebugMessage(L"Flush\n");
 	while (!m_packetQueue.empty())
 	{
 		av_packet_unref(&PopPacket());

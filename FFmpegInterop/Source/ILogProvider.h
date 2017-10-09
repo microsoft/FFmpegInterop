@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2015 Microsoft Corporation
+//	Copyright 2017 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -17,32 +17,27 @@
 //*****************************************************************************
 
 #pragma once
-#include "UncompressedSampleProvider.h"
 
-extern "C"
-{
-#include <libswresample/swresample.h>
-}
+using namespace Platform;
 
 namespace FFmpegInterop
 {
-	ref class UncompressedAudioSampleProvider: UncompressedSampleProvider
+	// Level values from ffmpeg: libavutil/log.h
+	public enum class LogLevel
 	{
-	public:
-		virtual ~UncompressedAudioSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
+		Panic = 0,
+		Fatal = 8,
+		Error = 16,
+		Warning = 24,
+		Info = 32,
+		Verbose = 40,
+		Debug = 48,
+		Trace = 56
+	};
 
-	internal:
-		UncompressedAudioSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter) override;
-		virtual HRESULT AllocateResources() override;
-
-	private:
-		SwrContext* m_pSwrCtx;
+	public interface class ILogProvider
+	{
+		void Log(LogLevel level, String^ message);
 	};
 }
 

@@ -33,6 +33,7 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_startOffset(AV_NOPTS_VALUE)
 	, m_nextFramePts(0)
+	, m_isEnabled(true)
 {
 	DebugMessage(L"MediaSampleProvider\n");
 }
@@ -70,17 +71,20 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 	HRESULT hr = S_OK;
 
 	MediaStreamSample^ sample;
-	DataWriter^ dataWriter = ref new DataWriter();
-
-	LONGLONG pts = 0;
-	LONGLONG dur = 0;
-
-	hr = GetNextPacket(dataWriter, pts, dur);
-
-	if (hr == S_OK)
+	if (m_isEnabled)
 	{
-		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
-		sample->Duration = { dur };
+		DataWriter^ dataWriter = ref new DataWriter();
+
+		LONGLONG pts = 0;
+		LONGLONG dur = 0;
+
+		hr = GetNextPacket(dataWriter, pts, dur);
+
+		if (hr == S_OK)
+		{
+			sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
+			sample->Duration = { dur };
+		}
 	}
 
 	return sample;
@@ -121,7 +125,14 @@ void MediaSampleProvider::QueuePacket(AVPacket packet)
 {
 	DebugMessage(L" - QueuePacket\n");
 
-	m_packetQueue.push_back(packet);
+	if (m_isEnabled)
+	{
+		m_packetQueue.push_back(packet);
+	}
+	else
+	{
+		av_packet_unref(&packet);
+	}
 }
 
 AVPacket MediaSampleProvider::PopPacket()
@@ -154,6 +165,7 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 	bool frameComplete = false;
 	bool decodeSuccess = true;
 	int64_t framePts = 0, frameDuration = 0;
+	int errorCount = 0;
 
 	while (SUCCEEDED(hr) && !frameComplete)
 	{
@@ -178,6 +190,13 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 			// Decode the packet if necessary, it will update the presentation time if necessary
 			hr = DecodeAVPacket(writer, &avPacket, framePts, frameDuration);
 			frameComplete = (hr == S_OK);
+
+			if (!frameComplete && errorCount++ < 10)
+			{
+				// skip a few broken packets (maybe make this configurable later)
+				DebugMessage(L"Skipping broken packet\n");
+				hr = S_OK;
+			}
 		}
 	}
 
@@ -201,6 +220,14 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 	}
 
 	av_packet_unref(&avPacket);
+
+	if (FAILED(hr))
+	{
+		// flush stream and disable any further processing
+		DebugMessage(L"Too many broken packets - disable stream\n");
+		m_isEnabled = false;
+		Flush();
+	}
 
 	return hr;
 }

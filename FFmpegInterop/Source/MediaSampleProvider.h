@@ -49,6 +49,7 @@ namespace FFmpegInterop
 		int m_streamIndex;
 		int64 m_startOffset;
 		int64 m_nextFramePts;
+		bool m_isEnabled;
 
 	internal:
 		// The FFmpeg context. Because they are complex types

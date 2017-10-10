@@ -34,6 +34,7 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_startOffset(AV_NOPTS_VALUE)
 	, m_nextFramePts(0)
 	, m_isEnabled(true)
+	, m_isDiscontinuous(false)
 {
 	DebugMessage(L"MediaSampleProvider\n");
 }
@@ -78,12 +79,19 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 		LONGLONG pts = 0;
 		LONGLONG dur = 0;
 
-		hr = GetNextPacket(dataWriter, pts, dur);
+		hr = GetNextPacket(dataWriter, pts, dur, true);
 
 		if (hr == S_OK)
 		{
 			sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
 			sample->Duration = { dur };
+			sample->Discontinuous = m_isDiscontinuous;
+			m_isDiscontinuous = false;
+		}
+		else
+		{
+			DebugMessage(L"Too many broken packets - disable stream\n");
+			DisableStream();
 		}
 	}
 
@@ -153,7 +161,7 @@ AVPacket MediaSampleProvider::PopPacket()
 	return avPacket;
 }
 
-HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, LONGLONG & pts, LONGLONG & dur)
+HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, LONGLONG & pts, LONGLONG & dur, bool allowSkip)
 {
 	HRESULT hr = S_OK;
 
@@ -191,11 +199,15 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 			hr = DecodeAVPacket(writer, &avPacket, framePts, frameDuration);
 			frameComplete = (hr == S_OK);
 
-			if (!frameComplete && errorCount++ < 10)
+			if (!frameComplete)
 			{
-				// skip a few broken packets (maybe make this configurable later)
-				DebugMessage(L"Skipping broken packet\n");
-				hr = S_OK;
+				m_isDiscontinuous = true;
+				if (allowSkip && errorCount++ < 10)
+				{
+					// skip a few broken packets (maybe make this configurable later)
+					DebugMessage(L"Skipping broken packet\n");
+					hr = S_OK;
+				}
 			}
 		}
 	}
@@ -221,14 +233,6 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 
 	av_packet_unref(&avPacket);
 
-	if (FAILED(hr))
-	{
-		// flush stream and disable any further processing
-		DebugMessage(L"Too many broken packets - disable stream\n");
-		m_isEnabled = false;
-		Flush();
-	}
-
 	return hr;
 }
 
@@ -239,4 +243,12 @@ void MediaSampleProvider::Flush()
 	{
 		av_packet_unref(&PopPacket());
 	}
+	m_isDiscontinuous = true;
+}
+
+void MediaSampleProvider::DisableStream()
+{
+	DebugMessage(L"DisableStream\n");
+	Flush();
+	m_isEnabled = false;
 }

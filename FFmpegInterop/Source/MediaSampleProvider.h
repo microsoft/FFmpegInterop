@@ -43,6 +43,7 @@ namespace FFmpegInterop
 	internal:
 		void QueuePacket(AVPacket packet);
 		AVPacket PopPacket();
+		HRESULT GetNextPacket(DataWriter^ writer, LONGLONG& pts, LONGLONG& dur);
 
 	private:
 		std::vector<AVPacket> m_packetQueue;
@@ -67,6 +68,5 @@ namespace FFmpegInterop
 		virtual HRESULT AllocateResources();
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket);
 		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration);
-		virtual HRESULT GetNextPacket(DataWriter^ writer, LONGLONG& pts, LONGLONG& dur);
 	};
 }

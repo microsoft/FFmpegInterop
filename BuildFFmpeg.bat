@@ -61,7 +61,7 @@ if %BUILD.win10%==N (
 
 :: Verifying ffmpeg directory
 echo Verifying ffmpeg directory...
-pushd ffmpeg
+pushd %~dp0\ffmpeg
 if not exist configure (
     echo:
     echo configure is not found in ffmpeg folder. Ensure this folder is populated with ffmpeg snapshot

@@ -23,7 +23,8 @@ using namespace FFmpegInterop;
 
 UncompressedSampleProvider::UncompressedSampleProvider(FFmpegReader^ reader, AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx)
 	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_pAvFrame(nullptr)
+	, m_pAvFrame(nullptr),
+	m_maxCorruptedPackageThreshold(11)
 {
 }
 
@@ -88,11 +89,13 @@ HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVPacket* avPacket
 HRESULT UncompressedSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration)
 {
 	HRESULT hr = S_OK;
-	bool fGotFrame  = false;
+	bool fGotFrame = false;
 	AVPacket *pPacket = avPacket;
+	int m_framesSkipped = 0;
+	bool tryAgain = true;
 
-	while (SUCCEEDED(hr))
-	{
+	while (SUCCEEDED(hr) || tryAgain)
+	{	
 		hr = GetFrameFromFFmpegDecoder(pPacket);
 		pPacket = nullptr;
 		if (SUCCEEDED(hr))
@@ -116,6 +119,11 @@ HRESULT UncompressedSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPac
 			fGotFrame = true;
 
 			hr = ProcessDecodedFrame(dataWriter);
+		}
+		else
+		{
+			m_framesSkipped++;
+			tryAgain = m_framesSkipped < m_maxCorruptedPackageThreshold;
 		}
 	}
 

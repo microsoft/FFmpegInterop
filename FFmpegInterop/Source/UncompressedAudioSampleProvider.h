@@ -31,7 +31,6 @@ namespace FFmpegInterop
 	public:
 		virtual ~UncompressedAudioSampleProvider();
 		virtual MediaStreamSample^ GetNextSample() override;
-
 	internal:
 		UncompressedAudioSampleProvider(
 			FFmpegReader^ reader,
@@ -42,6 +41,8 @@ namespace FFmpegInterop
 		virtual HRESULT AllocateResources() override;
 
 	private:
+		int64 m_blockAlign;
+		int64 m_avgBytesPerSec;
 		SwrContext* m_pSwrCtx;
 	};
 }

@@ -37,7 +37,7 @@ namespace FFmpegInterop
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx);
-
+		int m_maxCorruptedPackageThreshold;
 	internal:
 		AVFrame* m_pAvFrame;
 	};

@@ -192,7 +192,7 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 			DebugMessage(L"Saving m_startOffset\n");
 
 			//in some real-time streams framePts is less than 0 so we need to make sure m_startOffset is never negative
-			m_startOffset = framePts < 0 ? 0 : framePts;
+			m_startOffset = m_pAvFormatCtx->streams[m_streamIndex]->start_time < 0 ? 0 : m_pAvFormatCtx->streams[m_streamIndex]->start_time;
 		}
 
 		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (framePts - m_startOffset));

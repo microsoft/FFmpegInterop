@@ -17,6 +17,7 @@
     <ClCompile Include="..\..\Source\UncompressedSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedVideoSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\FFmpegInteropLogging.cpp" />
+    <ClCompile Include="..\..\Source\HEVCSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -31,5 +32,6 @@
     <ClInclude Include="..\..\Source\ILogProvider.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropLogging.h" />
     <ClInclude Include="..\..\Source\MediaThumbnailData.h" />
+    <ClInclude Include="..\..\Source\HEVCSampleProvider.h" />
   </ItemGroup>
 </Project>

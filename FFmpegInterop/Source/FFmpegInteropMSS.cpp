@@ -21,6 +21,7 @@
 #include "MediaSampleProvider.h"
 #include "H264AVCSampleProvider.h"
 #include "H264SampleProvider.h"
+#include "HEVCSampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
 #include "shcore.h"
@@ -601,6 +602,16 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		{
 			videoSampleProvider = ref new H264SampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 		}
+	}
+	else if (avVideoCodecCtx->codec_id == AV_CODEC_ID_HEVC && !forceVideoDecode &&
+		Windows::Foundation::Metadata::ApiInformation::IsMethodPresent("Windows.Media.MediaProperties.VideoEncodingProperties", "CreateHevc"))
+	{
+		videoProperties = VideoEncodingProperties::CreateHevc();
+		videoProperties->ProfileId = avVideoCodecCtx->profile;
+		videoProperties->Height = avVideoCodecCtx->height;
+		videoProperties->Width = avVideoCodecCtx->width;
+
+		videoSampleProvider = ref new HEVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 	}
 	else
 	{

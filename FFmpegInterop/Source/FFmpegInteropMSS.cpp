@@ -414,7 +414,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					if (threads > 0)
 					{
 						avVideoCodecCtx->thread_count = threads;
-						avVideoCodecCtx->thread_type = FF_THREAD_FRAME || FF_THREAD_SLICE;
+						avVideoCodecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
 					}
 
 					if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)

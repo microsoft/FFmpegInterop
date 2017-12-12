@@ -603,6 +603,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 			videoSampleProvider = ref new H264SampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 		}
 	}
+#if _WIN32_WINNT >= _WIN32_WINNT_WIN10
 	else if (avVideoCodecCtx->codec_id == AV_CODEC_ID_HEVC && !forceVideoDecode &&
 		Windows::Foundation::Metadata::ApiInformation::IsMethodPresent("Windows.Media.MediaProperties.VideoEncodingProperties", "CreateHevc"))
 	{
@@ -613,6 +614,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 
 		videoSampleProvider = ref new HEVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 	}
+#endif
 	else
 	{
 		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12, avVideoCodecCtx->width, avVideoCodecCtx->height);

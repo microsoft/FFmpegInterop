@@ -603,7 +603,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 			videoSampleProvider = ref new H264SampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 		}
 	}
-#if _WIN32_WINNT >= _WIN32_WINNT_WIN10
+#if _WIN32_WINNT >= 0x0A00 // only compile if platform toolset is Windows 10 or higher
 	else if (avVideoCodecCtx->codec_id == AV_CODEC_ID_HEVC && !forceVideoDecode &&
 		Windows::Foundation::Metadata::ApiInformation::IsMethodPresent("Windows.Media.MediaProperties.VideoEncodingProperties", "CreateHevc"))
 	{

@@ -44,9 +44,18 @@ HRESULT HEVCSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPack
 	}
 
 	if (SUCCEEDED(hr))
-	{	
-		// Convert the packet to NAL format
-		hr = WriteNALPacket(dataWriter, avPacket);
+	{
+		if (m_bIsRawNalStream)
+		{
+			// Just write NAL stream to output
+			auto data = ref new Platform::Array<uint8_t>(avPacket->data, avPacket->size);
+			dataWriter->WriteBytes(data);
+		}
+		else
+		{
+			// Convert the packet to NAL format
+			hr = WriteNALPacket(dataWriter, avPacket);
+		}
 	}
 
 	// We have a complete frame
@@ -59,12 +68,11 @@ HRESULT HEVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 	int spsLength = 0;
 	int ppsLength = 0;
 
-	auto extra = ref new Platform::Array<uint8_t>(m_pAvCodecCtx->extradata, m_pAvCodecCtx->extradata_size);
 	auto buf = m_pAvCodecCtx->extradata;
 	auto length = m_pAvCodecCtx->extradata_size;
 
 	// Get the position of the SPS
-	if (m_pAvCodecCtx->extradata == nullptr || m_pAvCodecCtx->extradata_size < 4)
+	if (buf == nullptr || length < 4)
 	{
 		// The data isn't present
 		hr = E_FAIL;
@@ -108,29 +116,10 @@ HRESULT HEVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 		}
 		else 
 		{
-			/* Extradata is standard NAL packets (not sure if this is even allowed, but ffmpeg seems to support it) */
-			m_nalLenSize = 4;
-			int pos = 0;
-			while (pos + m_nalLenSize < length)
-			{
-				int nalsize = ReadNALLength(buf, pos, m_nalLenSize);
-				pos += m_nalLenSize;
-
-				if (length - pos < nalsize) {
-					return E_FAIL;
-				}
-
-				// Write the NAL unit to the stream
-				dataWriter->WriteByte(0);
-				dataWriter->WriteByte(0);
-				dataWriter->WriteByte(0);
-				dataWriter->WriteByte(1);
-
-				auto data = ref new Platform::Array<uint8_t>(buf + pos, nalsize);
-				dataWriter->WriteBytes(data);
-
-				pos += nalsize;
-			}
+			/* The stream and extradata contains raw NAL packets. No decoding needed. */
+			auto extra = ref new Platform::Array<uint8_t>(m_pAvCodecCtx->extradata, m_pAvCodecCtx->extradata_size);
+			dataWriter->WriteBytes(extra);
+			m_bIsRawNalStream = true;
 		}
 	}
 

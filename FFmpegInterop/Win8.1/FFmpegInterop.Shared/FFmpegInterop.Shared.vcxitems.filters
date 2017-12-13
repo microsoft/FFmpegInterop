@@ -2,6 +2,7 @@
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\CritSec.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegReader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\H264SampleProvider.h" />

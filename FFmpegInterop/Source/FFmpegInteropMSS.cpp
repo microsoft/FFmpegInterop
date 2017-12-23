@@ -281,23 +281,6 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 	return hr;
 }
 
-static AVPixelFormat get_format(struct AVCodecContext *s, const enum AVPixelFormat *fmt)
-{
-	AVPixelFormat result = (AVPixelFormat)-1;
-	AVPixelFormat format;
-	int index = 0;
-	do
-	{
-		format = fmt[index++];
-		if (format != -1 && result == -1)
-		{
-			result = format;
-		}
-	} while (format != -1);
-
-	return result;
-}
-
 HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode)
 {
 	HRESULT hr = S_OK;
@@ -415,8 +398,6 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 				
 				if (SUCCEEDED(hr))
 				{
-					avVideoCodecCtx->get_format = &get_format;
-
 					// initialize the stream parameters with demuxer information
 					if (avcodec_parameters_to_context(avVideoCodecCtx, avFormatCtx->streams[videoStreamIndex]->codecpar) < 0)
 					{

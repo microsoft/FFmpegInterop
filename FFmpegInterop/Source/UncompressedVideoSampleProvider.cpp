@@ -55,7 +55,7 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 			m_pAvCodecCtx->pix_fmt,
 			m_pAvCodecCtx->width,
 			m_pAvCodecCtx->height,
-			AV_PIX_FMT_NV12,
+			AV_PIX_FMT_BGRA,
 			SWS_BICUBIC,
 			NULL,
 			NULL,
@@ -78,7 +78,7 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 
 	if (SUCCEEDED(hr))
 	{
-		if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, AV_PIX_FMT_NV12, 1) < 0)
+		if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, AV_PIX_FMT_BGRA, 1) < 0)
 		{
 			hr = E_FAIL;
 		}

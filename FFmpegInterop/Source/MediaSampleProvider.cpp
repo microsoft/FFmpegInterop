@@ -42,7 +42,7 @@ MediaSampleProvider::MediaSampleProvider(
 HRESULT MediaSampleProvider::AllocateResources()
 {
 	DebugMessage(L"AllocateResources\n");
-	m_startOffset = AV_NOPTS_VALUE;
+	m_startOffset = avFormatCtx->start_time == AV_NOPTS_VALUE ? 0 : LONGLONG(avFormatCtx->start_time * 10000000 / double(AV_TIME_BASE));
 	m_nextFramePts = 0;
 	return S_OK;
 }
@@ -216,15 +216,6 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 	{
 		// Write the packet out
 		hr = WriteAVPacketToStream(writer, &avPacket);
-
-		if (m_startOffset == AV_NOPTS_VALUE)
-		{
-			//if we havent set m_startOffset already
-			DebugMessage(L"Saving m_startOffset\n");
-
-			//in some real-time streams framePts is less than 0 so we need to make sure m_startOffset is never negative
-			m_startOffset = m_pAvFormatCtx->streams[m_streamIndex]->start_time < 0 ? 0 : m_pAvFormatCtx->streams[m_streamIndex]->start_time;
-		}
 
 		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (framePts - m_startOffset));
 

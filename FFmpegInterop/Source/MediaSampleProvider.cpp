@@ -42,7 +42,7 @@ MediaSampleProvider::MediaSampleProvider(
 HRESULT MediaSampleProvider::AllocateResources()
 {
 	DebugMessage(L"AllocateResources\n");
-	m_startOffset = avFormatCtx->start_time == AV_NOPTS_VALUE ? 0 : LONGLONG(avFormatCtx->start_time * 10000000 / double(AV_TIME_BASE));
+	m_startOffset = m_pAvFormatCtx->start_time == AV_NOPTS_VALUE ? 0 : LONGLONG(m_pAvFormatCtx->start_time * 10000000 / double(AV_TIME_BASE));
 	m_nextFramePts = 0;
 	return S_OK;
 }
@@ -217,7 +217,7 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 		// Write the packet out
 		hr = WriteAVPacketToStream(writer, &avPacket);
 
-		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (framePts - m_startOffset));
+		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) - m_startOffset;
 
 		dur = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration);
 	}

@@ -55,7 +55,7 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 			m_pAvCodecCtx->pix_fmt,
 			m_pAvCodecCtx->width,
 			m_pAvCodecCtx->height,
-			AV_PIX_FMT_NV12,
+			AV_PIX_FMT_YUV420P,
 			SWS_BICUBIC,
 			NULL,
 			NULL,
@@ -78,7 +78,7 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 
 	if (SUCCEEDED(hr))
 	{
-		if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, AV_PIX_FMT_NV12, 1) < 0)
+		if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, AV_PIX_FMT_YUV420P, 1) < 0)
 		{
 			hr = E_FAIL;
 		}
@@ -140,16 +140,24 @@ MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
 
 HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
 {
-	// Convert decoded video pixel format to NV12 using FFmpeg software scaler
-	if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, m_rgVideoBufferData, m_rgVideoBufferLineSize) < 0)
-	{
-		return E_FAIL;
-	}
+	//// Convert decoded video pixel format to NV12 using FFmpeg software scaler
+	//if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, m_rgVideoBufferData, m_rgVideoBufferLineSize) < 0)
+	//{
+	//	return E_FAIL;
+	//}
 
-	auto YBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[0], m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height);
-	auto UVBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[1], m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2);
+	//auto YBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[0], m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height);
+	//auto UVBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[1], m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2);
+	//dataWriter->WriteBytes(YBuffer);
+	//dataWriter->WriteBytes(UVBuffer);
+
+	auto YBuffer = ref new Platform::Array<uint8_t>(m_pAvFrame->data[0], m_pAvFrame->linesize[0] * m_pAvCodecCtx->height);
+	auto UBuffer = ref new Platform::Array<uint8_t>(m_pAvFrame->data[1], m_pAvFrame->linesize[1] * m_pAvCodecCtx->height / 2);
+	auto VBuffer = ref new Platform::Array<uint8_t>(m_pAvFrame->data[2], m_pAvFrame->linesize[2] * m_pAvCodecCtx->height / 2);
 	dataWriter->WriteBytes(YBuffer);
-	dataWriter->WriteBytes(UVBuffer);
+	dataWriter->WriteBytes(UBuffer);
+	dataWriter->WriteBytes(VBuffer);
+
 	av_frame_unref(m_pAvFrame);
 	av_frame_free(&m_pAvFrame);
 

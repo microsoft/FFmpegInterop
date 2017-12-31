@@ -26,6 +26,7 @@
 #include "CritSec.h"
 #include "shcore.h"
 #include <mfapi.h>
+#include <dshow.h>
 
 extern "C"
 {
@@ -281,6 +282,23 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 	return hr;
 }
 
+static AVPixelFormat get_format(struct AVCodecContext *s, const enum AVPixelFormat *fmt)
+{
+	AVPixelFormat result = (AVPixelFormat)-1;
+	AVPixelFormat format;
+	int index = 0;
+	do
+	{
+		format = fmt[index++];
+		if (format != -1 && result == -1)
+		{
+			result = format;
+		}
+	} while (format != -1);
+
+	return result;
+}
+
 HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode)
 {
 	HRESULT hr = S_OK;
@@ -398,6 +416,8 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 				if (SUCCEEDED(hr))
 				{
+					avVideoCodecCtx->get_format = &get_format;
+
 					// initialize the stream parameters with demuxer information
 					if (avcodec_parameters_to_context(avVideoCodecCtx, avFormatCtx->streams[videoStreamIndex]->codecpar) < 0)
 					{
@@ -622,7 +642,9 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	}
 	else
 	{
-		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
+		// 32434d49-0000-0010-8000-00AA00389B71  'IMC2' ==  MEDIASUBTYPE_IMC2
+		// 34434d49-0000-0010-8000-00AA00389B71  'IMC4' ==  MEDIASUBTYPE_IMC4
+		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Iyuv, avVideoCodecCtx->width, avVideoCodecCtx->height);
 		videoSampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 
 		if (avVideoCodecCtx->sample_aspect_ratio.num > 0 && avVideoCodecCtx->sample_aspect_ratio.den != 0)

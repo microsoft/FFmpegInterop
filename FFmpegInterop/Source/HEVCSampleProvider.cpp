@@ -48,7 +48,7 @@ HRESULT HEVCSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPack
 		if (m_bIsRawNalStream)
 		{
 			// Just write NAL stream to output
-			auto data = ref new Platform::Array<uint8_t>(avPacket->data, avPacket->size);
+			auto data = Platform::ArrayReference<uint8_t>(avPacket->data, avPacket->size);
 			dataWriter->WriteBytes(data);
 		}
 		else
@@ -107,7 +107,7 @@ HRESULT HEVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 					dataWriter->WriteByte(0);
 					dataWriter->WriteByte(1);
 
-					auto data = ref new Platform::Array<uint8_t>(buf + pos, nalsize);
+					auto data = Platform::ArrayReference<uint8_t>(buf + pos, nalsize);
 					dataWriter->WriteBytes(data);
 
 					pos += nalsize;
@@ -117,7 +117,7 @@ HRESULT HEVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 		else 
 		{
 			/* The stream and extradata contains raw NAL packets. No decoding needed. */
-			auto extra = ref new Platform::Array<uint8_t>(m_pAvCodecCtx->extradata, m_pAvCodecCtx->extradata_size);
+			auto extra = Platform::ArrayReference<uint8_t>(m_pAvCodecCtx->extradata, m_pAvCodecCtx->extradata_size);
 			dataWriter->WriteBytes(extra);
 			m_bIsRawNalStream = true;
 		}
@@ -161,7 +161,7 @@ HRESULT HEVCSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* avP
 		}
 
 		// Write the rest of the packet to the stream
-		auto vBuffer = ref new Platform::Array<uint8_t>(&(avPacket->data[index]), size);
+		auto vBuffer = Platform::ArrayReference<uint8_t>(&(avPacket->data[index]), size);
 		dataWriter->WriteBytes(vBuffer);
 		index += size;
 	} while (index < packetSize);

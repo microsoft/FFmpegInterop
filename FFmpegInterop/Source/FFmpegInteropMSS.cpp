@@ -555,7 +555,7 @@ MediaThumbnailData ^ FFmpegInterop::FFmpegInteropMSS::ExtractThumbnail()
 			}
 
 
-			auto vector = ref new Array<uint8_t>(imageStream->attached_pic.data, imageStream->attached_pic.size);
+			auto vector = ArrayReference<uint8_t>(imageStream->attached_pic.data, imageStream->attached_pic.size);
 			DataWriter^ writer = ref new DataWriter();
 			writer->WriteBytes(vector);
 

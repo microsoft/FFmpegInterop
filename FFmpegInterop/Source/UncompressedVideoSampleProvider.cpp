@@ -147,9 +147,10 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 {
 	if (m_OutputPixelFormat == AV_PIX_FMT_YUV420P)
 	{
-		auto YBuffer = ref new Platform::Array<uint8_t>(m_pAvFrame->data[0], m_pAvFrame->linesize[0] * m_pAvCodecCtx->height);
-		auto UBuffer = ref new Platform::Array<uint8_t>(m_pAvFrame->data[1], m_pAvFrame->linesize[1] * m_pAvCodecCtx->height / 2);
-		auto VBuffer = ref new Platform::Array<uint8_t>(m_pAvFrame->data[2], m_pAvFrame->linesize[2] * m_pAvCodecCtx->height / 2);
+		// ffmpeg does not allocate contiguous buffers for YUV, so we need to manually copy all three planes
+		auto YBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[0], m_pAvFrame->linesize[0] * m_pAvCodecCtx->height);
+		auto UBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[1], m_pAvFrame->linesize[1] * m_pAvCodecCtx->height / 2);
+		auto VBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[2], m_pAvFrame->linesize[2] * m_pAvCodecCtx->height / 2);
 		dataWriter->WriteBytes(YBuffer);
 		dataWriter->WriteBytes(UBuffer);
 		dataWriter->WriteBytes(VBuffer);
@@ -162,10 +163,12 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 			return E_FAIL;
 		}
 
-		auto YBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[0], m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height);
-		auto UVBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[1], m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2);
-		dataWriter->WriteBytes(YBuffer);
-		dataWriter->WriteBytes(UVBuffer);
+		// we allocate a contiguous buffer for sws_scale, so we do not have to copy YUV planes separately
+		auto size = m_OutputPixelFormat == AVPixelFormat::AV_PIX_FMT_RGBA
+			? m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height
+			: (m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height) + (m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2);
+		auto buffer = Platform::ArrayReference<uint8_t>(m_rgVideoBufferData[0], size);
+		dataWriter->WriteBytes(buffer);
 	}
 
 	av_frame_unref(m_pAvFrame);

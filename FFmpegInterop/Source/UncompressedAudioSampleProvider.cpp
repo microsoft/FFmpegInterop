@@ -98,7 +98,7 @@ HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWri
 	uint8_t *resampledData = nullptr;
 	unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 	int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-	auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
+	auto aBuffer = Platform::ArrayReference<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
 	dataWriter->WriteBytes(aBuffer);
 	av_freep(&resampledData);
 	av_frame_unref(m_pAvFrame);

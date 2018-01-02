@@ -164,7 +164,7 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 		}
 
 		// we allocate a contiguous buffer for sws_scale, so we do not have to copy YUV planes separately
-		auto size = m_OutputPixelFormat == AVPixelFormat::AV_PIX_FMT_RGBA
+		auto size = m_OutputPixelFormat == AVPixelFormat::AV_PIX_FMT_BGRA
 			? m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height
 			: (m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height) + (m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2);
 		auto buffer = Platform::ArrayReference<uint8_t>(m_rgVideoBufferData[0], size);

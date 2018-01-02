@@ -20,7 +20,7 @@
 #include "FFmpegInteropMSS.h"
 #include "MediaSampleProvider.h"
 #include "H264AVCSampleProvider.h"
-#include "H264SampleProvider.h"
+#include "NALPacketSampleProvider.h"
 #include "HEVCSampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
@@ -618,7 +618,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		}
 		else
 		{
-			videoSampleProvider = ref new H264SampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+			videoSampleProvider = ref new NALPacketSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 		}
 	}
 #if _WIN32_WINNT >= 0x0A00 // only compile if platform toolset is Windows 10 or higher
@@ -630,7 +630,16 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		videoProperties->Height = avVideoCodecCtx->height;
 		videoProperties->Width = avVideoCodecCtx->width;
 
-		videoSampleProvider = ref new HEVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		// Check for HEVC bitstream flavor.
+		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 22 && 
+			(avVideoCodecCtx->extradata[0] || avVideoCodecCtx->extradata[1] || avVideoCodecCtx->extradata[2] > 1))
+		{
+			videoSampleProvider = ref new HEVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		}
+		else
+		{
+			videoSampleProvider = ref new NALPacketSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		}
 	}
 #endif
 	else

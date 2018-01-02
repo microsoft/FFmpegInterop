@@ -17,29 +17,21 @@
 //*****************************************************************************
 
 #pragma once
-#include "MediaSampleProvider.h"
+#include "H264AVCSampleProvider.h"
 
 namespace FFmpegInterop
 {
 	ref class HEVCSampleProvider :
-		public MediaSampleProvider
+		public H264AVCSampleProvider
 	{
 	public:
 		virtual ~HEVCSampleProvider();
-
-	private:
-		HRESULT WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket);
-		HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter, byte* buf, int length);
-		int ReadMultiByteValue(byte* buffer, int position, int numBytes);
-		bool m_bIsRawNalStream;
-		bool m_bHasSentExtradata;
-		int m_nalLenSize;
 
 	internal:
 		HEVCSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
+		virtual HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter, byte* buf, int length) override;
 	};
 }

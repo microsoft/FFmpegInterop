@@ -80,10 +80,10 @@ HRESULT NALPacketSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter, byte
 	return hr;
 }
 
-
-// Write out an NAL packet
 HRESULT NALPacketSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket)
 {
-	// Call base class method that simply write the packet to stream as is
-	return MediaSampleProvider::WriteAVPacketToStream(dataWriter, avPacket);
+	// Write out the NAL packet
+	auto aBuffer = Platform::ArrayReference<uint8_t>(avPacket->data, avPacket->size);
+	dataWriter->WriteBytes(aBuffer);
+	return S_OK;
 }

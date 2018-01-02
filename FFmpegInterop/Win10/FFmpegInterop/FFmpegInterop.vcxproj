@@ -230,7 +230,7 @@
     <ClInclude Include="..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="..\..\Source\FFmpegReader.h" />
     <ClInclude Include="..\..\Source\H264AVCSampleProvider.h" />
-    <ClInclude Include="..\..\Source\H264SampleProvider.h" />
+    <ClInclude Include="..\..\Source\NALPacketSampleProvider.h" />
     <ClInclude Include="..\..\Source\HEVCSampleProvider.h" />
     <ClInclude Include="..\..\Source\ILogProvider.h" />
     <ClInclude Include="..\..\Source\MediaSampleProvider.h" />
@@ -245,7 +245,7 @@
     <ClCompile Include="..\..\Source\FFmpegInteropMSS.cpp" />
     <ClCompile Include="..\..\Source\FFmpegReader.cpp" />
     <ClCompile Include="..\..\Source\H264AVCSampleProvider.cpp" />
-    <ClCompile Include="..\..\Source\H264SampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\NALPacketSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\HEVCSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\MediaSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedAudioSampleProvider.cpp" />

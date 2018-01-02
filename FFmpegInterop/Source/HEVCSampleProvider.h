@@ -29,8 +29,8 @@ namespace FFmpegInterop
 
 	private:
 		HRESULT WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket);
-		HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter);
-		int ReadNALLength(byte* buffer, int position, int lenSize);
+		HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter, byte* buf, int length);
+		int ReadMultiByteValue(byte* buffer, int position, int numBytes);
 		bool m_bIsRawNalStream;
 		bool m_bHasSentExtradata;
 		int m_nalLenSize;

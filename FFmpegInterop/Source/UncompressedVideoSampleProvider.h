@@ -45,6 +45,9 @@ namespace FFmpegInterop
 		virtual HRESULT AllocateResources() override;
 
 	private:
+
+		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
+		AVBufferPool *m_pBufferPool;
 		AVPixelFormat m_OutputPixelFormat;
 		SwsContext* m_pSwsCtx;
 		int m_rgVideoBufferLineSize[4];

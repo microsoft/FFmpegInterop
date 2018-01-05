@@ -18,6 +18,7 @@
 
 #include "pch.h"
 #include "UncompressedVideoSampleProvider.h"
+#include "NativeBufferFactory.h"
 #include <mfapi.h>
 
 extern "C"
@@ -27,6 +28,7 @@ extern "C"
 
 
 using namespace FFmpegInterop;
+using namespace NativeBuffer;
 using namespace Windows::Media::MediaProperties;
 
 UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
@@ -87,6 +89,14 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 				}
 			}
 		}
+		else
+		{
+			if (m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
+			{
+				m_pAvCodecCtx->get_buffer2 = &get_buffer2;
+				m_pAvCodecCtx->opaque = (void*)this;
+			}
+		}
 	}
 
 	return hr;
@@ -102,6 +112,11 @@ UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
 	if (m_rgVideoBufferData)
 	{
 		av_freep(m_rgVideoBufferData);
+	}
+
+	if (m_pBufferPool)
+	{
+		av_buffer_pool_uninit(&m_pBufferPool);
 	}
 }
 
@@ -175,4 +190,62 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	av_frame_free(&m_pAvFrame);
 
 	return S_OK;
+}
+
+static void free_buffer(void *lpVoid)
+{
+	auto buffer = (AVBufferRef *)lpVoid;
+	av_buffer_unref(&buffer);
+}
+
+int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags)
+{
+	auto provider = reinterpret_cast<UncompressedVideoSampleProvider^>(avCodecContext->opaque);
+
+	auto width = frame->width;
+	auto height = frame->height;
+	avcodec_align_dimensions(avCodecContext, &width, &height);
+
+	frame->linesize[0] = width;
+	frame->linesize[1] = width / 2;
+	frame->linesize[2] = width / 2;
+	frame->linesize[3] = 0;
+
+	auto YBufferSize = frame->linesize[0] * height;
+	auto UBufferSize = frame->linesize[1] * height / 2;
+	auto VBufferSize = frame->linesize[2] * height / 2;
+	auto totalSize = YBufferSize + UBufferSize + VBufferSize;
+
+	if (!provider->m_pBufferPool)
+	{
+		provider->m_pBufferPool = av_buffer_pool_init(totalSize, NULL);
+		if (!provider->m_pBufferPool)
+		{
+			return ERROR;
+		}
+	}
+
+	auto buffer = av_buffer_pool_get(provider->m_pBufferPool);
+	if (!buffer)
+	{
+		return ERROR;
+	}
+
+	if (buffer->size != totalSize)
+	{
+		av_buffer_unref(&buffer);
+		return ERROR;
+	}
+
+	frame->buf[0] = buffer;
+	frame->data[0] = buffer->data;
+	frame->data[1] = buffer->data + YBufferSize;
+	frame->data[2] = buffer->data + UBufferSize;
+	frame->data[3] = NULL;
+	frame->extended_data = frame->data;
+
+	auto bufferRef = av_buffer_ref(buffer);
+	auto ibuffer = NativeBufferFactory::CreateNativeBuffer(bufferRef->data, totalSize, &free_buffer, bufferRef);
+
+	return 0;
 }

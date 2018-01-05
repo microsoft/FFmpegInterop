@@ -234,6 +234,8 @@
     <ClInclude Include="..\..\Source\ILogProvider.h" />
     <ClInclude Include="..\..\Source\MediaSampleProvider.h" />
     <ClInclude Include="..\..\Source\MediaThumbnailData.h" />
+    <ClInclude Include="..\..\Source\NativeBuffer.h" />
+    <ClInclude Include="..\..\Source\NativeBufferFactory.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedVideoSampleProvider.h" />
@@ -246,6 +248,7 @@
     <ClCompile Include="..\..\Source\H264AVCSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\H264SampleProvider.cpp" />
     <ClCompile Include="..\..\Source\MediaSampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\NativeBufferFactory.cpp" />
     <ClCompile Include="..\..\Source\UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedVideoSampleProvider.cpp" />

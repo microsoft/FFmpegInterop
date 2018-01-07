@@ -687,10 +687,10 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 		if (streamIndex >= 0)
 		{
 			// Convert TimeSpan unit to AV_TIME_BASE
-			LONGLONG startTime = avFormatCtx->start_time == AV_NOPTS_VALUE ? 0 : LONGLONG(avFormatCtx->start_time * 10000000 / double(AV_TIME_BASE));
-			int64_t seekTarget = static_cast<int64_t>((request->StartPosition->Value.Duration + startTime) / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
+			int64_t streamStartTime = avFormatCtx->streams[streamIndex]->start_time == AV_NOPTS_VALUE ? (int64_t)0 : avFormatCtx->streams[streamIndex]->start_time;
+			int64_t seekTarget = static_cast<int64_t>(request->StartPosition->Value.Duration / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
 
-			if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
+			if (av_seek_frame(avFormatCtx, streamIndex, seekTarget + streamStartTime, AVSEEK_FLAG_BACKWARD) < 0)
 			{
 				DebugMessage(L" - ### Error while seeking\n");
 			}

@@ -32,5 +32,6 @@
     <ClInclude Include="..\..\Source\FFmpegInteropLogging.h" />
     <ClInclude Include="..\..\Source\MediaThumbnailData.h" />
     <ClInclude Include="..\..\Source\CritSec.h" />
+    <ClInclude Include="..\..\Source\VideoFrame.h" />
   </ItemGroup>
 </Project>

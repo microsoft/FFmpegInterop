@@ -22,8 +22,6 @@
 #include "FFmpegReader.h"
 #include "MediaSampleProvider.h"
 #include "MediaThumbnailData.h"
-#include "VideoFrame.h"
-#include <pplawait.h>
 
 using namespace Platform;
 using namespace Windows::Foundation;
@@ -45,8 +43,6 @@ namespace FFmpegInterop
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
-		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position);
-		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream) { return ExtractVideoFrameAsync(stream, { 0 }); };
 		MediaThumbnailData^ ExtractThumbnail();
 
 		// Contructor
@@ -92,21 +88,19 @@ namespace FFmpegInterop
 
 	internal:
 		int ReadPacket();
-		static VideoFrame^ ExtractVideoFrame(IRandomAccessStream^ stream, TimeSpan position);
 
 	private:
 		FFmpegInteropMSS();
 
-		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, bool isFrameGrabber, PropertySet^ ffmpegOptions, MediaStreamSource^ mss);
+		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss);
 		HRESULT CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
-		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode, bool isFrameGrabber);
+		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
 		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
-		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode, bool isFrameGrabber);
+		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode);
 		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
-		void Seek(TimeSpan position);
 
 		MediaStreamSource^ mss;
 		EventRegistrationToken startingRequestedToken;

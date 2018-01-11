@@ -39,8 +39,7 @@ namespace FFmpegInterop
 		UncompressedVideoSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx,
-			bool isFrameGrabber);
+			AVCodecContext* avCodecCtx);
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
 		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
 		virtual HRESULT AllocateResources() override;

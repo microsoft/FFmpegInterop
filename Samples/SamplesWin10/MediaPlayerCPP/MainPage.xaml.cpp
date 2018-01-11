@@ -71,34 +71,41 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 			{
 				try
 				{
-					// Read toggle switches states and use them to setup FFmpeg MSS
-					bool forceDecodeAudio = toggleSwitchAudioDecode->IsOn;
-					bool forceDecodeVideo = toggleSwitchVideoDecode->IsOn;
-
 					// Instantiate FFmpegInteropMSS using the opened local file stream
 					IRandomAccessStream^ readStream = stream.get();
-					FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
-					if (FFmpegMSS != nullptr)
-					{
-						MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
+					auto outStream = FFmpegInteropMSS::ExtractVideoFrame(readStream, { 0 }, false);
+					//auto source = ref new Windows::UI::Xaml::Media::Imaging::BitmapImage();
+					//source->SetSource(outStream);
+					mediaElement->SetSource(outStream, "image/bmp");
 
-						if (mss)
-						{
-							// Pass MediaStreamSource to Media Element
-							mediaElement->SetMediaStreamSource(mss);
+					//readStream->Seek(0);
 
-							// Close control panel after file open
-							Splitter->IsPaneOpen = false;
-						}
-						else
-						{
-							DisplayErrorMessage("Cannot open media");
-						}
-					}
-					else
-					{
-						DisplayErrorMessage("Cannot open media");
-					}
+					//// Read toggle switches states and use them to setup FFmpeg MSS
+					//bool forceDecodeAudio = toggleSwitchAudioDecode->IsOn;
+					//bool forceDecodeVideo = toggleSwitchVideoDecode->IsOn;
+
+					//FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
+					//if (FFmpegMSS != nullptr)
+					//{
+					//	MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
+
+					//	if (mss)
+					//	{
+					//		// Pass MediaStreamSource to Media Element
+					//		mediaElement->SetMediaStreamSource(mss);
+
+					//		// Close control panel after file open
+					//		Splitter->IsPaneOpen = false;
+					//	}
+					//	else
+					//	{
+					//		DisplayErrorMessage("Cannot open media");
+					//	}
+					//}
+					//else
+					//{
+					//	DisplayErrorMessage("Cannot open media");
+					//}
 				}
 				catch (COMException^ ex)
 				{

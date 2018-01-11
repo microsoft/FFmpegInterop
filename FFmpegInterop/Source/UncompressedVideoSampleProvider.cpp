@@ -32,7 +32,8 @@ using namespace Windows::Media::MediaProperties;
 UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
+	AVCodecContext* avCodecCtx,
+	bool isFrameGrabber)
 	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
 {
 	switch (m_pAvCodecCtx->pix_fmt)
@@ -51,6 +52,12 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
 		break;
 	}
+
+	if (isFrameGrabber)
+	{
+		m_OutputPixelFormat = AV_PIX_FMT_BGR32;
+		OutputMediaSubtype = MediaEncodingSubtypes::Rgb32;
+	}
 }
 
 HRESULT UncompressedVideoSampleProvider::AllocateResources()
@@ -59,7 +66,7 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 	hr = UncompressedSampleProvider::AllocateResources();
 	if (SUCCEEDED(hr))
 	{
-		if (m_pAvCodecCtx->pix_fmt != AV_PIX_FMT_YUV420P && m_pAvCodecCtx->pix_fmt != AV_PIX_FMT_YUVJ420P)
+		if (m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat || !(m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P && m_OutputPixelFormat == AV_PIX_FMT_YUV420P))
 		{
 			// Setup software scaler to convert any unsupported decoder pixel format to NV12 that is supported in Windows & Windows Phone MediaElement
 			m_pSwsCtx = sws_getContext(
@@ -145,7 +152,7 @@ MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
 
 HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
 {
-	if (m_OutputPixelFormat == AV_PIX_FMT_YUV420P)
+	if (m_pSwsCtx == NULL)
 	{
 		// ffmpeg does not allocate contiguous buffers for YUV, so we need to manually copy all three planes
 		auto YBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[0], m_pAvFrame->linesize[0] * m_pAvCodecCtx->height);

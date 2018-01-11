@@ -24,6 +24,7 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+using namespace Platform;
 
 namespace FFmpegInterop
 {
@@ -32,6 +33,8 @@ namespace FFmpegInterop
 	public:
 		virtual ~UncompressedVideoSampleProvider();
 		virtual MediaStreamSample^ GetNextSample() override;
+		property String^ OutputMediaSubtype;
+
 	internal:
 		UncompressedVideoSampleProvider(
 			FFmpegReader^ reader,
@@ -42,6 +45,7 @@ namespace FFmpegInterop
 		virtual HRESULT AllocateResources() override;
 
 	private:
+		AVPixelFormat m_OutputPixelFormat;
 		SwsContext* m_pSwsCtx;
 		int m_rgVideoBufferLineSize[4];
 		uint8_t* m_rgVideoBufferData[4];

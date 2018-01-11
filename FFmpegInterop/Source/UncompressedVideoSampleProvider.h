@@ -47,7 +47,9 @@ namespace FFmpegInterop
 	private:
 
 		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
+		static void free_buffer(void *lpVoid);
 		AVBufferPool *m_pBufferPool;
+		int m_bufferHeight;
 		AVPixelFormat m_OutputPixelFormat;
 		SwsContext* m_pSwsCtx;
 		int m_rgVideoBufferLineSize[4];

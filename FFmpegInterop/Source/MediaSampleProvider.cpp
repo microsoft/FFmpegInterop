@@ -74,7 +74,7 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 	MediaStreamSample^ sample;
 	if (m_isEnabled)
 	{
-		DataWriter^ dataWriter = ref new DataWriter();
+		DataWriter^ dataWriter = m_bUseDirectBuffer ? nullptr : ref new DataWriter();
 
 		LONGLONG pts = 0;
 		LONGLONG dur = 0;
@@ -83,7 +83,15 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 
 		if (hr == S_OK)
 		{
-			sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
+			if (m_bUseDirectBuffer)
+			{
+				sample = MediaStreamSample::CreateFromBuffer(m_pDirectBuffer, { pts });
+				m_pDirectBuffer = nullptr;
+			}
+			else
+			{
+				sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
+			}
 			sample->Duration = { dur };
 			sample->Discontinuous = m_isDiscontinuous;
 			m_isDiscontinuous = false;

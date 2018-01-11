@@ -83,7 +83,7 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 
 			if (SUCCEEDED(hr))
 			{
-				if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, m_OutputPixelFormat, 1) < 0)
+				if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, m_OutputPixelFormat, 32) < 0)
 				{
 					hr = E_FAIL;
 				}
@@ -93,8 +93,9 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 		{
 			if (m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
 			{
-				m_pAvCodecCtx->get_buffer2 = &get_buffer2;
+				m_pAvCodecCtx->get_buffer2 = get_buffer2;
 				m_pAvCodecCtx->opaque = (void*)this;
+				m_bUseDirectBuffer = true;
 			}
 		}
 	}
@@ -162,13 +163,32 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 {
 	if (m_OutputPixelFormat == AV_PIX_FMT_YUV420P)
 	{
-		// ffmpeg does not allocate contiguous buffers for YUV, so we need to manually copy all three planes
-		auto YBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[0], m_pAvFrame->linesize[0] * m_pAvCodecCtx->height);
-		auto UBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[1], m_pAvFrame->linesize[1] * m_pAvCodecCtx->height / 2);
-		auto VBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[2], m_pAvFrame->linesize[2] * m_pAvCodecCtx->height / 2);
-		dataWriter->WriteBytes(YBuffer);
-		dataWriter->WriteBytes(UBuffer);
-		dataWriter->WriteBytes(VBuffer);
+		if (!m_bUseDirectBuffer)
+		{
+			// ffmpeg does not allocate contiguous buffers for YUV, so we need to manually copy all three planes
+			auto YBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[0], m_pAvFrame->linesize[0] * m_pAvCodecCtx->height);
+			auto UBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[1], m_pAvFrame->linesize[1] * m_pAvCodecCtx->height / 2);
+			auto VBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[2], m_pAvFrame->linesize[2] * m_pAvCodecCtx->height / 2);
+			dataWriter->WriteBytes(YBuffer);
+			dataWriter->WriteBytes(UBuffer);
+			dataWriter->WriteBytes(VBuffer);
+		}
+		else
+		{
+			auto outputYBufferSize = m_pAvFrame->linesize[0] * m_pAvCodecCtx->height;
+			auto outputUBufferSize = m_pAvFrame->linesize[1] * m_pAvCodecCtx->height / 2;
+			auto outputVBufferSize = m_pAvFrame->linesize[2] * m_pAvCodecCtx->height / 2;
+			auto totalSize = outputYBufferSize + outputUBufferSize + outputVBufferSize;
+			if (m_bufferHeight != m_pAvFrame->height)
+			{
+				// move U+V buffers "up" to remove extra lines
+				memcpy(m_pAvFrame->data[0] + outputYBufferSize, m_pAvFrame->data[1], outputUBufferSize);
+				memcpy(m_pAvFrame->data[0] + outputYBufferSize + outputUBufferSize, m_pAvFrame->data[2], outputVBufferSize);
+			}
+
+			auto bufferRef = av_buffer_ref(m_pAvFrame->buf[0]);
+			m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(m_pAvFrame->data[0], totalSize, free_buffer, bufferRef);
+		}
 	}
 	else
 	{
@@ -192,9 +212,10 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	return S_OK;
 }
 
-static void free_buffer(void *lpVoid)
+void UncompressedVideoSampleProvider::free_buffer(void *lpVoid)
 {
 	auto buffer = (AVBufferRef *)lpVoid;
+	auto count = av_buffer_get_ref_count(buffer);
 	av_buffer_unref(&buffer);
 }
 
@@ -223,6 +244,7 @@ int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext,
 		{
 			return ERROR;
 		}
+		provider->m_bufferHeight = height;
 	}
 
 	auto buffer = av_buffer_pool_get(provider->m_pBufferPool);
@@ -230,6 +252,7 @@ int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext,
 	{
 		return ERROR;
 	}
+	auto count = av_buffer_get_ref_count(buffer);
 
 	if (buffer->size != totalSize)
 	{
@@ -240,12 +263,8 @@ int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext,
 	frame->buf[0] = buffer;
 	frame->data[0] = buffer->data;
 	frame->data[1] = buffer->data + YBufferSize;
-	frame->data[2] = buffer->data + UBufferSize;
+	frame->data[2] = buffer->data + YBufferSize + UBufferSize;
 	frame->data[3] = NULL;
-	frame->extended_data = frame->data;
-
-	auto bufferRef = av_buffer_ref(buffer);
-	auto ibuffer = NativeBufferFactory::CreateNativeBuffer(bufferRef->data, totalSize, &free_buffer, bufferRef);
 
 	return 0;
 }

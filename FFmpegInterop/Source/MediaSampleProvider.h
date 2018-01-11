@@ -60,6 +60,8 @@ namespace FFmpegInterop
 		AVFormatContext* m_pAvFormatCtx;
 		AVCodecContext* m_pAvCodecCtx;
 		bool m_isDiscontinuous;
+		bool m_bUseDirectBuffer;
+		IBuffer ^m_pDirectBuffer;
 
 	internal:
 		MediaSampleProvider(

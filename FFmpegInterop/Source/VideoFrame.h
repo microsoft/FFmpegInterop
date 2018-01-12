@@ -24,27 +24,27 @@ namespace FFmpegInterop
 			this->height = height;
 		}
 
-		IAsyncOperation<IRandomAccessStream^>^ EncodeAsBmpAsync()
+		IAsyncAction^ EncodeAsBmpAsync(IRandomAccessStream^ stream)
 		{
-			return create_async([this]
+			return create_async([this, stream]
 			{
-				return this->Encode(BitmapEncoder::BmpEncoderId);
+				return this->Encode(stream, BitmapEncoder::BmpEncoderId);
 			});
 		}
 
-		IAsyncOperation<IRandomAccessStream^>^ EncodeAsJpegAsync()
+		IAsyncAction^ EncodeAsJpegAsync(IRandomAccessStream^ stream)
 		{
-			return create_async([this]
+			return create_async([this, stream]
 			{
-				return this->Encode(BitmapEncoder::JpegEncoderId);
+				return this->Encode(stream, BitmapEncoder::JpegEncoderId);
 			});
 		}
 
-		IAsyncOperation<IRandomAccessStream^>^ EncodeAsPngAsync()
+		IAsyncAction^ EncodeAsPngAsync(IRandomAccessStream^ stream)
 		{
-			return create_async([this]
+			return create_async([this, stream]
 			{
-				return this->Encode(BitmapEncoder::PngEncoderId);
+				return this->Encode(stream, BitmapEncoder::PngEncoderId);
 			});
 		}
 
@@ -53,31 +53,31 @@ namespace FFmpegInterop
 		unsigned int width;
 		unsigned int height;
 
-		concurrency::task<IRandomAccessStream^> Encode(Guid encoderGuid)
+		task<void> Encode(IRandomAccessStream^ stream, Guid encoderGuid)
 		{
 			// Query the IBufferByteAccess interface.  
-			Microsoft::WRL::ComPtr<Windows::Storage::Streams::IBufferByteAccess> bufferByteAccess;
+			Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
 			reinterpret_cast<IInspectable*>(pixelData)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
 
 			// Retrieve the buffer data.  
 			byte* pixels = nullptr;
 			bufferByteAccess->Buffer(&pixels);
+			auto length = pixelData->Length;
 
-			IRandomAccessStream^ outputStream = ref new Windows::Storage::Streams::InMemoryRandomAccessStream();
-			auto encoder = co_await BitmapEncoder::CreateAsync(encoderGuid, outputStream);
-			encoder->SetPixelData(
-				BitmapPixelFormat::Rgba8,
-				BitmapAlphaMode::Ignore,
-				width,
-				height,
-				72,
-				72,
-				ArrayReference<byte>(pixels, pixelData->Length));
+			return create_task(BitmapEncoder::CreateAsync(encoderGuid, stream)).then([this, pixels, length](task<BitmapEncoder^> encoder)
+			{
+				auto encoderValue = encoder.get();
+				encoderValue->SetPixelData(
+					BitmapPixelFormat::Bgra8,
+					BitmapAlphaMode::Ignore,
+					width,
+					height,
+					72,
+					72,
+					ArrayReference<byte>(pixels, length));
 
-			co_await encoder->FlushAsync();
-
-			outputStream->Seek(0);
-			co_return outputStream;
+				return encoderValue->FlushAsync();
+			});
 		}
 
 	};

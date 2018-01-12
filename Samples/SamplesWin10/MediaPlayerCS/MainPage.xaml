@@ -40,6 +40,8 @@
                     </StackPanel>
                     <ToggleSwitch x:Name="toggleSwitchAudioDecode" Header="Force Decode Audio" OffContent="OFF" OnContent="ON" IsOn="False"/>
                     <ToggleSwitch x:Name="toggleSwitchVideoDecode" Header="Force Decode Video" OffContent="OFF" OnContent="ON" IsOn="False"/>
+                    <Button Content="Extract Frame" Click="ExtractFrame"  Margin="0,20,10,10" />
+                    <ToggleSwitch x:Name="grabFrameExactSeek" Header="Exact Seek for Extract Frame" OffContent="OFF" OnContent="ON" IsOn="True"/>
                 </StackPanel>
             </SplitView.Pane>
 

@@ -64,6 +64,7 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 	{
 		if (file != nullptr)
 		{
+			currentFile = file;
 			mediaElement->Stop();
 
 			// Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
@@ -71,41 +72,34 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 			{
 				try
 				{
+					// Read toggle switches states and use them to setup FFmpeg MSS
+					bool forceDecodeAudio = toggleSwitchAudioDecode->IsOn;
+					bool forceDecodeVideo = toggleSwitchVideoDecode->IsOn;
+
 					// Instantiate FFmpegInteropMSS using the opened local file stream
 					IRandomAccessStream^ readStream = stream.get();
-					auto outStream = FFmpegInteropMSS::ExtractVideoFrame(readStream, { 0 }, false);
-					//auto source = ref new Windows::UI::Xaml::Media::Imaging::BitmapImage();
-					//source->SetSource(outStream);
-					mediaElement->SetSource(outStream, "image/bmp");
+					FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
+					if (FFmpegMSS != nullptr)
+					{
+						MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
 
-					//readStream->Seek(0);
+						if (mss)
+						{
+							// Pass MediaStreamSource to Media Element
+							mediaElement->SetMediaStreamSource(mss);
 
-					//// Read toggle switches states and use them to setup FFmpeg MSS
-					//bool forceDecodeAudio = toggleSwitchAudioDecode->IsOn;
-					//bool forceDecodeVideo = toggleSwitchVideoDecode->IsOn;
-
-					//FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
-					//if (FFmpegMSS != nullptr)
-					//{
-					//	MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
-
-					//	if (mss)
-					//	{
-					//		// Pass MediaStreamSource to Media Element
-					//		mediaElement->SetMediaStreamSource(mss);
-
-					//		// Close control panel after file open
-					//		Splitter->IsPaneOpen = false;
-					//	}
-					//	else
-					//	{
-					//		DisplayErrorMessage("Cannot open media");
-					//	}
-					//}
-					//else
-					//{
-					//	DisplayErrorMessage("Cannot open media");
-					//}
+							// Close control panel after file open
+							Splitter->IsPaneOpen = false;
+						}
+						else
+						{
+							DisplayErrorMessage("Cannot open media");
+						}
+					}
+					else
+					{
+						DisplayErrorMessage("Cannot open media");
+					}
 				}
 				catch (COMException^ ex)
 				{
@@ -161,6 +155,54 @@ void MainPage::URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::K
 		{
 			DisplayErrorMessage("Cannot open media");
 		}
+	}
+}
+
+void MainPage::ExtractFrame(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+	if (currentFile == nullptr)
+	{
+		DisplayErrorMessage("Please open a video file first.");
+	}
+	else
+	{
+		// open the file that is currently playing
+		create_task(currentFile->OpenAsync(FileAccessMode::Read)).then([this](IRandomAccessStream^ stream)
+		{
+			try
+			{
+				bool exactSeek = grabFrameExactSeek->IsOn;
+				// extract frame using FFmpegInterop and current position
+				create_task(FFmpegInteropMSS::ExtractVideoFrameAsync(stream, mediaElement->Position, exactSeek)).then([this](VideoFrame^ frame)
+				{
+					auto filePicker = ref new FileSavePicker();
+					filePicker->SuggestedStartLocation = PickerLocationId::VideosLibrary;
+					filePicker->DefaultFileExtension = ".jpg";
+					filePicker->FileTypeChoices->Insert("Jpeg file", ref new Platform::Collections::Vector<String^>(1, ".jpg"));
+
+					// Show file picker so user can select a file
+					create_task(filePicker->PickSaveFileAsync()).then([this, frame](StorageFile^ file)
+					{
+						if (file != nullptr)
+						{
+							create_task(file->OpenAsync(FileAccessMode::ReadWrite)).then([this, frame, file](IRandomAccessStream^ stream)
+							{
+								// encode frame as jpeg file
+								create_task(frame->EncodeAsJpegAsync(stream)).then([this, file]
+								{
+									// launch file after creation
+									Windows::System::Launcher::LaunchFileAsync(file);
+								});
+							});
+						}
+					});
+				});
+			}
+			catch (COMException^ ex)
+			{
+				DisplayErrorMessage(ex->Message);
+			}
+		});
 	}
 }
 

@@ -45,8 +45,12 @@ namespace FFmpegInterop
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
-		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position);
-		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream) { return ExtractVideoFrameAsync(stream, { 0 }); };
+
+		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek, int maxFrameSkip);
+		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(stream, position, exactSeek, 0); };
+		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position) { return ExtractVideoFrameAsync(stream, position, false, 0); };
+		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream) { return ExtractVideoFrameAsync(stream, { 0 }, false, 0); };
+		
 		MediaThumbnailData^ ExtractThumbnail();
 
 		// Contructor
@@ -92,7 +96,6 @@ namespace FFmpegInterop
 
 	internal:
 		int ReadPacket();
-		static VideoFrame^ ExtractVideoFrame(IRandomAccessStream^ stream, TimeSpan position);
 
 	private:
 		FFmpegInteropMSS();
@@ -106,7 +109,7 @@ namespace FFmpegInterop
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
-		void Seek(TimeSpan position);
+		HRESULT Seek(TimeSpan position);
 
 		MediaStreamSource^ mss;
 		EventRegistrationToken startingRequestedToken;

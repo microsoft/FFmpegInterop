@@ -36,8 +36,10 @@ namespace MediaPlayerCPP
 		void OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::KeyRoutedEventArgs^ e);
 		void MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ e);
+		void ExtractFrame(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void DisplayErrorMessage(Platform::String^ message);
 
+		Windows::Storage::StorageFile^ currentFile;
 		FFmpegInterop::FFmpegInteropMSS^ FFmpegMSS;
 	};
 }

@@ -45,7 +45,7 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		break;
 	case AV_PIX_FMT_YUVA420P:
 		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
-		OutputMediaSubtype = MediaEncodingSubtypes::Argb32;
+		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
 		break;
 	default:
 		m_OutputPixelFormat = AV_PIX_FMT_NV12;
@@ -55,8 +55,8 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 
 	if (isFrameGrabber)
 	{
-		m_OutputPixelFormat = AV_PIX_FMT_BGR32;
-		OutputMediaSubtype = MediaEncodingSubtypes::Rgb32;
+		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
+		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
 	}
 }
 

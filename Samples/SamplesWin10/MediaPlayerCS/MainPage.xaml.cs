@@ -43,6 +43,7 @@ namespace MediaPlayerCS
     public sealed partial class MainPage : Page
     {
         private FFmpegInteropMSS FFmpegMSS;
+        private StorageFile currentFile;
 
         public MainPage()
         {
@@ -64,6 +65,7 @@ namespace MediaPlayerCS
 
             if (file != null)
             {
+
                 mediaElement.Stop();
 
                 // Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
@@ -146,6 +148,41 @@ namespace MediaPlayerCS
                     else
                     {
                         DisplayErrorMessage("Cannot open media");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DisplayErrorMessage(ex.Message);
+                }
+            }
+        }
+
+        private async void ExtractFrame(object sender, RoutedEventArgs e)
+        {
+            if (currentFile == null)
+            {
+                DisplayErrorMessage("Please open a video file first.");
+            }
+            else
+            {
+                try
+                {
+                    var stream = await currentFile.OpenAsync(FileAccessMode.Read);
+                    bool exactSeek = grabFrameExactSeek.IsOn;
+                    var frame = await FFmpegInteropMSS.ExtractVideoFrameAsync(stream, mediaElement.Position, exactSeek);
+
+                    var filePicker = new FileSavePicker();
+                    filePicker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
+                    filePicker.DefaultFileExtension = ".jpg";
+                    filePicker.FileTypeChoices["Jpeg file"] = new[] { ".jpg" }.ToList();
+
+                    var file = await filePicker.PickSaveFileAsync();
+                    if (file != null)
+                    {
+                        var outputStream = file.OpenAsync(FileAccessMode.ReadWrite);
+                        await frame.EncodeAsJpegAsync(stream);
+                        outputStream.Dispose();
+                        await Windows.System.Launcher.LaunchFileAsync(file);
                     }
                 }
                 catch (Exception ex)

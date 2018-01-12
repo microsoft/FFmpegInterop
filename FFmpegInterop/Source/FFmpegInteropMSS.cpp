@@ -752,8 +752,10 @@ void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource
 	mutexGuard.unlock();
 }
 
-void FFmpegInteropMSS::Seek(TimeSpan position)
+HRESULT FFmpegInteropMSS::Seek(TimeSpan position)
 {
+	auto hr = S_OK;;
+
 	// Select the first valid stream either from video or audio
 	int streamIndex = videoStreamIndex >= 0 ? videoStreamIndex : audioStreamIndex >= 0 ? audioStreamIndex : -1;
 
@@ -764,12 +766,11 @@ void FFmpegInteropMSS::Seek(TimeSpan position)
 
 		if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
 		{
+			hr = E_FAIL;
 			DebugMessage(L" - ### Error while seeking\n");
 		}
 		else
 		{
-			// Add deferral
-
 			// Flush the AudioSampleProvider
 			if (audioSampleProvider != nullptr)
 			{
@@ -785,6 +786,12 @@ void FFmpegInteropMSS::Seek(TimeSpan position)
 			}
 		}
 	}
+	else
+	{
+		hr = E_FAIL;
+	}
+
+	return hr;
 }
 
 // Static function to read file stream and pass data to FFmpeg. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
@@ -855,45 +862,63 @@ static int lock_manager(void **mtx, enum AVLockOp op)
 	return 1;
 }
 
-VideoFrame^ FFmpegInteropMSS::ExtractVideoFrame(IRandomAccessStream^ stream, TimeSpan position)
+IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek, int maxFrameSkip)
 {
-	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(stream, false, true, true, nullptr, nullptr)))
+	return create_async([stream, position, exactSeek, maxFrameSkip]
 	{
-		// We failed to initialize, clear the variable to return failure
-		throw ref new Exception(E_FAIL, "Unable to open file.");
-	}
-	if (interopMSS->videoSampleProvider == nullptr)
-	{
-		throw ref new Exception(E_FAIL, "No video stream found in file (or no suitable decoder available).");
-	}
-	if (interopMSS->Duration.Duration < position.Duration)
-	{
-		interopMSS->Seek(position);
-	}
-	else if (interopMSS->Duration.Duration > 0)
-	{
-		interopMSS->Seek({ interopMSS->Duration.Duration / 2 });
-	}
-	auto sample = interopMSS->videoSampleProvider->GetNextSample();
-	if (sample == nullptr)
-	{
-		throw ref new Exception(E_FAIL, "Failed to decode video frame.");
-	}
-	auto result = ref new VideoFrame(sample->Buffer,
-		interopMSS->videoSampleProvider->m_pAvCodecCtx->width,
-		interopMSS->videoSampleProvider->m_pAvCodecCtx->height);
-	return result;
-
-};
-
-IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position)
-{
-	return create_async([stream, position]
-	{
-		return create_task([stream, position]
+		return create_task([stream, position, exactSeek, maxFrameSkip]
 		{
-			return ExtractVideoFrame(stream, position);
+			auto interopMSS = ref new FFmpegInteropMSS();
+			if (FAILED(interopMSS->CreateMediaStreamSource(stream, false, true, true, nullptr, nullptr)))
+			{
+				throw ref new Exception(E_FAIL, "Unable to open file.");
+			}
+			if (interopMSS->videoSampleProvider == nullptr)
+			{
+				throw ref new Exception(E_FAIL, "No video stream found in file (or no suitable decoder available).");
+			}
+
+			bool seekSucceeded = false;
+			if (interopMSS->Duration.Duration > position.Duration)
+			{
+				seekSucceeded = SUCCEEDED(interopMSS->Seek(position));
+			}
+
+			int framesSkipped = 0;
+			MediaStreamSample^ lastSample = nullptr;
+			while (true)
+			{
+				auto sample = interopMSS->videoSampleProvider->GetNextSample();
+				if (sample == nullptr)
+				{
+					// if we hit end of stream, use last decoded sample (if any), otherwise fail
+					if (lastSample != nullptr)
+					{
+						sample = lastSample;
+						seekSucceeded = false;
+					}
+					else
+					{
+						throw ref new Exception(E_FAIL, "Failed to decode video frame.");
+					}
+				}
+				else
+				{
+					lastSample = sample;
+				}
+
+				// if exact seek, continue decoding until we have the right sample
+				if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) && 
+				    (maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
+				{
+					continue;
+				}
+
+				auto result = ref new VideoFrame(sample->Buffer,
+					interopMSS->videoSampleProvider->m_pAvCodecCtx->width,
+					interopMSS->videoSampleProvider->m_pAvCodecCtx->height);
+				return result;
+			}
 		});
 	});
 };

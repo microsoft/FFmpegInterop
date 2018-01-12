@@ -45,7 +45,7 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 		int64 outChannelLayout = av_get_default_channel_layout(m_pAvCodecCtx->channels);
 
 		// some files report sample duration 0. They also happen to have the m_pAvCodecCtx block_align 0
-		blockAlign = m_pAvCodecCtx->channels * (16 / 8);
+		blockAlign = m_pAvCodecCtx->channels * 2;
 		avgBytesPerSec = m_pAvCodecCtx->sample_rate * blockAlign;
 		
 		// Set up resampler to convert any PCM format (e.g. AV_SAMPLE_FMT_FLTP) to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element.
@@ -140,7 +140,7 @@ MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
 			}
 			if (dur == 0 && dataWriter->UnstoredBufferLength != 0)
 			{
-				finalDur = (dataWriter->UnstoredBufferLength / avgBytesPerSec) * 10000000;
+				finalDur = (dataWriter->UnstoredBufferLength * 10000000) / avgBytesPerSec;
 			}
 			else
 			{

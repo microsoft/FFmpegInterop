@@ -74,7 +74,7 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 	MediaStreamSample^ sample;
 	if (m_isEnabled)
 	{
-		DataWriter^ dataWriter = m_bUseDirectBuffer ? nullptr : ref new DataWriter();
+		DataWriter^ dataWriter = ref new DataWriter();
 
 		LONGLONG pts = 0;
 		LONGLONG dur = 0;

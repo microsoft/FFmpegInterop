@@ -56,6 +56,22 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
 		break;
 	}
+
+	// if there is no format change and yuv is used, try get_buffer2 direct buffer approach
+	if (m_pAvCodecCtx->pix_fmt == m_OutputPixelFormat && 
+		(m_OutputPixelFormat == AV_PIX_FMT_YUV420P || 
+		 m_OutputPixelFormat == AV_PIX_FMT_YUVJ420P) &&
+		m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
+	{
+		m_pAvCodecCtx->get_buffer2 = get_buffer2;
+		m_pAvCodecCtx->opaque = (void*)this;
+		m_bUseDirectBuffer = true;
+	}
+	else
+	{
+		// when scaler is used, we also use direct buffer
+		m_bUseDirectBuffer = true;
+	}
 }
 
 
@@ -75,6 +91,10 @@ HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired(AVFrame *fra
 			if (width != m_pAvCodecCtx->width)
 			{
 				needsScaler = true;
+			}
+			else if (height != m_pAvCodecCtx->height)
+			{
+				m_bUseDirectBuffer = false;
 			}
 		}
 		if (needsScaler)
@@ -97,9 +117,9 @@ HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired(AVFrame *fra
 				hr = E_OUTOFMEMORY;
 			}
 
-			if (SUCCEEDED(hr))
+			if (SUCCEEDED(hr) && !m_bUseDirectBuffer)
 			{
-				if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, m_OutputPixelFormat, 32) < 0)
+				if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, m_OutputPixelFormat, 1) < 0)
 				{
 					hr = E_FAIL;
 				}
@@ -107,12 +127,7 @@ HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired(AVFrame *fra
 		}
 		else
 		{
-			if (m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
-			{
-				m_pAvCodecCtx->get_buffer2 = get_buffer2;
-				m_pAvCodecCtx->opaque = (void*)this;
-				m_bUseDirectBuffer = true;
-			}
+
 		}
 	}
 
@@ -213,6 +228,27 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 			m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(m_pAvFrame->data[0], totalSize, free_buffer, bufferRef);
 		}
 	}
+	else if (m_bUseDirectBuffer)
+	{
+		byte **data = (byte**)malloc(32);
+		if (av_image_alloc(data, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, m_OutputPixelFormat, 1) < 0)
+		{
+			return E_FAIL;
+		}
+
+		// Convert decoded video pixel format to output format using FFmpeg software scaler
+		if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, data, m_rgVideoBufferLineSize) < 0)
+		{
+			return E_FAIL;
+		}
+
+		// we allocate a contiguous buffer for sws_scale, so we do not have to copy YUV planes separately
+		auto size = 
+			(m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height) + 
+			(m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2) + 
+			(m_rgVideoBufferLineSize[2] * m_pAvCodecCtx->height / 2);
+		m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(data[0], size, av_freep, data);
+	}
 	else
 	{
 		// Convert decoded video pixel format to NV12 using FFmpeg software scaler
@@ -222,9 +258,9 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 		}
 
 		// we allocate a contiguous buffer for sws_scale, so we do not have to copy YUV planes separately
-		auto size = 
-			(m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height) + 
-			(m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2) + 
+		auto size =
+			(m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height) +
+			(m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2) +
 			(m_rgVideoBufferLineSize[2] * m_pAvCodecCtx->height / 2);
 		auto buffer = Platform::ArrayReference<uint8_t>(m_rgVideoBufferData[0], size);
 		dataWriter->WriteBytes(buffer);
@@ -250,6 +286,14 @@ int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext,
 	auto width = frame->width;
 	auto height = frame->height;
 	avcodec_align_dimensions(avCodecContext, &width, &height);
+
+	// only use direct buffer if frame size is exactly output size
+	if (width != avCodecContext->width || height != avCodecContext->height)
+	{
+		return avcodec_default_get_buffer2(avCodecContext, frame, flags);
+	}
+
+	provider->m_bUseDirectBuffer = true;
 
 	frame->linesize[0] = width;
 	frame->linesize[1] = width / 2;

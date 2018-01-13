@@ -38,8 +38,11 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	switch (m_pAvCodecCtx->pix_fmt)
 	{
 	case AV_PIX_FMT_YUV420P:
-	case AV_PIX_FMT_YUVJ420P:
 		m_OutputPixelFormat = AV_PIX_FMT_YUV420P;
+		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
+		break;
+	case AV_PIX_FMT_YUVJ420P:
+		m_OutputPixelFormat = AV_PIX_FMT_YUVJ420P;
 		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
 		break;
 	case AV_PIX_FMT_YUVA420P:
@@ -53,13 +56,26 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	}
 }
 
-HRESULT UncompressedVideoSampleProvider::AllocateResources()
+
+HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired(AVFrame *frame)
 {
 	HRESULT hr = S_OK;
-	hr = UncompressedSampleProvider::AllocateResources();
-	if (SUCCEEDED(hr))
+	if (!m_bIsInitialized)
 	{
-		if (m_pAvCodecCtx->pix_fmt != AV_PIX_FMT_YUV420P && m_pAvCodecCtx->pix_fmt != AV_PIX_FMT_YUVJ420P)
+		m_bIsInitialized = true;
+		bool needsScaler = m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat;
+		if (!needsScaler)
+		{
+			// check if decoder adds stride (workaround for MF_MT_DEFAULT_STRIDE not working)
+			auto width = frame->width;
+			auto height = frame->height;
+			avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
+			if (width != m_pAvCodecCtx->width)
+			{
+				needsScaler = true;
+			}
+		}
+		if (needsScaler)
 		{
 			// Setup software scaler to convert any unsupported decoder pixel format to NV12 that is supported in Windows & Windows Phone MediaElement
 			m_pSwsCtx = sws_getContext(
@@ -103,6 +119,11 @@ UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
 	{
 		av_freep(m_rgVideoBufferData);
 	}
+
+	if (m_pSwsCtx)
+	{
+		sws_freeContext(m_pSwsCtx);
+	}
 }
 
 HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration)
@@ -145,7 +166,9 @@ MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
 
 HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
 {
-	if (m_OutputPixelFormat == AV_PIX_FMT_YUV420P)
+	InitializeScalerIfRequired(m_pAvFrame);
+
+	if (m_pSwsCtx == nullptr)
 	{
 		// ffmpeg does not allocate contiguous buffers for YUV, so we need to manually copy all three planes
 		auto YBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[0], m_pAvFrame->linesize[0] * m_pAvCodecCtx->height);
@@ -157,16 +180,17 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	}
 	else
 	{
-		// Convert decoded video pixel format to NV12 using FFmpeg software scaler
+		// Convert decoded video pixel format to output format using FFmpeg software scaler
 		if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, m_rgVideoBufferData, m_rgVideoBufferLineSize) < 0)
 		{
 			return E_FAIL;
 		}
 
 		// we allocate a contiguous buffer for sws_scale, so we do not have to copy YUV planes separately
-		auto size = m_OutputPixelFormat == AVPixelFormat::AV_PIX_FMT_BGRA
-			? m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height
-			: (m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height) + (m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2);
+		auto size = 
+			(m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height) + 
+			(m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2) + 
+			(m_rgVideoBufferLineSize[2] * m_pAvCodecCtx->height / 2);
 		auto buffer = Platform::ArrayReference<uint8_t>(m_rgVideoBufferData[0], size);
 		dataWriter->WriteBytes(buffer);
 	}

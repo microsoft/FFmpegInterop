@@ -66,7 +66,7 @@ HRESULT UncompressedVideoSampleProvider::AllocateResources()
 	hr = UncompressedSampleProvider::AllocateResources();
 	if (SUCCEEDED(hr))
 	{
-		if (m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat || !(m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P && m_OutputPixelFormat == AV_PIX_FMT_YUV420P))
+		if (m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat && !(m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P && m_OutputPixelFormat == AV_PIX_FMT_YUV420P))
 		{
 			// Setup software scaler to convert any unsupported decoder pixel format to NV12 that is supported in Windows & Windows Phone MediaElement
 			m_pSwsCtx = sws_getContext(

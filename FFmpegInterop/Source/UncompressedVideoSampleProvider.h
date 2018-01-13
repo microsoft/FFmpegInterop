@@ -42,9 +42,9 @@ namespace FFmpegInterop
 			AVCodecContext* avCodecCtx);
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
 		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT AllocateResources() override;
 
 	private:
+		HRESULT InitializeScalerIfRequired(AVFrame* frame);
 
 		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
 		static void free_buffer(void *lpVoid);
@@ -56,6 +56,7 @@ namespace FFmpegInterop
 		uint8_t* m_rgVideoBufferData[4];
 		bool m_interlaced_frame;
 		bool m_top_field_first;
+		bool m_bIsInitialized;
 	};
 }
 

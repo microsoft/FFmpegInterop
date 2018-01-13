@@ -138,6 +138,19 @@ MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
 		{
 			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
 		}
+
+		/*sample->ExtendedProperties->Insert(MF_MT_DEFAULT_STRIDE, (uint32)768);
+		sample->ExtendedProperties->Insert(MF_MT_FRAME_SIZE, Pack2UINT32AsUINT64(720, 480));
+
+		MFVideoArea* area = new MFVideoArea();
+		area->Area.cx = 720;
+		area->Area.cy = 480;
+		area->OffsetX.fract = 0;
+		area->OffsetX.value = 0;
+		area->OffsetY.fract = 0;
+		area->OffsetY.value = 0;
+		sample->ExtendedProperties->Insert(MF_MT_GEOMETRIC_APERTURE, ref new Array<uint8_t>((byte*)&area, sizeof(MFVideoArea)));
+		sample->ExtendedProperties->Insert(MF_MT_MINIMUM_DISPLAY_APERTURE, ref new Array<uint8_t>((byte*)&area, sizeof(MFVideoArea)));*/
 	}
 
 	return sample;

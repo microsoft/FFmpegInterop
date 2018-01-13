@@ -644,6 +644,25 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	{
 		auto sampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 		videoProperties = VideoEncodingProperties::CreateUncompressed(sampleProvider->OutputMediaSubtype, avVideoCodecCtx->width, avVideoCodecCtx->height);
+		//videoProperties = ref new VideoEncodingProperties();
+		//videoProperties->Subtype = sampleProvider->OutputMediaSubtype;
+		//videoProperties->Width = 720;
+		//videoProperties->Height = 480;
+		//videoProperties->Properties->Insert(MF_MT_FRAME_SIZE, Pack2UINT32AsUINT64(720, 480));
+		//videoProperties->Properties->Insert(MF_MT_DEFAULT_STRIDE, (uint32)768);
+
+		//videoProperties = ref new VideoEncodingProperties();
+		//videoProperties->Properties->Insert(MF_MT_FRAME_SIZE, Pack2UINT32AsUINT64(768, 480));
+		//MFVideoArea* area = new MFVideoArea();
+		//area->Area.cx = 720;
+		//area->Area.cy = 480;
+		//area->OffsetX.fract = 0;
+		//area->OffsetX.value = 0;
+		//area->OffsetY.fract = 0;
+		//area->OffsetY.value = 0;
+		//videoProperties->Properties->Insert(MF_MT_GEOMETRIC_APERTURE, ref new Array<uint8_t>((byte*)&area, sizeof(MFVideoArea)));
+		//videoProperties->Properties->Insert(MF_MT_MINIMUM_DISPLAY_APERTURE, ref new Array<uint8_t>((byte*)&area, sizeof(MFVideoArea)));
+		
 		videoSampleProvider = sampleProvider;
 
 		if (avVideoCodecCtx->sample_aspect_ratio.num > 0 && avVideoCodecCtx->sample_aspect_ratio.den != 0)

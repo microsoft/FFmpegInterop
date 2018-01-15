@@ -282,6 +282,12 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 	return hr;
 }
 
+static int is_hwaccel_pix_fmt(enum AVPixelFormat pix_fmt)
+{
+	const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+	return desc->flags & AV_PIX_FMT_FLAG_HWACCEL;
+}
+
 static AVPixelFormat get_format(struct AVCodecContext *s, const enum AVPixelFormat *fmt)
 {
 	AVPixelFormat result = (AVPixelFormat)-1;
@@ -290,12 +296,17 @@ static AVPixelFormat get_format(struct AVCodecContext *s, const enum AVPixelForm
 	do
 	{
 		format = fmt[index++];
-		if (format != -1 && result == -1)
+		if (format != -1 && result == -1 && !is_hwaccel_pix_fmt(format))
 		{
+			// take first non hw accelerated format
+			result = format;
+		}
+		else if (format == AV_PIX_FMT_NV12 && result != AV_PIX_FMT_YUVA420P)
+		{
+			// switch to NV12 if available, unless this is an alpha channel file
 			result = format;
 		}
 	} while (format != -1);
-
 	return result;
 }
 

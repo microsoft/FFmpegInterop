@@ -52,11 +52,26 @@ namespace FFmpegInterop
 		int m_bufferHeight;
 		AVPixelFormat m_OutputPixelFormat;
 		SwsContext* m_pSwsCtx;
-		int m_rgVideoBufferLineSize[4];
-		uint8_t* m_rgVideoBufferData[4];
 		bool m_interlaced_frame;
 		bool m_top_field_first;
 		bool m_bIsInitialized;
+	};
+
+	private ref class FrameDataHolder
+	{
+	internal:
+		int LineSize[4];
+		uint8_t* Data[4];
+		bool IsAllocated;
+
+	public:
+		virtual ~FrameDataHolder()
+		{
+			if (IsAllocated)
+			{
+				av_freep(Data);
+			}
+		};
 	};
 }
 

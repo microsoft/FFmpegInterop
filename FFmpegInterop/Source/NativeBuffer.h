@@ -20,6 +20,7 @@ namespace NativeBuffer
 			{
 				m_free(m_opaque);
 			}
+			m_pObject = nullptr;
 		}
 
 		STDMETHODIMP RuntimeClassInitialize(byte *buffer, UINT totalSize)
@@ -28,6 +29,7 @@ namespace NativeBuffer
 			m_buffer = buffer;
 			m_free = NULL;
 			m_opaque = NULL;
+			m_pObject = nullptr;
 
 			return S_OK;
 		}
@@ -38,6 +40,18 @@ namespace NativeBuffer
 			m_buffer = buffer;
 			m_free = free;
 			m_opaque = opaque;
+			m_pObject = nullptr;
+
+			return S_OK;
+		}
+
+		STDMETHODIMP RuntimeClassInitialize(byte *buffer, UINT totalSize, Platform::Object^ pObject)
+		{
+			m_length = totalSize;
+			m_buffer = buffer;
+			m_free = NULL;
+			m_opaque = NULL;
+			m_pObject = pObject;
 
 			return S_OK;
 		}
@@ -74,5 +88,6 @@ namespace NativeBuffer
 		byte *m_buffer;
 		void(*m_free)(void *opaque);
 		void *m_opaque;
+		Platform::Object^ m_pObject;
 	};
 }

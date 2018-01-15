@@ -25,3 +25,13 @@ Windows::Storage::Streams::IBuffer^ NativeBufferFactory::CreateNativeBuffer(LPVO
 
 	return buffer;
 }
+
+Windows::Storage::Streams::IBuffer^ NativeBufferFactory::CreateNativeBuffer(LPVOID lpBuffer, DWORD nNumberOfBytes, Platform::Object^ pObject)
+{
+	Microsoft::WRL::ComPtr<NativeBuffer> nativeBuffer;
+	Microsoft::WRL::Details::MakeAndInitialize<NativeBuffer>(&nativeBuffer, (byte *)lpBuffer, nNumberOfBytes, pObject);
+	auto iinspectable = (IInspectable *)reinterpret_cast<IInspectable *>(nativeBuffer.Get());
+	Windows::Storage::Streams::IBuffer ^buffer = reinterpret_cast<Windows::Storage::Streams::IBuffer ^>(iinspectable);
+
+	return buffer;
+}

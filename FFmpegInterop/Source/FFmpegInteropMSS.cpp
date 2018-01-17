@@ -644,6 +644,8 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	{
 		auto sampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
 		videoProperties = VideoEncodingProperties::CreateUncompressed(sampleProvider->OutputMediaSubtype, avVideoCodecCtx->width, avVideoCodecCtx->height);
+		videoProperties->Properties->Insert(MF_MT_DEFAULT_STRIDE, (uint32)768);
+		
 		//videoProperties = ref new VideoEncodingProperties();
 		//videoProperties->Subtype = sampleProvider->OutputMediaSubtype;
 		//videoProperties->Width = 720;

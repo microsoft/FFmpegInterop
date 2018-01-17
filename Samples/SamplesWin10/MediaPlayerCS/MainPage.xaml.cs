@@ -29,6 +29,7 @@ using Windows.Media.Core;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
+using Windows.System;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -65,7 +66,7 @@ namespace MediaPlayerCS
 
             if (file != null)
             {
-
+                currentFile = file;
                 mediaElement.Stop();
 
                 // Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
@@ -179,10 +180,14 @@ namespace MediaPlayerCS
                     var file = await filePicker.PickSaveFileAsync();
                     if (file != null)
                     {
-                        var outputStream = file.OpenAsync(FileAccessMode.ReadWrite);
-                        await frame.EncodeAsJpegAsync(stream);
+                        var outputStream = await file.OpenAsync(FileAccessMode.ReadWrite);
+                        await frame.EncodeAsJpegAsync(outputStream);
                         outputStream.Dispose();
-                        await Windows.System.Launcher.LaunchFileAsync(file);
+                        bool launched = await Windows.System.Launcher.LaunchFileAsync(file, new LauncherOptions() { DisplayApplicationPicker = false });
+                        if (!launched)
+                        {
+                            DisplayErrorMessage("File has been created:\n" + file.Path);
+                        }
                     }
                 }
                 catch (Exception ex)

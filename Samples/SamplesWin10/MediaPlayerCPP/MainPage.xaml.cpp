@@ -191,7 +191,13 @@ void MainPage::ExtractFrame(Platform::Object^ sender, Windows::UI::Xaml::RoutedE
 								create_task(frame->EncodeAsJpegAsync(stream)).then([this, file]
 								{
 									// launch file after creation
-									Windows::System::Launcher::LaunchFileAsync(file);
+									create_task(Windows::System::Launcher::LaunchFileAsync(file)).then([this, file](bool launched)
+									{
+										if (!launched)
+										{
+											DisplayErrorMessage("File has been created:\n" + file->Path);
+										}
+									});
 								});
 							});
 						}

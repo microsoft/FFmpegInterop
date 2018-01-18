@@ -54,6 +54,20 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
 		break;
 	}
+
+	auto width = avCodecCtx->width;
+	auto height = avCodecCtx->height;
+
+	// if no scaler is used, check decoder frame size
+	// we can ignore height changes because we just copy the required number of lines to output buffer
+	if (m_pAvCodecCtx->pix_fmt == m_OutputPixelFormat)
+	{
+		avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
+		height = m_pAvCodecCtx->height; 
+	}
+
+	DecoderWidth = width;
+	DecoderHeight = height;
 }
 
 
@@ -66,11 +80,11 @@ HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired(AVFrame *fra
 		bool needsScaler = m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat;
 		if (!needsScaler)
 		{
-			// check if decoder adds stride (workaround for MF_MT_DEFAULT_STRIDE not working)
+			// check if actual frame size has changed from expected decoder size
 			auto width = frame->width;
 			auto height = frame->height;
 			avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
-			if (width != m_pAvCodecCtx->width)
+			if (width != DecoderWidth)
 			{
 				needsScaler = true;
 			}

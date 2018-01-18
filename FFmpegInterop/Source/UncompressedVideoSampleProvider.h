@@ -34,6 +34,8 @@ namespace FFmpegInterop
 		virtual ~UncompressedVideoSampleProvider();
 		virtual MediaStreamSample^ GetNextSample() override;
 		property String^ OutputMediaSubtype;
+		property int DecoderWidth;
+		property int DecoderHeight;
 
 	internal:
 		UncompressedVideoSampleProvider(

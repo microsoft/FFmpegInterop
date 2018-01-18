@@ -53,6 +53,20 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		break;
 	}
 
+	auto width = avCodecCtx->width;
+	auto height = avCodecCtx->height;
+
+	// if no scaler is used, check decoder frame size
+	// we can ignore height changes because we just copy the required number of lines to output buffer
+	if (m_pAvCodecCtx->pix_fmt == m_OutputPixelFormat)
+	{
+		avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
+		height = m_pAvCodecCtx->height; 
+	}
+
+	DecoderWidth = width;
+	DecoderHeight = height;
+
 	if (isFrameGrabber)
 	{
 		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
@@ -60,13 +74,26 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	}
 }
 
-HRESULT UncompressedVideoSampleProvider::AllocateResources()
+
+HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired(AVFrame *frame)
 {
 	HRESULT hr = S_OK;
-	hr = UncompressedSampleProvider::AllocateResources();
-	if (SUCCEEDED(hr))
+	if (!m_bIsInitialized)
 	{
-		if (m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat && !(m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P && m_OutputPixelFormat == AV_PIX_FMT_YUV420P))
+		m_bIsInitialized = true;
+		bool needsScaler = m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat;
+		if (!needsScaler)
+		{
+			// check if actual frame size has changed from expected decoder size
+			auto width = frame->width;
+			auto height = frame->height;
+			avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
+			if (width != DecoderWidth)
+			{
+				needsScaler = true;
+			}
+		}
+		if (needsScaler)
 		{
 			// Setup software scaler to convert any unsupported decoder pixel format to NV12 that is supported in Windows & Windows Phone MediaElement
 			m_pSwsCtx = sws_getContext(

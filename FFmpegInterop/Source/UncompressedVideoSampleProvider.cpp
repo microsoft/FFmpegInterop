@@ -208,13 +208,8 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 		}
 		else
 		{
-			auto outputYBufferSize = m_pAvFrame->linesize[0] * m_pAvCodecCtx->height;
-			auto outputUBufferSize = m_pAvFrame->linesize[1] * m_pAvCodecCtx->height / 2;
-			auto outputVBufferSize = m_pAvFrame->linesize[2] * m_pAvCodecCtx->height / 2;
-			auto totalSize = outputYBufferSize + outputUBufferSize + outputVBufferSize;
-
 			auto bufferRef = av_buffer_ref(m_pAvFrame->buf[0]);
-			m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(m_pAvFrame->data[0], totalSize, free_buffer, bufferRef);
+			m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(bufferRef->data, bufferRef->size, free_buffer, bufferRef);
 		}
 	}
 	else

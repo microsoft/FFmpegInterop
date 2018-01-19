@@ -39,8 +39,11 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	switch (m_pAvCodecCtx->pix_fmt)
 	{
 	case AV_PIX_FMT_YUV420P:
-	case AV_PIX_FMT_YUVJ420P:
 		m_OutputPixelFormat = AV_PIX_FMT_YUV420P;
+		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
+		break;
+	case AV_PIX_FMT_YUVJ420P:
+		m_OutputPixelFormat = AV_PIX_FMT_YUVJ420P;
 		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
 		break;
 	case AV_PIX_FMT_YUVA420P:
@@ -51,6 +54,12 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		m_OutputPixelFormat = AV_PIX_FMT_NV12;
 		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
 		break;
+	}
+
+	if (isFrameGrabber)
+	{
+		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
+		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
 	}
 
 	auto width = avCodecCtx->width;
@@ -66,12 +75,6 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 
 	DecoderWidth = width;
 	DecoderHeight = height;
-
-	if (isFrameGrabber)
-	{
-		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
-		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
-	}
 }
 
 

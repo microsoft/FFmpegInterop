@@ -64,7 +64,7 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	{
 		// if no scaler is used, we need to check decoder frame size
 		avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
-
+		
 		// try direct buffer approach, if supported by decoder
 		if (m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
 		{
@@ -95,26 +95,6 @@ HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired(AVFrame *fra
 	{
 		m_bIsInitialized = true;
 		bool needsScaler = m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat;
-		if (!needsScaler)
-		{
-			// check if actual frame size has changed from expected decoder size
-			auto width = frame->width;
-			auto height = frame->height;
-			avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
-			if (width < DecoderWidth || height < DecoderHeight)
-			{
-				hr = E_FAIL; // smaller size would be a problem
-			}
-			else if (width > DecoderWidth)
-			{
-				needsScaler = true; // need to use scaler to cut out image
-			}
-			else if (height > DecoderHeight)
-			{
-				m_bUseDirectBuffer = false; // we can copy just the number or required lines
-			}
-			//TODO check if this is really correct!!
-		}
 		if (needsScaler && SUCCEEDED(hr))
 		{
 			// Setup software scaler to convert any unsupported decoder pixel format to NV12 that is supported in Windows & Windows Phone MediaElement
@@ -216,6 +196,7 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 			}
 			else
 			{
+				// create a buffer reference to hand out to MSS pipeline
 				auto bufferRef = av_buffer_ref(m_pAvFrame->buf[0]);
 				if (bufferRef == NULL)
 				{
@@ -229,28 +210,21 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 		}
 		else
 		{
-			auto frameData = ref new FrameDataHolder();
-			if (av_image_alloc(frameData->Data, frameData->LineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, m_OutputPixelFormat, 1) < 0)
+			// allocate a new frame from buffer pool
+			auto frame = ref new FrameDataHolder();
+			hr = AllocateScalerFrame(frame);
+			if (SUCCEEDED(hr))
 			{
-				hr = E_FAIL;
-			}
-			else
-			{
-				frameData->IsAllocated = true;
-
 				// Convert decoded video pixel format to output format using FFmpeg software scaler
-				if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, frameData->Data, frameData->LineSize) < 0)
+				if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, frame->data, frame->linesize) < 0)
 				{
+					free_buffer(frame->buffer);
 					hr = E_FAIL;
 				}
 				else
 				{
-					// we allocate a contiguous buffer for sws_scale, so we do not have to copy YUV planes separately
-					auto size =
-						(frameData->LineSize[0] * m_pAvCodecCtx->height) +
-						(frameData->LineSize[1] * m_pAvCodecCtx->height / 2) +
-						(frameData->LineSize[2] * m_pAvCodecCtx->height / 2);
-					m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(frameData->Data[0], size, frameData);
+					auto bufferRef = frame->buffer;
+					m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(bufferRef->data, bufferRef->size, free_buffer, bufferRef);
 				}
 			}
 		}
@@ -260,6 +234,63 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	av_frame_free(&m_pAvFrame);
 
 	return hr;
+}
+
+HRESULT UncompressedVideoSampleProvider::AllocateScalerFrame(FrameDataHolder^ frame)
+{
+	if (av_image_fill_linesizes(frame->linesize, m_OutputPixelFormat, DecoderWidth) < 0)
+	{
+		return E_FAIL;
+	}
+	if (frame->linesize[0] != DecoderWidth)
+	{
+		return E_FAIL; // unexpected size change cannot be handled
+	}
+
+	auto YBufferSize = frame->linesize[0] * DecoderHeight;
+	auto UBufferSize = frame->linesize[1] * DecoderHeight / 2;
+	auto VBufferSize = frame->linesize[2] * DecoderHeight / 2;
+	auto totalSize = YBufferSize + UBufferSize + VBufferSize;
+
+	auto buffer = AllocateBuffer(totalSize);
+	if (!buffer)
+	{
+		return E_OUTOFMEMORY;
+	}
+
+	frame->data[0] = buffer->data;
+	frame->data[1] = buffer->data + YBufferSize;
+	frame->data[2] = buffer->data + YBufferSize + UBufferSize;
+	frame->data[3] = NULL;
+	
+	frame->buffer = buffer;
+	
+	return S_OK;
+}
+
+AVBufferRef* UncompressedVideoSampleProvider::AllocateBuffer(int totalSize)
+{
+	if (!m_pBufferPool)
+	{
+		m_pBufferPool = av_buffer_pool_init(totalSize, NULL);
+		if (!m_pBufferPool)
+		{
+			return NULL;
+		}
+	}
+
+	auto buffer = av_buffer_pool_get(m_pBufferPool);
+	if (!buffer)
+	{
+		return NULL;
+	}
+	if (buffer->size != totalSize)
+	{
+		free_buffer(buffer);
+		return NULL;
+	}
+
+	return buffer;
 }
 
 void UncompressedVideoSampleProvider::free_buffer(void *lpVoid)
@@ -279,11 +310,7 @@ int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext,
 
 	if (width != provider->DecoderWidth || height != provider->DecoderHeight)
 	{
-		// we can only use direct buffer if frame size is exactly expexted output size
-		provider->m_bUseDirectBuffer = false;
-		avCodecContext->get_buffer2 = avcodec_default_get_buffer2;
-		avCodecContext->opaque = NULL;
-		return avcodec_default_get_buffer2(avCodecContext, frame, flags);
+		return ERROR; // unexpected size change cannot be handled
 	}
 
 	frame->linesize[0] = width;
@@ -296,26 +323,9 @@ int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext,
 	auto VBufferSize = frame->linesize[2] * height / 2;
 	auto totalSize = YBufferSize + UBufferSize + VBufferSize;
 
-	if (!provider->m_pBufferPool)
-	{
-		provider->m_pBufferPool = av_buffer_pool_init(totalSize, NULL);
-		if (!provider->m_pBufferPool)
-		{
-			return ERROR;
-		}
-		provider->m_bufferHeight = height;
-	}
-
-	auto buffer = av_buffer_pool_get(provider->m_pBufferPool);
+	auto buffer = provider->AllocateBuffer(totalSize);
 	if (!buffer)
 	{
-		return ERROR;
-	}
-	auto count = av_buffer_get_ref_count(buffer);
-
-	if (buffer->size != totalSize)
-	{
-		av_buffer_unref(&buffer);
 		return ERROR;
 	}
 

@@ -675,7 +675,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 			videoProperties->PixelAspectRatio->Denominator = avVideoCodecCtx->sample_aspect_ratio.den;
 		}
 
-		if (avVideoCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P)
+		if (sampleProvider->GetOutputPixelFormat() == AV_PIX_FMT_YUVJ420P)
 		{
 			// YUVJ420P uses full range values
 			videoProperties->Properties->Insert(MF_MT_VIDEO_NOMINAL_RANGE, (uint32)MFNominalRange_0_255);

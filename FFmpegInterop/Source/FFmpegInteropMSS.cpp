@@ -646,7 +646,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 		videoProperties = VideoEncodingProperties::CreateUncompressed(sampleProvider->OutputMediaSubtype, sampleProvider->DecoderWidth, sampleProvider->DecoderHeight);
 		videoSampleProvider = sampleProvider;
 
-		if (sampleProvider->DecoderWidth != avVideoCodecCtx->width || sampleProvider->DecoderHeight != avAudioCodecCtx->height)
+		if (sampleProvider->DecoderWidth != avVideoCodecCtx->width || sampleProvider->DecoderHeight != avVideoCodecCtx->height)
 		{
 			MFVideoArea area;
 			area.Area.cx = avVideoCodecCtx->width;

@@ -313,10 +313,10 @@ int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext,
 		return ERROR; // unexpected size change cannot be handled
 	}
 
-	frame->linesize[0] = width;
-	frame->linesize[1] = width / 2;
-	frame->linesize[2] = width / 2;
-	frame->linesize[3] = 0;
+	if (av_image_fill_linesizes(frame->linesize, provider->m_OutputPixelFormat, width) < 0)
+	{
+		return E_FAIL;
+	}
 
 	auto YBufferSize = frame->linesize[0] * height;
 	auto UBufferSize = frame->linesize[1] * height / 2;

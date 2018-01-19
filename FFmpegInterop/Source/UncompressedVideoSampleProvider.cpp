@@ -182,6 +182,8 @@ MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
 
 HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
 {
+	InitializeScalerIfRequired(m_pAvFrame);
+
 	if (m_pSwsCtx == NULL)
 	{
 		// ffmpeg does not allocate contiguous buffers for YUV, so we need to manually copy all three planes

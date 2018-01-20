@@ -17,7 +17,7 @@
 //*****************************************************************************
 
 #pragma once
-#include "MediaSampleProvider.h"
+#include "UncompressedSampleProvider.h"
 
 extern "C"
 {
@@ -27,25 +27,26 @@ extern "C"
 
 namespace FFmpegInterop
 {
-	ref class UncompressedVideoSampleProvider: MediaSampleProvider
+	ref class UncompressedVideoSampleProvider: UncompressedSampleProvider
 	{
 	public:
 		virtual ~UncompressedVideoSampleProvider();
-
+		virtual MediaStreamSample^ GetNextSample() override;
 	internal:
 		UncompressedVideoSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx);
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket) override;
+		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
 		virtual HRESULT AllocateResources() override;
 
 	private:
-		AVFrame* m_pAvFrame;
 		SwsContext* m_pSwsCtx;
 		int m_rgVideoBufferLineSize[4];
 		uint8_t* m_rgVideoBufferData[4];
+		bool m_interlaced_frame;
+		bool m_top_field_first;
 	};
 }
 

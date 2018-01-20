@@ -30,13 +30,17 @@ namespace MediaPlayerCPP
 	/// <summary>
 	/// Provides application-specific behavior to supplement the default Application class.
 	/// </summary>
-	ref class App sealed
+	ref class App sealed :
+		public FFmpegInterop::ILogProvider
 	{
 	protected:
 		virtual void OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEventArgs^ e) override;
 
 	internal:
 		App();
+
+	public:
+		virtual void Log(FFmpegInterop::LogLevel level, Platform::String^ message);
 
 	private:
 		void OnSuspending(Platform::Object^ sender, Windows::ApplicationModel::SuspendingEventArgs^ e);

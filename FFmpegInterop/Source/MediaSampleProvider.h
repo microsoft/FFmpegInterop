@@ -41,12 +41,16 @@ namespace FFmpegInterop
 		virtual void SetCurrentStreamIndex(int streamIndex);
 
 	internal:
-		void PushPacket(AVPacket packet);
+		void QueuePacket(AVPacket packet);
 		AVPacket PopPacket();
+		void DisableStream();
 
 	private:
-		std::queue<AVPacket> m_packetQueue;
+		std::vector<AVPacket> m_packetQueue;
 		int m_streamIndex;
+		int64 m_startOffset;
+		int64 m_nextFramePts;
+		bool m_isEnabled;
 
 	internal:
 		// The FFmpeg context. Because they are complex types
@@ -55,6 +59,7 @@ namespace FFmpegInterop
 		FFmpegReader^ m_pReader;
 		AVFormatContext* m_pAvFormatCtx;
 		AVCodecContext* m_pAvCodecCtx;
+		bool m_isDiscontinuous;
 
 	internal:
 		MediaSampleProvider(
@@ -63,6 +68,7 @@ namespace FFmpegInterop
 			AVCodecContext* avCodecCtx);
 		virtual HRESULT AllocateResources();
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket);
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket);
+		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration);
+		virtual HRESULT GetNextPacket(DataWriter^ writer, LONGLONG& pts, LONGLONG& dur, bool allowSkip);
 	};
 }

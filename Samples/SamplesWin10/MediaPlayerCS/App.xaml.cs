@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using FFmpegInterop;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
@@ -38,7 +39,7 @@ namespace MediaPlayerCS
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
-    sealed partial class App : Application
+    sealed partial class App : Application, ILogProvider
     {
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -48,6 +49,13 @@ namespace MediaPlayerCS
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            FFmpegInteropLogging.SetLogLevel(LogLevel.Info);
+            FFmpegInteropLogging.SetLogProvider(this);
+        }
+
+        public void Log(LogLevel level, string message)
+        {
+            System.Diagnostics.Debug.WriteLine("FFmpeg ({0}): {1}", level, message);
         }
 
         /// <summary>

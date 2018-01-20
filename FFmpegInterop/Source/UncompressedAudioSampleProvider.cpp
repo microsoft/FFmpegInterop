@@ -17,16 +17,19 @@
 //*****************************************************************************
 
 #include "pch.h"
+
 #include "UncompressedAudioSampleProvider.h"
 
 using namespace FFmpegInterop;
+
+// Minimum duration for uncompressed audio samples (50 ms)
+const LONGLONG MINAUDIOSAMPLEDURATION = 500000;
 
 UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_pAvFrame(nullptr)
+	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
 	, m_pSwrCtx(nullptr)
 {
 }
@@ -34,7 +37,7 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 HRESULT UncompressedAudioSampleProvider::AllocateResources()
 {
 	HRESULT hr = S_OK;
-	hr = MediaSampleProvider::AllocateResources();
+	hr = UncompressedSampleProvider::AllocateResources();
 	if (SUCCEEDED(hr))
 	{
 		// Set default channel layout when the value is unknown (0)
@@ -69,15 +72,6 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 		}
 	}
 
-	if (SUCCEEDED(hr))
-	{
-		m_pAvFrame = av_frame_alloc();
-		if (!m_pAvFrame)
-		{
-			hr = E_OUTOFMEMORY;
-		}
-	}
-
 	return hr;
 }
 
@@ -85,7 +79,7 @@ UncompressedAudioSampleProvider::~UncompressedAudioSampleProvider()
 {
 	if (m_pAvFrame)
 	{
-		av_freep(m_pAvFrame);
+		av_frame_free(&m_pAvFrame);
 	}
 
 	// Free 
@@ -99,48 +93,78 @@ HRESULT UncompressedAudioSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 	return S_OK;
 }
 
-HRESULT UncompressedAudioSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWriter)
 {
+	// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
+	uint8_t *resampledData = nullptr;
+	unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+	int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
+	auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
+	dataWriter->WriteBytes(aBuffer);
+	av_freep(&resampledData);
+	av_frame_unref(m_pAvFrame);
+	av_frame_free(&m_pAvFrame);
+
+	return S_OK;
+}
+
+MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
+{
+	// Similar to GetNextSample in MediaSampleProvider, 
+	// but we concatenate samples until reaching a minimum duration
+	DebugMessage(L"GetNextSample\n");
+
 	HRESULT hr = S_OK;
-	int frameComplete = 0;
-	// Each audio packet may contain multiple frames which requires calling avcodec_decode_audio4 for each frame. Loop through the entire packet data
-	while (avPacket->size > 0)
+
+	MediaStreamSample^ sample;
+	DataWriter^ dataWriter = ref new DataWriter();
+
+	LONGLONG finalPts = -1;
+	LONGLONG finalDur = 0;
+	bool isFirstPacket = true;
+	bool isDiscontinuous;
+
+	do
 	{
-		frameComplete = 0;
-		int decodedBytes = avcodec_decode_audio4(m_pAvCodecCtx, m_pAvFrame, &frameComplete, avPacket);
+		LONGLONG pts = 0;
+		LONGLONG dur = 0;
 
-		if (decodedBytes < 0)
+		hr = GetNextPacket(dataWriter, pts, dur, isFirstPacket);
+		if (isFirstPacket)
 		{
-			DebugMessage(L"Fail To Decode!\n");
-			hr = E_FAIL;
-			break; // Skip broken frame
+			isDiscontinuous = m_isDiscontinuous;
 		}
-
-		if (SUCCEEDED(hr) && frameComplete)
-		{
-			// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
-			uint8_t *resampledData = nullptr;
-			unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-			int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-			auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
-			dataWriter->WriteBytes(aBuffer);
-			av_freep(&resampledData);
-			av_frame_unref(m_pAvFrame);
-		}
+		isFirstPacket = false;
 
 		if (SUCCEEDED(hr))
 		{
-			// Advance to the next frame data that have not been decoded if any
-			avPacket->size -= decodedBytes;
-			avPacket->data += decodedBytes;
+			if (finalPts == -1)
+			{
+				finalPts = pts;
+			}
+			finalDur += dur;
+		}
+
+	} while (SUCCEEDED(hr) && finalDur < MINAUDIOSAMPLEDURATION);
+
+	if (finalDur > 0)
+	{
+		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
+		sample->Duration = { finalDur };
+		sample->Discontinuous = isDiscontinuous;
+		;
+		if (SUCCEEDED(hr))
+		{
+			// only reset flag if last packet was read successfully
+			m_isDiscontinuous = false;
 		}
 	}
-
-	if (SUCCEEDED(hr))
+	else
 	{
-		// We've completed the packet. Return S_FALSE to indicate an incomplete frame
-		hr = (frameComplete != 0) ? S_OK : S_FALSE;
+		// flush stream and disable any further processing
+		DebugMessage(L"Too many broken packets - disable stream\n");
+		DisableStream();
 	}
 
-	return hr;
+	return sample;
 }

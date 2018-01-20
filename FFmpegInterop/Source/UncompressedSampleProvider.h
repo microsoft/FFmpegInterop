@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2015 Microsoft Corporation
+//	Copyright 2016 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 //*****************************************************************************
 
 #pragma once
-#include "UncompressedSampleProvider.h"
+#include "MediaSampleProvider.h"
 
 extern "C"
 {
@@ -26,23 +26,20 @@ extern "C"
 
 namespace FFmpegInterop
 {
-	ref class UncompressedAudioSampleProvider: UncompressedSampleProvider
+	ref class UncompressedSampleProvider abstract : public MediaSampleProvider
 	{
-	public:
-		virtual ~UncompressedAudioSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
-
 	internal:
-		UncompressedAudioSampleProvider(
+		// Try to get a frame from FFmpeg, otherwise, feed a frame to start decoding
+		virtual HRESULT GetFrameFromFFmpegDecoder(AVPacket* avPacket);
+		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
+		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter);
+		UncompressedSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter) override;
-		virtual HRESULT AllocateResources() override;
 
-	private:
-		SwrContext* m_pSwrCtx;
+	internal:
+		AVFrame* m_pAvFrame;
 	};
 }
 

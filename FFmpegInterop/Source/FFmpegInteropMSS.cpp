@@ -493,7 +493,8 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			mss->BufferTime = { 0 };
 			if (mediaDuration.Duration > 0)
 			{
-				mss->CanSeek = true;
+				mss->Duration = mediaDuration;
+ 				mss->CanSeek = true;
 			}
 
 			startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);

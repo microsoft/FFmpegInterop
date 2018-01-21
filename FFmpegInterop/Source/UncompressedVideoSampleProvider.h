@@ -28,13 +28,7 @@ using namespace Platform;
 
 namespace FFmpegInterop
 {
-	private ref class FrameDataHolder
-	{
-	internal:
-		int linesize[4];
-		uint8_t* data[4];
-		AVBufferRef* buffer;
-	};
+	ref class FrameDataHolder;
 
 	ref class UncompressedVideoSampleProvider: UncompressedSampleProvider
 	{
@@ -56,17 +50,25 @@ namespace FFmpegInterop
 
 	private:
 		HRESULT InitializeScalerIfRequired(AVFrame* frame);
-		HRESULT AllocateScalerFrame(FrameDataHolder^ frame);
+		HRESULT FillLinesAndBuffer(int* linesize, byte** data, AVBufferRef** buffer);
 		AVBufferRef* AllocateBuffer(int totalSize);
-
 		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
 		static void free_buffer(void *lpVoid);
+
 		AVBufferPool *m_pBufferPool;
 		AVPixelFormat m_OutputPixelFormat;
 		SwsContext* m_pSwsCtx;
 		bool m_interlaced_frame;
 		bool m_top_field_first;
 		bool m_bIsInitialized;
+	};
+
+	private ref class FrameDataHolder
+	{
+	internal:
+		int linesize[4];
+		uint8_t* data[4];
+		AVBufferRef* buffer;
 	};
 }
 

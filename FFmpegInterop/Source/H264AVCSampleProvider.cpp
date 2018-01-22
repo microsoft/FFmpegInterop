@@ -76,7 +76,7 @@ HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 		}
 		else
 		{
-			auto vSPS = ref new Platform::Array<uint8_t>(spsPos, spsLength);
+			auto vSPS = Platform::ArrayReference<uint8_t>(spsPos, spsLength);
 
 			// Write the NAL unit for the SPS
 			dataWriter->WriteByte(0);
@@ -107,7 +107,7 @@ HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 			}
 			else
 			{
-				auto vPPS = ref new Platform::Array<uint8_t>(ppsPos, ppsLength);
+				auto vPPS = Platform::ArrayReference<uint8_t>(ppsPos, ppsLength);
 
 				// Write the NAL unit for the PPS
 				dataWriter->WriteByte(0);
@@ -159,7 +159,7 @@ HRESULT H264AVCSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* 
 		}
 
 		// Write the rest of the packet to the stream
-		auto vBuffer = ref new Platform::Array<uint8_t>(&(avPacket->data[index]), size);
+		auto vBuffer = Platform::ArrayReference<uint8_t>(&(avPacket->data[index]), size);
 		dataWriter->WriteBytes(vBuffer);
 		index += size;
 	} while (index < packetSize);

@@ -56,63 +56,70 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		break;
 	}
 
+	// MPEG2 is often interlaced, and DXVA HW deinterlacing only works with NV12. Let's force output to NV12
+	if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_MPEG2VIDEO || m_pAvCodecCtx->codec_id == AV_CODEC_ID_MPEG2VIDEO_XVMC)
+	{
+		m_OutputPixelFormat = AV_PIX_FMT_NV12;
+		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
+	}
+
 	auto width = avCodecCtx->width;
 	auto height = avCodecCtx->height;
 
 	if (m_pAvCodecCtx->pix_fmt == m_OutputPixelFormat)
 	{
-		// if no scaler is used, we need to use decoder frame size
-		avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
-		
 		if (m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
 		{
-			// use direct buffer
+			// This codec supports direct buffer decoding.
+			// Get decoder frame size and override get_buffer2...
+			avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
+
 			m_pAvCodecCtx->get_buffer2 = get_buffer2;
 			m_pAvCodecCtx->opaque = (void*)this;
-			m_bUseDirectBuffer = true;
 		}
 		else
 		{
-			// direct buffer is not supported by this codec
-			m_bUseDirectBuffer = false;
+			// We cannot use direct buffer decoding with this codec.
+			// Now that we must use scaler, let's directly scale to NV12.
+			if (m_OutputPixelFormat == AV_PIX_FMT_YUV420P || m_OutputPixelFormat == AV_PIX_FMT_YUVJ420P)
+			{
+				m_OutputPixelFormat = AV_PIX_FMT_NV12;
+				OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
+			}
+			m_bUseScaler = true;
 		}
 	}
 	else
 	{
-		// scaler also uses direct buffer
-		m_bUseDirectBuffer = true;
+		// Scaler required to convert pixel format
+		m_bUseScaler = true;
 	}
 
 	DecoderWidth = width;
 	DecoderHeight = height;
 }
 
-HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired(AVFrame *frame)
+HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired()
 {
 	HRESULT hr = S_OK;
-	if (!m_bIsInitialized)
+	if (m_bUseScaler && !m_pSwsCtx)
 	{
-		m_bIsInitialized = true;
-		bool needsScaler = m_pAvCodecCtx->pix_fmt != m_OutputPixelFormat;
-		if (needsScaler)
-		{
-			// Setup software scaler to convert frame to output pixel type
-			m_pSwsCtx = sws_getContext(
-				m_pAvCodecCtx->width,
-				m_pAvCodecCtx->height,
-				m_pAvCodecCtx->pix_fmt,
-				m_pAvCodecCtx->width,
-				m_pAvCodecCtx->height,
-				m_OutputPixelFormat,
-				SWS_BICUBIC,
-				NULL,
-				NULL,
-				NULL);
+		// Setup software scaler to convert frame to output pixel type
+		m_pSwsCtx = sws_getContext(
+			m_pAvCodecCtx->width,
+			m_pAvCodecCtx->height,
+			m_pAvCodecCtx->pix_fmt,
+			m_pAvCodecCtx->width,
+			m_pAvCodecCtx->height,
+			m_OutputPixelFormat,
+			SWS_BICUBIC,
+			NULL,
+			NULL,
+			NULL);
 
-			if (m_pSwsCtx == nullptr)
-			{
-				hr = E_OUTOFMEMORY;
-			}
+		if (m_pSwsCtx == nullptr)
+		{
+			hr = E_OUTOFMEMORY;
 		}
 	}
 
@@ -135,6 +142,11 @@ UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
 	{
 		av_buffer_pool_uninit(&m_pBufferPool);
 	}
+
+	if (m_pDirectBuffer)
+	{
+		m_pDirectBuffer = nullptr;
+	}
 }
 
 HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration)
@@ -156,19 +168,45 @@ HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, 
 
 MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
 {
-	MediaStreamSample^ sample = MediaSampleProvider::GetNextSample();
+	DebugMessage(L"GetNextSample\n");
 
-	if (sample != nullptr)
+	HRESULT hr = S_OK;
+
+	MediaStreamSample^ sample;
+	if (m_isEnabled)
 	{
-		if (m_interlaced_frame)
+		LONGLONG pts = 0;
+		LONGLONG dur = 0;
+
+		hr = GetNextPacket(nullptr, pts, dur, true);
+
+		if (hr == S_OK && !m_pDirectBuffer)
 		{
-			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, TRUE);
-			sample->ExtendedProperties->Insert(MFSampleExtension_BottomFieldFirst, m_top_field_first ? safe_cast<Platform::Object^>(FALSE) : TRUE);
-			sample->ExtendedProperties->Insert(MFSampleExtension_RepeatFirstField, safe_cast<Platform::Object^>(FALSE));
+			hr = E_FAIL;
+		}
+
+		if (hr == S_OK)
+		{
+			sample = MediaStreamSample::CreateFromBuffer(m_pDirectBuffer, { pts });
+			sample->Duration = { dur };
+			sample->Discontinuous = m_isDiscontinuous;
+			if (m_interlaced_frame)
+			{
+				sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, TRUE);
+				sample->ExtendedProperties->Insert(MFSampleExtension_BottomFieldFirst, m_top_field_first ? safe_cast<Platform::Object^>(FALSE) : TRUE);
+				sample->ExtendedProperties->Insert(MFSampleExtension_RepeatFirstField, safe_cast<Platform::Object^>(FALSE));
+			}
+			else
+			{
+				sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
+			}
+			m_isDiscontinuous = false;
+			m_pDirectBuffer = nullptr;
 		}
 		else
 		{
-			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
+			DebugMessage(L"Too many broken packets - disable stream\n");
+			DisableStream();
 		}
 	}
 
@@ -177,39 +215,26 @@ MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
 
 HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
 {
-	auto hr = InitializeScalerIfRequired(m_pAvFrame);
+	auto hr = InitializeScalerIfRequired();
 
 	if (SUCCEEDED(hr))
 	{
-		if (m_pSwsCtx == nullptr)
+		if (!m_bUseScaler)
 		{
-			if (m_bUseDirectBuffer)
+			// Using direct buffer: just create a buffer reference to hand out to MSS pipeline
+			auto bufferRef = av_buffer_ref(m_pAvFrame->buf[0]);
+			if (bufferRef)
 			{
-				// using direct buffer: just create a buffer reference to hand out to MSS pipeline
-				auto bufferRef = av_buffer_ref(m_pAvFrame->buf[0]);
-				if (bufferRef)
-				{
-					m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(bufferRef->data, bufferRef->size, free_buffer, bufferRef);
-				}
-				else
-				{
-					hr = E_FAIL;
-				}
+				m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(bufferRef->data, bufferRef->size, free_buffer, bufferRef);
 			}
 			else
 			{
-				// ffmpeg does not allocate contiguous buffers for YUV, so we need to manually copy all three planes
-				auto YBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[0], m_pAvFrame->linesize[0] * m_pAvCodecCtx->height);
-				auto UBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[1], m_pAvFrame->linesize[1] * m_pAvCodecCtx->height / 2);
-				auto VBuffer = Platform::ArrayReference<uint8_t>(m_pAvFrame->data[2], m_pAvFrame->linesize[2] * m_pAvCodecCtx->height / 2);
-				dataWriter->WriteBytes(YBuffer);
-				dataWriter->WriteBytes(UBuffer);
-				dataWriter->WriteBytes(VBuffer);
+				hr = E_FAIL;
 			}
 		}
 		else
 		{
-			// using scaler: allocate a new frame from buffer pool
+			// Using scaler: allocate a new frame from buffer pool
 			auto frame = ref new FrameDataHolder();
 			hr = FillLinesAndBuffer(frame->linesize, frame->data, &frame->buffer);
 			if (SUCCEEDED(hr))
@@ -239,10 +264,6 @@ HRESULT UncompressedVideoSampleProvider::FillLinesAndBuffer(int* linesize, byte*
 	if (av_image_fill_linesizes(linesize, m_OutputPixelFormat, DecoderWidth) < 0)
 	{
 		return E_FAIL;
-	}
-	if (linesize[0] != DecoderWidth)
-	{
-		return E_FAIL; // unexpected size change cannot be handled
 	}
 
 	auto YBufferSize = linesize[0] * DecoderHeight;
@@ -298,7 +319,15 @@ void UncompressedVideoSampleProvider::free_buffer(void *lpVoid)
 
 int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags)
 {
+	// If frame size changes during playback and gets larger than our buffer, we need to switch to sws_scale
 	auto provider = reinterpret_cast<UncompressedVideoSampleProvider^>(avCodecContext->opaque);
-	auto hr = provider->FillLinesAndBuffer(frame->linesize, frame->data, frame->buf);
-	return hr;
+	provider->m_bUseScaler = frame->height > provider->DecoderHeight || frame->width > provider->DecoderWidth;
+	if (provider->m_bUseScaler)
+	{
+		return avcodec_default_get_buffer2(avCodecContext, frame, flags);
+	}
+	else
+	{
+		return provider->FillLinesAndBuffer(frame->linesize, frame->data, frame->buf);
+	}
 }

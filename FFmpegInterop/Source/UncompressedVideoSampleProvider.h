@@ -49,7 +49,7 @@ namespace FFmpegInterop
 		AVPixelFormat GetOutputPixelFormat() { return m_OutputPixelFormat; }
 
 	private:
-		HRESULT InitializeScalerIfRequired(AVFrame* frame);
+		HRESULT InitializeScalerIfRequired();
 		HRESULT FillLinesAndBuffer(int* linesize, byte** data, AVBufferRef** buffer);
 		AVBufferRef* AllocateBuffer(int totalSize);
 		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
@@ -60,7 +60,8 @@ namespace FFmpegInterop
 		SwsContext* m_pSwsCtx;
 		bool m_interlaced_frame;
 		bool m_top_field_first;
-		bool m_bIsInitialized;
+		bool m_bUseScaler;
+		IBuffer ^m_pDirectBuffer;
 	};
 
 	private ref class FrameDataHolder

@@ -83,15 +83,7 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 
 		if (hr == S_OK)
 		{
-			if (m_bUseDirectBuffer)
-			{
-				sample = MediaStreamSample::CreateFromBuffer(m_pDirectBuffer, { pts });
-				m_pDirectBuffer = nullptr;
-			}
-			else
-			{
-				sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
-			}
+			sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
 			sample->Duration = { dur };
 			sample->Discontinuous = m_isDiscontinuous;
 			m_isDiscontinuous = false;

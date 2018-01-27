@@ -26,6 +26,7 @@
 #include "CritSec.h"
 #include "shcore.h"
 #include <mfapi.h>
+#include <dshow.h>
 
 extern "C"
 {
@@ -281,6 +282,34 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 	return hr;
 }
 
+static int is_hwaccel_pix_fmt(enum AVPixelFormat pix_fmt)
+{
+	const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+	return desc->flags & AV_PIX_FMT_FLAG_HWACCEL;
+}
+
+static AVPixelFormat get_format(struct AVCodecContext *s, const enum AVPixelFormat *fmt)
+{
+	AVPixelFormat result = (AVPixelFormat)-1;
+	AVPixelFormat format;
+	int index = 0;
+	do
+	{
+		format = fmt[index++];
+		if (format != -1 && result == -1 && !is_hwaccel_pix_fmt(format))
+		{
+			// take first non hw accelerated format
+			result = format;
+		}
+		else if (format == AV_PIX_FMT_NV12 && result != AV_PIX_FMT_YUVA420P)
+		{
+			// switch to NV12 if available, unless this is an alpha channel file
+			result = format;
+		}
+	} while (format != -1);
+	return result;
+}
+
 HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode)
 {
 	HRESULT hr = S_OK;
@@ -398,6 +427,8 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 				if (SUCCEEDED(hr))
 				{
+					avVideoCodecCtx->get_format = &get_format;
+
 					// initialize the stream parameters with demuxer information
 					if (avcodec_parameters_to_context(avVideoCodecCtx, avFormatCtx->streams[videoStreamIndex]->codecpar) < 0)
 					{
@@ -490,15 +521,11 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		}
 		if (mss)
 		{
+			mss->BufferTime = { 0 };
 			if (mediaDuration.Duration > 0)
 			{
 				mss->Duration = mediaDuration;
 				mss->CanSeek = true;
-			}
-			else
-			{
-				// Set buffer time to 0 for realtime streaming to reduce latency
-				mss->BufferTime = { 0 };
 			}
 
 			startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);
@@ -535,7 +562,7 @@ MediaThumbnailData ^ FFmpegInterop::FFmpegInteropMSS::ExtractThumbnail()
 			}
 
 
-			auto vector = ref new Array<uint8_t>(imageStream->attached_pic.data, imageStream->attached_pic.size);
+			auto vector = ArrayReference<uint8_t>(imageStream->attached_pic.data, imageStream->attached_pic.size);
 			DataWriter^ writer = ref new DataWriter();
 			writer->WriteBytes(vector);
 
@@ -622,13 +649,32 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	}
 	else
 	{
-		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
-		videoSampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		auto sampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		videoProperties = VideoEncodingProperties::CreateUncompressed(sampleProvider->OutputMediaSubtype, sampleProvider->DecoderWidth, sampleProvider->DecoderHeight);
+		videoSampleProvider = sampleProvider;
+
+		if (sampleProvider->DecoderWidth != avVideoCodecCtx->width || sampleProvider->DecoderHeight != avVideoCodecCtx->height)
+		{
+			MFVideoArea area;
+			area.Area.cx = avVideoCodecCtx->width;
+			area.Area.cy = avVideoCodecCtx->height;
+			area.OffsetX.fract = 0;
+			area.OffsetX.value = 0;
+			area.OffsetY.fract = 0;
+			area.OffsetY.value = 0;
+			videoProperties->Properties->Insert(MF_MT_MINIMUM_DISPLAY_APERTURE, ref new Array<uint8_t>((byte*)&area, sizeof(MFVideoArea)));
+		}
 
 		if (avVideoCodecCtx->sample_aspect_ratio.num > 0 && avVideoCodecCtx->sample_aspect_ratio.den != 0)
 		{
 			videoProperties->PixelAspectRatio->Numerator = avVideoCodecCtx->sample_aspect_ratio.num;
 			videoProperties->PixelAspectRatio->Denominator = avVideoCodecCtx->sample_aspect_ratio.den;
+		}
+
+		if (sampleProvider->GetOutputPixelFormat() == AV_PIX_FMT_YUVJ420P)
+		{
+			// YUVJ420P uses full range values
+			videoProperties->Properties->Insert(MF_MT_VIDEO_NOMINAL_RANGE, (uint32)MFNominalRange_0_255);
 		}
 
 		videoProperties->Properties->Insert(MF_MT_INTERLACE_MODE, (uint32)_MFVideoInterlaceMode::MFVideoInterlace_MixedInterlaceOrProgressive);

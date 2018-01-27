@@ -64,7 +64,7 @@ HRESULT H264SampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 	else
 	{
 		// Write both SPS and PPS sequence as is from extradata
-		auto vSPSPPS = ref new Platform::Array<uint8_t>(m_pAvCodecCtx->extradata, m_pAvCodecCtx->extradata_size);
+		auto vSPSPPS = Platform::ArrayReference<uint8_t>(m_pAvCodecCtx->extradata, m_pAvCodecCtx->extradata_size);
 		dataWriter->WriteBytes(vSPSPPS);
 	}
 

@@ -128,11 +128,6 @@ HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired()
 
 UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
 {
-	if (m_pAvFrame)
-	{
-		av_frame_free(&m_pAvFrame);
-	}
-
 	if (m_pSwsCtx)
 	{
 		sws_freeContext(m_pSwsCtx);
@@ -142,90 +137,23 @@ UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
 	{
 		av_buffer_pool_uninit(&m_pBufferPool);
 	}
-
-	if (m_pDirectBuffer)
-	{
-		m_pDirectBuffer = nullptr;
-	}
 }
 
-HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration)
+HRESULT UncompressedVideoSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration)
 {
 	HRESULT hr = S_OK;
-	hr = UncompressedSampleProvider::DecodeAVPacket(dataWriter, avPacket, framePts, frameDuration);
 
-	// Don't set a timestamp on S_FALSE
-	if (hr == S_OK)
-	{
-		// Try to get the best effort timestamp for the frame.
-		framePts = av_frame_get_best_effort_timestamp(m_pAvFrame);
-		m_interlaced_frame = m_pAvFrame->interlaced_frame == 1;
-		m_top_field_first = m_pAvFrame->top_field_first == 1;
-	}
-
-	return hr;
-}
-
-MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
-{
-	DebugMessage(L"GetNextSample\n");
-
-	HRESULT hr = S_OK;
-
-	MediaStreamSample^ sample;
-	if (m_isEnabled)
-	{
-		LONGLONG pts = 0;
-		LONGLONG dur = 0;
-
-		hr = GetNextPacket(nullptr, pts, dur, true);
-
-		if (hr == S_OK && !m_pDirectBuffer)
-		{
-			hr = E_FAIL;
-		}
-
-		if (hr == S_OK)
-		{
-			sample = MediaStreamSample::CreateFromBuffer(m_pDirectBuffer, { pts });
-			sample->Duration = { dur };
-			sample->Discontinuous = m_isDiscontinuous;
-			if (m_interlaced_frame)
-			{
-				sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, TRUE);
-				sample->ExtendedProperties->Insert(MFSampleExtension_BottomFieldFirst, m_top_field_first ? safe_cast<Platform::Object^>(FALSE) : TRUE);
-				sample->ExtendedProperties->Insert(MFSampleExtension_RepeatFirstField, safe_cast<Platform::Object^>(FALSE));
-			}
-			else
-			{
-				sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
-			}
-			m_isDiscontinuous = false;
-			m_pDirectBuffer = nullptr;
-		}
-		else
-		{
-			DebugMessage(L"Too many broken packets - disable stream\n");
-			DisableStream();
-		}
-	}
-
-	return sample;
-}
-
-HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
-{
-	auto hr = InitializeScalerIfRequired();
+	hr = InitializeScalerIfRequired();
 
 	if (SUCCEEDED(hr))
 	{
 		if (!m_bUseScaler)
 		{
 			// Using direct buffer: just create a buffer reference to hand out to MSS pipeline
-			auto bufferRef = av_buffer_ref(m_pAvFrame->buf[0]);
+			auto bufferRef = av_buffer_ref(avFrame->buf[0]);
 			if (bufferRef)
 			{
-				m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(bufferRef->data, bufferRef->size, free_buffer, bufferRef);
+				*pBuffer = NativeBufferFactory::CreateNativeBuffer(bufferRef->data, bufferRef->size, free_buffer, bufferRef);
 			}
 			else
 			{
@@ -240,9 +168,9 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 			if (SUCCEEDED(hr))
 			{
 				// Convert to output format using FFmpeg software scaler
-				if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, frame->data, frame->linesize) > 0)
+				if (sws_scale(m_pSwsCtx, (const uint8_t **)(avFrame->data), avFrame->linesize, 0, m_pAvCodecCtx->height, frame->data, frame->linesize) > 0)
 				{
-					m_pDirectBuffer = NativeBufferFactory::CreateNativeBuffer(frame->buffer->data, frame->buffer->size, free_buffer, frame->buffer);
+					*pBuffer = NativeBufferFactory::CreateNativeBuffer(frame->buffer->data, frame->buffer->size, free_buffer, frame->buffer);
 				}
 				else
 				{
@@ -253,10 +181,32 @@ HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 		}
 	}
 
-	av_frame_unref(m_pAvFrame);
-	av_frame_free(&m_pAvFrame);
+	// Don't set a timestamp on S_FALSE
+	if (hr == S_OK)
+	{
+		// Try to get the best effort timestamp for the frame.
+		framePts = avFrame->best_effort_timestamp;
+		m_interlaced_frame = avFrame->interlaced_frame == 1;
+		m_top_field_first = avFrame->top_field_first == 1;
+	}
 
 	return hr;
+}
+
+HRESULT UncompressedVideoSampleProvider::SetSampleProperties(MediaStreamSample^ sample)
+{
+	if (m_interlaced_frame)
+	{
+		sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, TRUE);
+		sample->ExtendedProperties->Insert(MFSampleExtension_BottomFieldFirst, m_top_field_first ? safe_cast<Platform::Object^>(FALSE) : TRUE);
+		sample->ExtendedProperties->Insert(MFSampleExtension_RepeatFirstField, safe_cast<Platform::Object^>(FALSE));
+	}
+	else
+	{
+		sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
+	}
+
+	return S_OK;
 }
 
 HRESULT UncompressedVideoSampleProvider::FillLinesAndBuffer(int* linesize, byte** data, AVBufferRef** buffer)

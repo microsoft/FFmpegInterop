@@ -29,17 +29,17 @@ namespace FFmpegInterop
 	ref class UncompressedSampleProvider abstract : public MediaSampleProvider
 	{
 	internal:
-		// Try to get a frame from FFmpeg, otherwise, feed a frame to start decoding
-		virtual HRESULT GetFrameFromFFmpegDecoder(AVPacket* avPacket);
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter);
 		UncompressedSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx);
+		virtual HRESULT CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration) override;
+		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) { return E_FAIL; }; // must be overridden by specific decoders
+		virtual HRESULT GetFrameFromFFmpegDecoder(AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration);
+		virtual HRESULT FeedPacketToDecoder();
 
-	internal:
-		AVFrame* m_pAvFrame;
+	private:
+		int64 m_nextFramePts;
 	};
 }
 

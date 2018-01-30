@@ -34,7 +34,6 @@ namespace FFmpegInterop
 	{
 	public:
 		virtual ~UncompressedVideoSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
 		property String^ OutputMediaSubtype;
 		property int DecoderWidth;
 		property int DecoderHeight;
@@ -44,8 +43,8 @@ namespace FFmpegInterop
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
+		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) override;
+		virtual HRESULT SetSampleProperties(MediaStreamSample^ sample) override;
 		AVPixelFormat GetOutputPixelFormat() { return m_OutputPixelFormat; }
 
 	private:
@@ -61,7 +60,6 @@ namespace FFmpegInterop
 		bool m_interlaced_frame;
 		bool m_top_field_first;
 		bool m_bUseScaler;
-		IBuffer ^m_pDirectBuffer;
 	};
 
 	private ref class FrameDataHolder

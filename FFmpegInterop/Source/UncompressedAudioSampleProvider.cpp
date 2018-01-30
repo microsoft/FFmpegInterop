@@ -19,6 +19,7 @@
 #include "pch.h"
 
 #include "UncompressedAudioSampleProvider.h"
+#include "NativeBufferFactory.h"
 
 using namespace FFmpegInterop;
 
@@ -76,94 +77,25 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 
 UncompressedAudioSampleProvider::~UncompressedAudioSampleProvider()
 {
-	if (m_pAvFrame)
-	{
-		av_frame_free(&m_pAvFrame);
-	}
-
 	// Free 
 	swr_free(&m_pSwrCtx);
 }
 
-HRESULT UncompressedAudioSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
-{
-	// Because each packet can contain multiple frames, we have already written the packet to the stream
-	// during the decode stage.
-	return S_OK;
-}
-
-HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWriter)
+HRESULT UncompressedAudioSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration)
 {
 	// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
-	uint8_t *resampledData = nullptr;
-	unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-	int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-	auto aBuffer = Platform::ArrayReference<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
-	dataWriter->WriteBytes(aBuffer);
-	av_freep(&resampledData);
-	av_frame_unref(m_pAvFrame);
-	av_frame_free(&m_pAvFrame);
+	uint8_t **resampledData = nullptr;
+	unsigned int aBufferSize = av_samples_alloc_array_and_samples(&resampledData, NULL, avFrame->channels, avFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+	int resampledDataSize = swr_convert(m_pSwrCtx, resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
 
-	return S_OK;
-}
-
-MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
-{
-	// Similar to GetNextSample in MediaSampleProvider, 
-	// but we concatenate samples until reaching a minimum duration
-	DebugMessage(L"GetNextSample\n");
-
-	HRESULT hr = S_OK;
-
-	MediaStreamSample^ sample;
-	DataWriter^ dataWriter = ref new DataWriter();
-
-	LONGLONG finalPts = -1;
-	LONGLONG finalDur = 0;
-	bool isFirstPacket = true;
-	bool isDiscontinuous;
-
-	do
+	if (resampledDataSize < 0)
 	{
-		LONGLONG pts = 0;
-		LONGLONG dur = 0;
-
-		hr = GetNextPacket(dataWriter, pts, dur, isFirstPacket);
-		if (isFirstPacket)
-		{
-			isDiscontinuous = m_isDiscontinuous;
-		}
-		isFirstPacket = false;
-
-		if (SUCCEEDED(hr))
-		{
-			if (finalPts == -1)
-			{
-				finalPts = pts;
-			}
-			finalDur += dur;
-		}
-
-	} while (SUCCEEDED(hr) && finalDur < MINAUDIOSAMPLEDURATION);
-
-	if (finalDur > 0)
-	{
-		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
-		sample->Duration = { finalDur };
-		sample->Discontinuous = isDiscontinuous;
-		;
-		if (SUCCEEDED(hr))
-		{
-			// only reset flag if last packet was read successfully
-			m_isDiscontinuous = false;
-		}
+		return E_FAIL;
 	}
 	else
 	{
-		// flush stream and disable any further processing
-		DebugMessage(L"Too many broken packets - disable stream\n");
-		DisableStream();
+		*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(resampledData[0], resampledDataSize, av_freep, resampledData);
+		return S_OK;
 	}
-
-	return sample;
 }
+

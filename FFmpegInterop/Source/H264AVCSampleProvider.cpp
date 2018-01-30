@@ -25,7 +25,7 @@ H264AVCSampleProvider::H264AVCSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
+	: CompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
 {
 }
 
@@ -33,9 +33,11 @@ H264AVCSampleProvider::~H264AVCSampleProvider()
 {
 }
 
-HRESULT H264AVCSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT H264AVCSampleProvider::CreateBufferFromPacket(AVPacket* avPacket, IBuffer^* pBuffer)
 {
 	HRESULT hr = S_OK;
+	auto dataWriter = ref new DataWriter();
+
 	// On a KeyFrame, write the SPS and PPS
 	if (avPacket->flags & AV_PKT_FLAG_KEY)
 	{
@@ -46,6 +48,11 @@ HRESULT H264AVCSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVP
 	{
 		// Convert the packet to NAL format
 		hr = WriteNALPacket(dataWriter, avPacket);
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		*pBuffer = dataWriter->DetachBuffer();
 	}
 
 	// We have a complete frame

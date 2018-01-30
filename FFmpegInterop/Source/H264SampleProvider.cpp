@@ -25,7 +25,7 @@ H264SampleProvider::H264SampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
+	: CompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
 {
 }
 
@@ -33,9 +33,11 @@ H264SampleProvider::~H264SampleProvider()
 {
 }
 
-HRESULT H264SampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT H264SampleProvider::CreateBufferFromPacket(AVPacket* avPacket, IBuffer^* pBuffer)
 {
 	HRESULT hr = S_OK;
+	auto dataWriter = ref new DataWriter();
+	
 	// On a KeyFrame, write the SPS and PPS
 	if (avPacket->flags & AV_PKT_FLAG_KEY)
 	{
@@ -44,8 +46,12 @@ HRESULT H264SampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPack
 
 	if (SUCCEEDED(hr))
 	{
-		// Call base class method that simply write the packet to stream as is
-		hr = MediaSampleProvider::WriteAVPacketToStream(dataWriter, avPacket);
+		dataWriter->WriteBytes(Platform::ArrayReference<byte>(avPacket->data, avPacket->size));
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		*pBuffer = dataWriter->DetachBuffer();
 	}
 
 	// We have a complete frame

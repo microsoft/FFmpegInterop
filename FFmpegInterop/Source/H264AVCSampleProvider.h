@@ -17,12 +17,12 @@
 //*****************************************************************************
 
 #pragma once
-#include "MediaSampleProvider.h"
+#include "CompressedSampleProvider.h"
 
 namespace FFmpegInterop
 {
 	ref class H264AVCSampleProvider :
-		public MediaSampleProvider
+		public CompressedSampleProvider
 	{
 	public:
 		virtual ~H264AVCSampleProvider();
@@ -36,6 +36,6 @@ namespace FFmpegInterop
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
+		virtual HRESULT CreateBufferFromPacket(AVPacket* avPacket, IBuffer^* pBuffer) override;
 	};
 }

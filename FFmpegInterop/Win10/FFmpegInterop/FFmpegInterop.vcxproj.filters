@@ -18,6 +18,7 @@
     <ClCompile Include="..\..\Source\UncompressedVideoSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\FFmpegInteropLogging.cpp" />
     <ClCompile Include="..\..\Source\NativeBufferFactory.cpp" />
+    <ClCompile Include="..\..\Source\CompressedSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -35,5 +36,6 @@
     <ClInclude Include="..\..\Source\CritSec.h" />
     <ClInclude Include="..\..\Source\NativeBuffer.h" />
     <ClInclude Include="..\..\Source\NativeBufferFactory.h" />
+    <ClInclude Include="..\..\Source\CompressedSampleProvider.h" />
   </ItemGroup>
 </Project>

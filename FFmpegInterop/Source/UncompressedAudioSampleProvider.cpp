@@ -85,7 +85,7 @@ HRESULT UncompressedAudioSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 {
 	// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
 	uint8_t **resampledData = nullptr;
-	unsigned int aBufferSize = av_samples_alloc_array_and_samples(&resampledData, NULL, avFrame->channels, avFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+	unsigned int aBufferSize = av_samples_alloc_array_and_samples(&resampledData, NULL, m_pAvCodecCtx->channels, avFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
 	int resampledDataSize = swr_convert(m_pSwrCtx, resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
 
 	if (resampledDataSize < 0)
@@ -94,7 +94,8 @@ HRESULT UncompressedAudioSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 	}
 	else
 	{
-		*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(resampledData[0], resampledDataSize, av_freep, resampledData);
+		auto size = min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvCodecCtx->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+		*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(resampledData[0], size, av_freep, resampledData);
 		return S_OK;
 	}
 }

@@ -41,7 +41,7 @@ HRESULT CompressedSampleProvider::CreateBufferFromPacket(AVPacket* avPacket, IBu
 	auto bufferRef = av_buffer_ref(avPacket->buf);
 	if (bufferRef)
 	{
-		*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(bufferRef->data, bufferRef->size, free_buffer, bufferRef);
+		*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(avPacket->data, avPacket->size, free_buffer, bufferRef);
 	}
 	else
 	{

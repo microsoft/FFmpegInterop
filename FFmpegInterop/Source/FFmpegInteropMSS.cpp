@@ -359,6 +359,14 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 				if (SUCCEEDED(hr))
 				{
+					// enable multi threading
+					unsigned threads = std::thread::hardware_concurrency();
+					if (threads > 0)
+					{
+						avAudioCodecCtx->thread_count = threads;
+						avAudioCodecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+					}
+
 					if (avcodec_open2(avAudioCodecCtx, avAudioCodec, NULL) < 0)
 					{
 						avAudioCodecCtx = nullptr;

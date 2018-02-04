@@ -58,6 +58,7 @@ namespace FFmpegInterop
 		SwsContext* m_pSwsCtx;
 		bool m_interlaced_frame;
 		bool m_top_field_first;
+		AVChromaLocation m_chroma_location;
 		bool m_bUseScaler;
 	};
 

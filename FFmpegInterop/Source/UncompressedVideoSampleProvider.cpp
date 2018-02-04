@@ -188,6 +188,7 @@ HRESULT UncompressedVideoSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 		framePts = avFrame->best_effort_timestamp;
 		m_interlaced_frame = avFrame->interlaced_frame == 1;
 		m_top_field_first = avFrame->top_field_first == 1;
+		m_chroma_location = avFrame->chroma_location;
 	}
 
 	return hr;
@@ -204,6 +205,28 @@ HRESULT UncompressedVideoSampleProvider::SetSampleProperties(MediaStreamSample^ 
 	else
 	{
 		sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
+	}
+
+	switch (m_chroma_location)
+	{
+	case AVCHROMA_LOC_LEFT:
+		sample->ExtendedProperties->Insert(MF_MT_VIDEO_CHROMA_SITING, (uint32)MFVideoChromaSubsampling_MPEG2);
+		break;
+	case AVCHROMA_LOC_CENTER:
+		sample->ExtendedProperties->Insert(MF_MT_VIDEO_CHROMA_SITING, (uint32)MFVideoChromaSubsampling_MPEG1);
+		break;
+	case AVCHROMA_LOC_TOPLEFT:
+		if (m_interlaced_frame)
+		{
+			sample->ExtendedProperties->Insert(MF_MT_VIDEO_CHROMA_SITING, (uint32)MFVideoChromaSubsampling_DV_PAL);
+		}
+		else
+		{
+			sample->ExtendedProperties->Insert(MF_MT_VIDEO_CHROMA_SITING, (uint32)MFVideoChromaSubsampling_Cosited);
+		}
+		break;
+	default:
+		break;
 	}
 
 	return S_OK;

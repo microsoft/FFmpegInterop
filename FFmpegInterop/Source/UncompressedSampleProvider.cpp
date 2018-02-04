@@ -57,13 +57,10 @@ HRESULT UncompressedSampleProvider::CreateNextSampleBuffer(IBuffer^* pBuffer, in
 			}
 		}
 
-		if (!SUCCEEDED(hr) && errorCount < 10)
+		if (!SUCCEEDED(hr) && errorCount < 50)
 		{
-			// free old frame, if we had one
-			if (avFrame)
-			{
-				av_frame_free(&avFrame);
-			}
+			// unref any buffers in old frame
+			av_frame_unref(avFrame);
 
 			// try a few more times
 			m_isDiscontinuous = true;

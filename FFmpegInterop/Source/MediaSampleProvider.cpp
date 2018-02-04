@@ -175,7 +175,6 @@ AVPacket* MediaSampleProvider::PopPacket()
 	return result;
 }
 
-
 void MediaSampleProvider::Flush()
 {
 	DebugMessage(L"Flush\n");
@@ -185,6 +184,7 @@ void MediaSampleProvider::Flush()
 		av_packet_free(&avPacket);
 	}
 	m_isDiscontinuous = true;
+	m_isEnabled = true;
 }
 
 void MediaSampleProvider::DisableStream()

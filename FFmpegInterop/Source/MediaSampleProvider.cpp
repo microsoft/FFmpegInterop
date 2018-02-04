@@ -193,3 +193,9 @@ void MediaSampleProvider::DisableStream()
 	Flush();
 	m_isEnabled = false;
 }
+
+void free_buffer(void *lpVoid)
+{
+	auto buffer = (AVBufferRef *)lpVoid;
+	av_buffer_unref(&buffer);
+}

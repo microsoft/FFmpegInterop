@@ -73,3 +73,6 @@ namespace FFmpegInterop
 
 	};
 }
+
+// free AVBufferRef*
+void free_buffer(void *lpVoid);

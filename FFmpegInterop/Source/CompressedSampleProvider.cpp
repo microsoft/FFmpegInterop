@@ -31,8 +31,6 @@ HRESULT CompressedSampleProvider::CreateNextSampleBuffer(IBuffer^* pBuffer, int6
 	return hr;
 }
 
-void free_buffer(void *lpVoid);
-
 HRESULT CompressedSampleProvider::CreateBufferFromPacket(AVPacket* avPacket, IBuffer^* pBuffer)
 {
 	HRESULT hr = S_OK;
@@ -49,11 +47,4 @@ HRESULT CompressedSampleProvider::CreateBufferFromPacket(AVPacket* avPacket, IBu
 	}
 
 	return hr;
-}
-
-void free_buffer(void *lpVoid)
-{
-	auto buffer = (AVBufferRef *)lpVoid;
-	auto count = av_buffer_get_ref_count(buffer);
-	av_buffer_unref(&buffer);
 }

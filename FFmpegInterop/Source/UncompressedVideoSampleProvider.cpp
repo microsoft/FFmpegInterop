@@ -260,13 +260,6 @@ AVBufferRef* UncompressedVideoSampleProvider::AllocateBuffer(int totalSize)
 	return buffer;
 }
 
-void UncompressedVideoSampleProvider::free_buffer(void *lpVoid)
-{
-	auto buffer = (AVBufferRef *)lpVoid;
-	auto count = av_buffer_get_ref_count(buffer);
-	av_buffer_unref(&buffer);
-}
-
 int UncompressedVideoSampleProvider::get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags)
 {
 	// If frame size changes during playback and gets larger than our buffer, we need to switch to sws_scale

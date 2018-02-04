@@ -52,7 +52,6 @@ namespace FFmpegInterop
 		HRESULT FillLinesAndBuffer(int* linesize, byte** data, AVBufferRef** buffer);
 		AVBufferRef* AllocateBuffer(int totalSize);
 		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
-		static void free_buffer(void *lpVoid);
 
 		AVBufferPool *m_pBufferPool;
 		AVPixelFormat m_OutputPixelFormat;

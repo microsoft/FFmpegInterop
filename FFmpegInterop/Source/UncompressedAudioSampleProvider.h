@@ -41,6 +41,7 @@ namespace FFmpegInterop
 
 	private:
 		SwrContext* m_pSwrCtx;
+		AVSampleFormat m_outputSampleFormat;
 	};
 }
 

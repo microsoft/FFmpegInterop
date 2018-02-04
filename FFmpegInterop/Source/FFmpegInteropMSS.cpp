@@ -359,11 +359,24 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 				if (SUCCEEDED(hr))
 				{
+					if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_S16P)
+					{
+						avAudioCodecCtx->request_sample_fmt = AV_SAMPLE_FMT_S16;
+					}
+					if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P)
+					{
+						avAudioCodecCtx->request_sample_fmt = AV_SAMPLE_FMT_S32;
+					}
+					if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
+					{
+						avAudioCodecCtx->request_sample_fmt = AV_SAMPLE_FMT_FLT;
+					}
+
 					// enable multi threading
 					unsigned threads = std::thread::hardware_concurrency();
 					if (threads > 0)
 					{
-						avAudioCodecCtx->thread_count = threads;
+						avAudioCodecCtx->thread_count = min(threads, 4);
 						avAudioCodecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
 					}
 
@@ -626,8 +639,26 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 	}
 	else
 	{
-		// We always convert to 16-bit audio so set the size here
-		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 16));
+		// We try to preserve source format
+		if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32 || avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P)
+		{
+			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 32));
+		}
+		else if(avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
+		{
+			auto properties = ref new AudioEncodingProperties();
+			properties->Subtype = MediaEncodingSubtypes::Float;
+			properties->BitsPerSample = 32;
+			properties->SampleRate = avAudioCodecCtx->sample_rate;
+			properties->ChannelCount = avAudioCodecCtx->channels;
+			properties->Bitrate = properties->BitsPerSample * properties->SampleRate * properties->ChannelCount;
+			audioStreamDescriptor = ref new AudioStreamDescriptor(properties);
+		}
+		else
+		{
+			// Use S16 for all other cases
+			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 16));
+		}
 		audioSampleProvider = ref new UncompressedAudioSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
 	}
 

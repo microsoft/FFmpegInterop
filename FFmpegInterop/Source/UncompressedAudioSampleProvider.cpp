@@ -42,8 +42,9 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 	if (SUCCEEDED(hr))
 	{
 		// Set default channel layout when the value is unknown (0)
-		int64 inChannelLayout = m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels);
-		int64 outChannelLayout = av_get_default_channel_layout(m_pAvCodecCtx->channels);
+		int channels = m_pAvCodecCtx->profile == FF_PROFILE_AAC_HE_V2 && m_pAvCodecCtx->extradata_size != 0 ? m_pAvCodecCtx->channels * 2 : m_pAvCodecCtx->channels;
+		int64 inChannelLayout = m_pAvCodecCtx->channel_layout && (m_pAvCodecCtx->profile != FF_PROFILE_AAC_HE_V2 || m_pAvCodecCtx->extradata_size == 0) ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(channels);
+		int64 outChannelLayout = av_get_default_channel_layout(channels);
 
 		m_outputSampleFormat =
 			(m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32 || m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P) ? AV_SAMPLE_FMT_S32 :

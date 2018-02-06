@@ -63,6 +63,7 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 	, thumbnailStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, fileStreamData(nullptr)
 	, fileStreamBuffer(nullptr)
+	, isFirstSeek(true)
 {
 	if (!isRegistered)
 	{
@@ -804,8 +805,10 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 	MediaStreamSourceStartingRequest^ request = args->Request;
 
 	// Perform seek operation when MediaStreamSource received seek event from MediaElement
-	if (request->StartPosition && request->StartPosition->Value.Duration <= mediaDuration.Duration)
+	if (request->StartPosition && request->StartPosition->Value.Duration <= mediaDuration.Duration && (!isFirstSeek || request->StartPosition->Value.Duration > 0))
 	{
+		isFirstSeek = false;
+
 		// Select the first valid stream either from video or audio
 		int streamIndex = videoStreamIndex >= 0 ? videoStreamIndex : audioStreamIndex >= 0 ? audioStreamIndex : -1;
 

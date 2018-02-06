@@ -133,5 +133,6 @@ namespace FFmpegInterop
 		IStream* fileStreamData;
 		unsigned char* fileStreamBuffer;
 		FFmpegReader^ m_pReader;
+		bool isFirstSeek;
 	};
 }

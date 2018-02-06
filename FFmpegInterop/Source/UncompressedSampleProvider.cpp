@@ -52,7 +52,8 @@ HRESULT UncompressedSampleProvider::CreateNextSampleBuffer(IBuffer^* pBuffer, in
 			hr = CreateBufferFromFrame(pBuffer, avFrame, samplePts, sampleDuration);
 			if (SUCCEEDED(hr))
 			{
-				// sample created
+				// sample created. update m_nextFramePts in case pts or duration have changed
+				m_nextFramePts = samplePts + sampleDuration;
 				break;
 			}
 		}

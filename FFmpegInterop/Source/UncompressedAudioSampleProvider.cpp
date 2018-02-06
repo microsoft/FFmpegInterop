@@ -54,8 +54,7 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 		
 		if (needsResampler)
 		{
-			// Set up resampler to convert any PCM format (e.g. AV_SAMPLE_FMT_FLTP) to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element.
-			// Additional logic can be added to avoid resampling PCM data that is already in AV_SAMPLE_FMT_S16_PCM.
+			// Set up resampler to convert to output format and channel layout.
 			m_pSwrCtx = swr_alloc_set_opts(
 				NULL,
 				outChannelLayout,
@@ -124,6 +123,19 @@ HRESULT UncompressedAudioSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 		else
 		{
 			hr = E_FAIL;
+		}
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		// always update duration with real decoded sample duration
+		frameDuration = (long long)avFrame->nb_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / m_pAvCodecCtx->time_base.den;
+	
+		// compensate for start encoder padding (gapless playback)
+		if (framePts == 0 && m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples > 0)
+		{
+			auto skipDuration = (long long)m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / m_pAvCodecCtx->time_base.den;
+			framePts += skipDuration;
 		}
 	}
 

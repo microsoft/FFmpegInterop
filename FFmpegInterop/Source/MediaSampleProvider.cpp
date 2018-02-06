@@ -31,7 +31,6 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvFormatCtx(avFormatCtx)
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
-	, m_startOffset(avFormatCtx->start_time * 10)
 	, m_isEnabled(true)
 {
 	DebugMessage(L"MediaSampleProvider\n");
@@ -54,6 +53,21 @@ void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 	if (m_pAvCodecCtx != nullptr && m_pAvFormatCtx->nb_streams > (unsigned int)streamIndex)
 	{
 		m_streamIndex = streamIndex;
+
+		if (m_pAvFormatCtx->start_time != 0)
+		{
+			auto streamStartTime = (long long)(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_pAvFormatCtx->streams[m_streamIndex]->start_time * 1000000);
+
+			if (m_pAvFormatCtx->start_time == streamStartTime)
+			{
+				// calculate more precise start time
+				m_startOffset = (long long)(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_pAvFormatCtx->streams[m_streamIndex]->start_time * 10000000);
+			}
+			else
+			{
+				m_startOffset = m_pAvFormatCtx->start_time * 10;
+			}
+		}
 	}
 	else
 	{

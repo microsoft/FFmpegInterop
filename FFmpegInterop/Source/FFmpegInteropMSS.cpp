@@ -888,16 +888,29 @@ static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
 {
 	IStream* pStream = reinterpret_cast<IStream*>(ptr);
-	LARGE_INTEGER in;
-	in.QuadPart = pos;
-	ULARGE_INTEGER out = { 0 };
-
-	if (FAILED(pStream->Seek(in, whence, &out)))
+	if (whence == AVSEEK_SIZE)
 	{
-		return -1;
+		// get stream size
+		STATSTG status;
+		if (FAILED(pStream->Stat(&status, STATFLAG_NONAME)))
+		{
+			return -1;
+		}
+		return status.cbSize.QuadPart;
 	}
+	else
+	{
+		LARGE_INTEGER in;
+		in.QuadPart = pos;
+		ULARGE_INTEGER out = { 0 };
 
-	return out.QuadPart; // Return the new position:
+		if (FAILED(pStream->Seek(in, whence, &out)))
+		{
+			return -1;
+		}
+
+		return out.QuadPart; // Return the new position:
+	}
 }
 
 static int lock_manager(void **mtx, enum AVLockOp op)

@@ -110,7 +110,7 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
 {
 	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode, ffmpegOptions, mss)))
+	if (FAILED(interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode, false, ffmpegOptions, mss)))
 	{
 		// We failed to initialize, clear the variable to return failure
 		interopMSS = nullptr;
@@ -199,13 +199,13 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 	if (SUCCEEDED(hr))
 	{
 		this->mss = nullptr;
-		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
+		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode, false);
 	}
 
 	return hr;
 }
 
-HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
+HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, bool isFrameGrabber, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
 {
 	HRESULT hr = S_OK;
 	if (!stream)
@@ -278,7 +278,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 	if (SUCCEEDED(hr))
 	{
 		this->mss = mss;
-		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
+		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode, isFrameGrabber);
 	}
 
 	return hr;
@@ -312,7 +312,7 @@ static AVPixelFormat get_format(struct AVCodecContext *s, const enum AVPixelForm
 	return result;
 }
 
-HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode)
+HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode, bool isFrameGrabber)
 {
 	HRESULT hr = S_OK;
 
@@ -333,7 +333,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		}
 	}
 
-	if (SUCCEEDED(hr))
+	if (SUCCEEDED(hr) && !isFrameGrabber)
 	{
 		// Find the audio stream and its decoder
 		AVCodec* avAudioCodec = nullptr;
@@ -468,7 +468,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					if (threads > 0)
 					{
 						avVideoCodecCtx->thread_count = threads;
-						avVideoCodecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+						avVideoCodecCtx->thread_type = isFrameGrabber ? FF_THREAD_SLICE : FF_THREAD_FRAME | FF_THREAD_SLICE;
 					}
 
 					if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
@@ -479,7 +479,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					else
 					{
 						// Detect video format and create video stream descriptor accordingly
-						hr = CreateVideoStreamDescriptor(forceVideoDecode);
+						hr = CreateVideoStreamDescriptor(forceVideoDecode, isFrameGrabber);
 						if (SUCCEEDED(hr))
 						{
 							hr = videoSampleProvider->AllocateResources();
@@ -667,7 +667,7 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 	return (audioStreamDescriptor != nullptr && audioSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
 }
 
-HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
+HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode, bool isFrameGrabber)
 {
 	VideoEncodingProperties^ videoProperties;
 
@@ -711,7 +711,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 #endif
 	else
 	{
-		auto sampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+		auto sampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, isFrameGrabber);
 		videoProperties = VideoEncodingProperties::CreateUncompressed(sampleProvider->OutputMediaSubtype, sampleProvider->DecoderWidth, sampleProvider->DecoderHeight);
 		videoSampleProvider = sampleProvider;
 
@@ -807,40 +807,7 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 	// Perform seek operation when MediaStreamSource received seek event from MediaElement
 	if (request->StartPosition && request->StartPosition->Value.Duration <= mediaDuration.Duration && (!isFirstSeek || request->StartPosition->Value.Duration > 0))
 	{
-		isFirstSeek = false;
-
-		// Select the first valid stream either from video or audio
-		int streamIndex = videoStreamIndex >= 0 ? videoStreamIndex : audioStreamIndex >= 0 ? audioStreamIndex : -1;
-
-		if (streamIndex >= 0)
-		{
-			// Convert TimeSpan unit to AV_TIME_BASE
-			int64_t seekTarget = static_cast<int64_t>(request->StartPosition->Value.Duration / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
-
-			if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
-			{
-				DebugMessage(L" - ### Error while seeking\n");
-			}
-			else
-			{
-				// Add deferral
-
-				// Flush the AudioSampleProvider
-				if (audioSampleProvider != nullptr)
-				{
-					audioSampleProvider->Flush();
-					avcodec_flush_buffers(avAudioCodecCtx);
-				}
-
-				// Flush the VideoSampleProvider
-				if (videoSampleProvider != nullptr)
-				{
-					videoSampleProvider->Flush();
-					avcodec_flush_buffers(avVideoCodecCtx);
-				}
-			}
-		}
-
+		Seek(request->StartPosition->Value);
 		request->SetActualStartPosition(request->StartPosition->Value);
 	}
 }
@@ -864,6 +831,48 @@ void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource
 		}
 	}
 	mutexGuard.unlock();
+}
+
+HRESULT FFmpegInteropMSS::Seek(TimeSpan position)
+{
+	auto hr = S_OK;;
+
+	// Select the first valid stream either from video or audio
+	int streamIndex = videoStreamIndex >= 0 ? videoStreamIndex : audioStreamIndex >= 0 ? audioStreamIndex : -1;
+
+	if (streamIndex >= 0)
+	{
+		// Convert TimeSpan unit to AV_TIME_BASE
+		int64_t seekTarget = static_cast<int64_t>(position.Duration / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
+
+		if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
+		{
+			hr = E_FAIL;
+			DebugMessage(L" - ### Error while seeking\n");
+		}
+		else
+		{
+			// Flush the AudioSampleProvider
+			if (audioSampleProvider != nullptr)
+			{
+				audioSampleProvider->Flush();
+				avcodec_flush_buffers(avAudioCodecCtx);
+			}
+
+			// Flush the VideoSampleProvider
+			if (videoSampleProvider != nullptr)
+			{
+				videoSampleProvider->Flush();
+				avcodec_flush_buffers(avVideoCodecCtx);
+			}
+		}
+	}
+	else
+	{
+		hr = E_FAIL;
+	}
+
+	return hr;
 }
 
 // Static function to read file stream and pass data to FFmpeg. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
@@ -946,3 +955,64 @@ static int lock_manager(void **mtx, enum AVLockOp op)
 	}
 	return 1;
 }
+
+IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek, int maxFrameSkip)
+{
+	return create_async([stream, position, exactSeek, maxFrameSkip]
+	{
+		return create_task([stream, position, exactSeek, maxFrameSkip]
+		{
+			auto interopMSS = ref new FFmpegInteropMSS();
+			if (FAILED(interopMSS->CreateMediaStreamSource(stream, false, true, true, nullptr, nullptr)))
+			{
+				throw ref new Exception(E_FAIL, "Unable to open file.");
+			}
+			if (interopMSS->videoSampleProvider == nullptr)
+			{
+				throw ref new Exception(E_FAIL, "No video stream found in file (or no suitable decoder available).");
+			}
+
+			bool seekSucceeded = false;
+			if (interopMSS->Duration.Duration > position.Duration)
+			{
+				seekSucceeded = SUCCEEDED(interopMSS->Seek(position));
+			}
+
+			int framesSkipped = 0;
+			MediaStreamSample^ lastSample = nullptr;
+			while (true)
+			{
+				auto sample = interopMSS->videoSampleProvider->GetNextSample();
+				if (sample == nullptr)
+				{
+					// if we hit end of stream, use last decoded sample (if any), otherwise fail
+					if (lastSample != nullptr)
+					{
+						sample = lastSample;
+						seekSucceeded = false;
+					}
+					else
+					{
+						throw ref new Exception(E_FAIL, "Failed to decode video frame.");
+					}
+				}
+				else
+				{
+					lastSample = sample;
+				}
+
+				// if exact seek, continue decoding until we have the right sample
+				if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) && 
+				    (maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
+				{
+					continue;
+				}
+
+				auto result = ref new VideoFrame(sample->Buffer,
+					interopMSS->videoSampleProvider->m_pAvCodecCtx->width,
+					interopMSS->videoSampleProvider->m_pAvCodecCtx->height);
+				return result;
+			}
+		});
+	});
+};

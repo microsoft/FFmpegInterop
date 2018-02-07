@@ -64,6 +64,7 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 	{
 		if (file != nullptr)
 		{
+			currentFile = file;
 			mediaElement->Stop();
 
 			// Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
@@ -154,6 +155,60 @@ void MainPage::URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::K
 		{
 			DisplayErrorMessage("Cannot open media");
 		}
+	}
+}
+
+void MainPage::ExtractFrame(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+	if (currentFile == nullptr)
+	{
+		DisplayErrorMessage("Please open a video file first.");
+	}
+	else
+	{
+		// open the file that is currently playing
+		create_task(currentFile->OpenAsync(FileAccessMode::Read)).then([this](IRandomAccessStream^ stream)
+		{
+			try
+			{
+				bool exactSeek = grabFrameExactSeek->IsOn;
+				// extract frame using FFmpegInterop and current position
+				create_task(FFmpegInteropMSS::ExtractVideoFrameAsync(stream, mediaElement->Position, exactSeek)).then([this](VideoFrame^ frame)
+				{
+					auto filePicker = ref new FileSavePicker();
+					filePicker->SuggestedStartLocation = PickerLocationId::VideosLibrary;
+					filePicker->DefaultFileExtension = ".jpg";
+					filePicker->FileTypeChoices->Insert("Jpeg file", ref new Platform::Collections::Vector<String^>(1, ".jpg"));
+
+					// Show file picker so user can select a file
+					create_task(filePicker->PickSaveFileAsync()).then([this, frame](StorageFile^ file)
+					{
+						if (file != nullptr)
+						{
+							create_task(file->OpenAsync(FileAccessMode::ReadWrite)).then([this, frame, file](IRandomAccessStream^ stream)
+							{
+								// encode frame as jpeg file
+								create_task(frame->EncodeAsJpegAsync(stream)).then([this, file]
+								{
+									// launch file after creation
+									create_task(Windows::System::Launcher::LaunchFileAsync(file)).then([this, file](bool launched)
+									{
+										if (!launched)
+										{
+											DisplayErrorMessage("File has been created:\n" + file->Path);
+										}
+									});
+								});
+							});
+						}
+					});
+				});
+			}
+			catch (COMException^ ex)
+			{
+				DisplayErrorMessage(ex->Message);
+			}
+		});
 	}
 }
 

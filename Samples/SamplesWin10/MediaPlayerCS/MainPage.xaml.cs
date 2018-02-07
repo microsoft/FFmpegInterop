@@ -29,6 +29,7 @@ using Windows.Media.Core;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
+using Windows.System;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -43,6 +44,7 @@ namespace MediaPlayerCS
     public sealed partial class MainPage : Page
     {
         private FFmpegInteropMSS FFmpegMSS;
+        private StorageFile currentFile;
 
         public MainPage()
         {
@@ -64,6 +66,7 @@ namespace MediaPlayerCS
 
             if (file != null)
             {
+                currentFile = file;
                 mediaElement.Stop();
 
                 // Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
@@ -146,6 +149,45 @@ namespace MediaPlayerCS
                     else
                     {
                         DisplayErrorMessage("Cannot open media");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DisplayErrorMessage(ex.Message);
+                }
+            }
+        }
+
+        private async void ExtractFrame(object sender, RoutedEventArgs e)
+        {
+            if (currentFile == null)
+            {
+                DisplayErrorMessage("Please open a video file first.");
+            }
+            else
+            {
+                try
+                {
+                    var stream = await currentFile.OpenAsync(FileAccessMode.Read);
+                    bool exactSeek = grabFrameExactSeek.IsOn;
+                    var frame = await FFmpegInteropMSS.ExtractVideoFrameAsync(stream, mediaElement.Position, exactSeek);
+
+                    var filePicker = new FileSavePicker();
+                    filePicker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
+                    filePicker.DefaultFileExtension = ".jpg";
+                    filePicker.FileTypeChoices["Jpeg file"] = new[] { ".jpg" }.ToList();
+
+                    var file = await filePicker.PickSaveFileAsync();
+                    if (file != null)
+                    {
+                        var outputStream = await file.OpenAsync(FileAccessMode.ReadWrite);
+                        await frame.EncodeAsJpegAsync(outputStream);
+                        outputStream.Dispose();
+                        bool launched = await Windows.System.Launcher.LaunchFileAsync(file, new LauncherOptions() { DisplayApplicationPicker = false });
+                        if (!launched)
+                        {
+                            DisplayErrorMessage("File has been created:\n" + file.Path);
+                        }
                     }
                 }
                 catch (Exception ex)

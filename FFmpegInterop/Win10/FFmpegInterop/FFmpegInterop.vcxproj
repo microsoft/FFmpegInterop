@@ -241,6 +241,7 @@
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedVideoSampleProvider.h" />
+    <ClInclude Include="..\..\Source\VideoFrame.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>

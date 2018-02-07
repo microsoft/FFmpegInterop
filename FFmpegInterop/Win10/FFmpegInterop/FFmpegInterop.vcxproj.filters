@@ -39,5 +39,6 @@
     <ClInclude Include="..\..\Source\NativeBuffer.h" />
     <ClInclude Include="..\..\Source\NativeBufferFactory.h" />
     <ClInclude Include="..\..\Source\CompressedSampleProvider.h" />
+    <ClInclude Include="..\..\Source\VideoFrame.h" />
   </ItemGroup>
 </Project>

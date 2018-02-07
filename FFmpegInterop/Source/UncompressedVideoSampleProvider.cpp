@@ -33,7 +33,8 @@ using namespace Windows::Media::MediaProperties;
 UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
+	AVCodecContext* avCodecCtx,
+	bool isFrameGrabber)
 	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
 {
 	switch (m_pAvCodecCtx->pix_fmt)
@@ -48,7 +49,7 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		break;
 	case AV_PIX_FMT_YUVA420P:
 		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
-		OutputMediaSubtype = MediaEncodingSubtypes::Argb32;
+		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
 		break;
 	default:
 		m_OutputPixelFormat = AV_PIX_FMT_NV12;
@@ -61,6 +62,12 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	{
 		m_OutputPixelFormat = AV_PIX_FMT_NV12;
 		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
+	}
+
+	if (isFrameGrabber)
+	{
+		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
+		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
 	}
 
 	auto width = avCodecCtx->width;

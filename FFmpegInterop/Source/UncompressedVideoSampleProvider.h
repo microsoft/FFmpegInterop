@@ -28,8 +28,6 @@ using namespace Platform;
 
 namespace FFmpegInterop
 {
-	ref class FrameDataHolder;
-
 	ref class UncompressedVideoSampleProvider: UncompressedSampleProvider
 	{
 	public:
@@ -61,14 +59,6 @@ namespace FFmpegInterop
 		bool m_top_field_first;
 		AVChromaLocation m_chroma_location;
 		bool m_bUseScaler;
-	};
-
-	private ref class FrameDataHolder
-	{
-	internal:
-		int linesize[4];
-		uint8_t* data[4];
-		AVBufferRef* buffer;
 	};
 }
 

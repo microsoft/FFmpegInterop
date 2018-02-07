@@ -170,18 +170,21 @@ HRESULT UncompressedVideoSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 		else
 		{
 			// Using scaler: allocate a new frame from buffer pool
-			auto frame = ref new FrameDataHolder();
-			hr = FillLinesAndBuffer(frame->linesize, frame->data, &frame->buffer);
+			int linesize[4];
+			uint8_t* data[4];
+			AVBufferRef* buffer;
+
+			hr = FillLinesAndBuffer(linesize, data, &buffer);
 			if (SUCCEEDED(hr))
 			{
 				// Convert to output format using FFmpeg software scaler
-				if (sws_scale(m_pSwsCtx, (const uint8_t **)(avFrame->data), avFrame->linesize, 0, m_pAvCodecCtx->height, frame->data, frame->linesize) > 0)
+				if (sws_scale(m_pSwsCtx, (const uint8_t **)(avFrame->data), avFrame->linesize, 0, m_pAvCodecCtx->height, data, linesize) > 0)
 				{
-					*pBuffer = NativeBufferFactory::CreateNativeBuffer(frame->buffer->data, frame->buffer->size, free_buffer, frame->buffer);
+					*pBuffer = NativeBufferFactory::CreateNativeBuffer(buffer->data, buffer->size, free_buffer, buffer);
 				}
 				else
 				{
-					free_buffer(frame->buffer);
+					free_buffer(buffer);
 					hr = E_FAIL;
 				}
 			}

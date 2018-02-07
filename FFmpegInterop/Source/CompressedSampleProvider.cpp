@@ -23,7 +23,7 @@ HRESULT CompressedSampleProvider::CreateNextSampleBuffer(IBuffer^* pBuffer, int6
 
 	hr = GetNextPacket(&avPacket, samplePts, sampleDuration);
 
-	if (hr == S_OK)
+	if (hr == S_OK) // Do not create packet at end of stream (S_FALSE)
 	{
 		hr = CreateBufferFromPacket(avPacket, pBuffer);
 	}

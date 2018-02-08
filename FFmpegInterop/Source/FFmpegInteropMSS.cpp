@@ -709,7 +709,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor()
 {
 	VideoEncodingProperties^ videoProperties;
 
-	if (avVideoCodecCtx->codec_id == AV_CODEC_ID_H264 && config->PassthroughVideoH264 && (avVideoCodecCtx->profile < 100 || config->PassthroughVideoH264Hi10P))
+	if (avVideoCodecCtx->codec_id == AV_CODEC_ID_H264 && config->PassthroughVideoH264 && (avVideoCodecCtx->profile <= 100 || config->PassthroughVideoH264Hi10P))
 	{
 		videoProperties = VideoEncodingProperties::CreateH264();
 		videoProperties->ProfileId = avVideoCodecCtx->profile;

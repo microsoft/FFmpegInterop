@@ -24,8 +24,10 @@ using namespace FFmpegInterop;
 NALPacketSampleProvider::NALPacketSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: CompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
+	AVCodecContext* avCodecCtx,
+	FFmpegInteropConfig^ config,
+	int streamIndex)
+	: CompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
 {
 }
 

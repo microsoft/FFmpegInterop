@@ -21,8 +21,13 @@
 
 using namespace FFmpegInterop;
 
-UncompressedSampleProvider::UncompressedSampleProvider(FFmpegReader^ reader, AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
+UncompressedSampleProvider::UncompressedSampleProvider(
+	FFmpegReader^ reader, 
+	AVFormatContext* avFormatCtx, 
+	AVCodecContext* avCodecCtx,
+	FFmpegInteropConfig^ config,
+	int streamIndex)
+	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
 {
 }
 

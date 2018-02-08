@@ -26,14 +26,32 @@ using namespace FFmpegInterop;
 MediaSampleProvider::MediaSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
+	AVCodecContext* avCodecCtx,
+	FFmpegInteropConfig^ config,
+	int streamIndex)
 	: m_pReader(reader)
 	, m_pAvFormatCtx(avFormatCtx)
 	, m_pAvCodecCtx(avCodecCtx)
-	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_isEnabled(true)
+	, m_config(config)
+	, m_streamIndex(streamIndex)
 {
 	DebugMessage(L"MediaSampleProvider\n");
+
+	if (m_pAvFormatCtx->start_time != 0)
+	{
+		auto streamStartTime = (long long)(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_pAvFormatCtx->streams[m_streamIndex]->start_time * 1000000);
+
+		if (m_pAvFormatCtx->start_time == streamStartTime)
+		{
+			// calculate more precise start time
+			m_startOffset = (long long)(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_pAvFormatCtx->streams[m_streamIndex]->start_time * 10000000);
+		}
+		else
+		{
+			m_startOffset = m_pAvFormatCtx->start_time * 10;
+		}
+	}
 }
 
 HRESULT MediaSampleProvider::AllocateResources()
@@ -45,34 +63,6 @@ HRESULT MediaSampleProvider::AllocateResources()
 MediaSampleProvider::~MediaSampleProvider()
 {
 	DebugMessage(L"~MediaSampleProvider\n");
-}
-
-void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
-{
-	DebugMessage(L"SetCurrentStreamIndex\n");
-	if (m_pAvCodecCtx != nullptr && m_pAvFormatCtx->nb_streams > (unsigned int)streamIndex)
-	{
-		m_streamIndex = streamIndex;
-
-		if (m_pAvFormatCtx->start_time != 0)
-		{
-			auto streamStartTime = (long long)(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_pAvFormatCtx->streams[m_streamIndex]->start_time * 1000000);
-
-			if (m_pAvFormatCtx->start_time == streamStartTime)
-			{
-				// calculate more precise start time
-				m_startOffset = (long long)(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_pAvFormatCtx->streams[m_streamIndex]->start_time * 10000000);
-			}
-			else
-			{
-				m_startOffset = m_pAvFormatCtx->start_time * 10;
-			}
-		}
-	}
-	else
-	{
-		m_streamIndex = AVERROR_STREAM_NOT_FOUND;
-	}
 }
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample()

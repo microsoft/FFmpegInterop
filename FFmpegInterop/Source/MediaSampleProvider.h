@@ -18,6 +18,7 @@
 
 #pragma once
 #include <queue>
+#include "FFmpegInteropConfig.h"
 
 extern "C"
 {
@@ -29,7 +30,6 @@ using namespace Windows::Media::Core;
 
 namespace FFmpegInterop
 {
-	ref class FFmpegInteropMSS;
 	ref class FFmpegReader;
 
 	ref class MediaSampleProvider
@@ -38,7 +38,6 @@ namespace FFmpegInterop
 		virtual ~MediaSampleProvider();
 		virtual MediaStreamSample^ GetNextSample();
 		virtual void Flush();
-		virtual void SetCurrentStreamIndex(int streamIndex);
 
 	internal:
 		virtual HRESULT AllocateResources();
@@ -53,7 +52,9 @@ namespace FFmpegInterop
 		MediaSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
+			AVCodecContext* avCodecCtx,
+			FFmpegInteropConfig^ config,
+			int streamIndex);
 
 	private:
 		std::queue<AVPacket*> m_packetQueue;
@@ -63,6 +64,7 @@ namespace FFmpegInterop
 		// The FFmpeg context. Because they are complex types
 		// we declare them as internal so they don't get exposed
 		// externally
+		FFmpegInteropConfig^ m_config;
 		FFmpegReader^ m_pReader;
 		AVFormatContext* m_pAvFormatCtx;
 		AVCodecContext* m_pAvCodecCtx;

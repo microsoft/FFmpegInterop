@@ -43,8 +43,14 @@ namespace FFmpegInterop
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
+		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config, MediaStreamSource^ mss);
+		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config);
+		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream);
+
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
+		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, FFmpegInteropConfig^ config);
+		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri);
 
 		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek, int maxFrameSkip);
 		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(stream, position, exactSeek, 0); };
@@ -98,13 +104,13 @@ namespace FFmpegInterop
 		int ReadPacket();
 
 	private:
-		FFmpegInteropMSS();
+		FFmpegInteropMSS(FFmpegInteropConfig^ config);
 
-		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, bool isFrameGrabber, PropertySet^ ffmpegOptions, MediaStreamSource^ mss);
-		HRESULT CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
-		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode, bool isFrameGrabber);
-		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
-		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode, bool isFrameGrabber);
+		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, MediaStreamSource^ mss);
+		HRESULT CreateMediaStreamSource(String^ uri);
+		HRESULT InitFFmpegContext();
+		HRESULT CreateAudioStreamDescriptor();
+		HRESULT CreateVideoStreamDescriptor();
 		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
@@ -123,6 +129,7 @@ namespace FFmpegInterop
 		AVCodecContext* avVideoCodecCtx;
 
 		private:
+		FFmpegInteropConfig ^ config;
 		AudioStreamDescriptor^ audioStreamDescriptor;
 		VideoStreamDescriptor^ videoStreamDescriptor;
 		int audioStreamIndex;

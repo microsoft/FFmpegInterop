@@ -7,7 +7,9 @@ using namespace FFmpegInterop;
 CompressedSampleProvider::CompressedSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx) : MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
+	AVCodecContext* avCodecCtx,
+	FFmpegInteropConfig^ config, 
+	int streamIndex) : MediaSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
 {
 }
 

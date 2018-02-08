@@ -41,7 +41,8 @@ namespace FFmpegInterop
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx,
-			bool isFrameGrabber);
+			FFmpegInteropConfig^ config, 
+			int streamIndex);
 		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) override;
 		virtual HRESULT SetSampleProperties(MediaStreamSample^ sample) override;
 		AVPixelFormat GetOutputPixelFormat() { return m_OutputPixelFormat; }

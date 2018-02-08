@@ -34,40 +34,37 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx,
-	bool isFrameGrabber)
-	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
+	FFmpegInteropConfig^ config,
+	int streamIndex)
+	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
 {
-	switch (m_pAvCodecCtx->pix_fmt)
+	if (config->VideoOutputAllowIyuv && (m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P || m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P)
+		&& m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
 	{
-	case AV_PIX_FMT_YUV420P:
-		m_OutputPixelFormat = AV_PIX_FMT_YUV420P;
+		// if format is yuv and yuv is allowed and codec supports direct buffer decoding, use yuv
+		m_OutputPixelFormat = m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P ? AV_PIX_FMT_YUVJ420P : AV_PIX_FMT_YUV420P;
 		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
-		break;
-	case AV_PIX_FMT_YUVJ420P:
-		m_OutputPixelFormat = AV_PIX_FMT_YUVJ420P;
-		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
-		break;
-	case AV_PIX_FMT_YUVA420P:
-		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
-		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
-		break;
-	default:
-		m_OutputPixelFormat = AV_PIX_FMT_NV12;
-		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
-		break;
 	}
-
-	// MPEG2 is often interlaced, and DXVA HW deinterlacing only works with NV12. Let's force output to NV12
-	if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_MPEG2VIDEO || m_pAvCodecCtx->codec_id == AV_CODEC_ID_MPEG2VIDEO_XVMC)
+	else if (config->VideoOutputAllowNv12)
 	{
+		// NV12 is generally the preferred format
 		m_OutputPixelFormat = AV_PIX_FMT_NV12;
 		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
 	}
-
-	if (isFrameGrabber)
+	else if (config->VideoOutputAllowIyuv)
+	{
+		m_OutputPixelFormat = m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P 	? AV_PIX_FMT_YUVJ420P : AV_PIX_FMT_YUV420P;
+		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
+	}
+	else if (config->VideoOutputAllowBgra8)
 	{
 		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
 		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
+	}
+	else // if no format is allowed, we still use NV12
+	{
+		m_OutputPixelFormat = AV_PIX_FMT_NV12;
+		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
 	}
 
 	auto width = avCodecCtx->width;
@@ -86,13 +83,6 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		}
 		else
 		{
-			// We cannot use direct buffer decoding with this codec.
-			// Now that we must use scaler, let's directly scale to NV12.
-			if (m_OutputPixelFormat == AV_PIX_FMT_YUV420P || m_OutputPixelFormat == AV_PIX_FMT_YUVJ420P)
-			{
-				m_OutputPixelFormat = AV_PIX_FMT_NV12;
-				OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
-			}
 			m_bUseScaler = true;
 		}
 	}

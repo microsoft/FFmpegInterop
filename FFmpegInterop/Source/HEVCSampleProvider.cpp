@@ -24,8 +24,10 @@ using namespace FFmpegInterop;
 HEVCSampleProvider::HEVCSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: H264AVCSampleProvider(reader, avFormatCtx, avCodecCtx)
+	AVCodecContext* avCodecCtx,
+	FFmpegInteropConfig^ config,
+	int streamIndex)
+	: H264AVCSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
 {
 }
 

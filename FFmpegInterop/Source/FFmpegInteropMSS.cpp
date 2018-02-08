@@ -52,17 +52,11 @@ static int lock_manager(void **mtx, enum AVLockOp op);
 static bool isRegistered = false;
 
 // Initialize an FFmpegInteropObject
-FFmpegInteropMSS::FFmpegInteropMSS()
-	: avDict(nullptr)
-	, avIOCtx(nullptr)
-	, avFormatCtx(nullptr)
-	, avAudioCodecCtx(nullptr)
-	, avVideoCodecCtx(nullptr)
+FFmpegInteropMSS::FFmpegInteropMSS(FFmpegInteropConfig^ interopConfig)
+	: config(interopConfig)
 	, audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, thumbnailStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, fileStreamData(nullptr)
-	, fileStreamBuffer(nullptr)
 	, isFirstSeek(true)
 {
 	if (!isRegistered)
@@ -109,14 +103,17 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
 {
-	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode, false, ffmpegOptions, mss)))
+	auto config = ref new FFmpegInteropConfig();
+	config->PassthroughAudioAAC = !forceAudioDecode;
+	config->PassthroughAudioMP3 = !forceAudioDecode;
+	config->PassthroughVideoH264 = !forceVideoDecode;
+	config->PassthroughVideoH264Hi10P = !forceVideoDecode;
+	config->PassthroughVideoHEVC = !forceVideoDecode;
+	if (ffmpegOptions != nullptr)
 	{
-		// We failed to initialize, clear the variable to return failure
-		interopMSS = nullptr;
+		config->FFmpegOptions = ffmpegOptions;
 	}
-
-	return interopMSS;
+	return CreateFFmpegInteropMSSFromStream(stream, config);
 }
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
@@ -129,10 +126,51 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAcce
 	return CreateFFmpegInteropMSSFromStream(stream, forceAudioDecode, forceVideoDecode, nullptr);
 }
 
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config, MediaStreamSource^ mss)
+{
+	auto interopMSS = ref new FFmpegInteropMSS(config);
+	if (FAILED(interopMSS->CreateMediaStreamSource(stream, mss)))
+	{
+		// We failed to initialize, clear the variable to return failure
+		interopMSS = nullptr;
+	}
+	return interopMSS;
+}
+
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config)
+{
+	return CreateFFmpegInteropMSSFromStream(stream, config, nullptr);
+}
+
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream)
+{
+	return CreateFFmpegInteropMSSFromStream(stream, ref new FFmpegInteropConfig());
+}
+
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
 {
-	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(uri, forceAudioDecode, forceVideoDecode, ffmpegOptions)))
+	auto config = ref new FFmpegInteropConfig();
+	config->PassthroughAudioAAC = !forceAudioDecode;
+	config->PassthroughAudioMP3 = !forceAudioDecode;
+	config->PassthroughVideoH264 = !forceVideoDecode;
+	config->PassthroughVideoH264Hi10P = !forceVideoDecode;
+	config->PassthroughVideoHEVC = !forceVideoDecode;
+	if (ffmpegOptions != nullptr)
+	{
+		config->FFmpegOptions = ffmpegOptions;
+	}
+	return CreateFFmpegInteropMSSFromUri(uri, config);
+}
+
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode)
+{
+	return CreateFFmpegInteropMSSFromUri(uri, forceAudioDecode, forceVideoDecode, nullptr);
+}
+
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, FFmpegInteropConfig^ config)
+{
+	auto interopMSS = ref new FFmpegInteropMSS(config);
+	if (FAILED(interopMSS->CreateMediaStreamSource(uri)))
 	{
 		// We failed to initialize, clear the variable to return failure
 		interopMSS = nullptr;
@@ -141,9 +179,9 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, b
 	return interopMSS;
 }
 
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode)
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri)
 {
-	return CreateFFmpegInteropMSSFromUri(uri, forceAudioDecode, forceVideoDecode, nullptr);
+	return CreateFFmpegInteropMSSFromUri(uri, ref new FFmpegInteropConfig());
 }
 
 MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
@@ -151,7 +189,7 @@ MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
 	return mss;
 }
 
-HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
+HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri)
 {
 	HRESULT hr = S_OK;
 	const char* charStr = nullptr;
@@ -172,7 +210,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 	if (SUCCEEDED(hr))
 	{
 		// Populate AVDictionary avDict based on PropertySet ffmpegOptions. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-		hr = ParseOptions(ffmpegOptions);
+		hr = ParseOptions(config->FFmpegOptions);
 	}
 
 	if (SUCCEEDED(hr))
@@ -199,13 +237,13 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 	if (SUCCEEDED(hr))
 	{
 		this->mss = nullptr;
-		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode, false);
+		hr = InitFFmpegContext();
 	}
 
 	return hr;
 }
 
-HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, bool isFrameGrabber, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
+HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, MediaStreamSource^ mss)
 {
 	HRESULT hr = S_OK;
 	if (!stream)
@@ -251,7 +289,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 	if (SUCCEEDED(hr))
 	{
 		// Populate AVDictionary avDict based on PropertySet ffmpegOptions. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-		hr = ParseOptions(ffmpegOptions);
+		hr = ParseOptions(config->FFmpegOptions);
 	}
 
 	if (SUCCEEDED(hr))
@@ -278,7 +316,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 	if (SUCCEEDED(hr))
 	{
 		this->mss = mss;
-		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode, isFrameGrabber);
+		hr = InitFFmpegContext();
 	}
 
 	return hr;
@@ -312,7 +350,7 @@ static AVPixelFormat get_format(struct AVCodecContext *s, const enum AVPixelForm
 	return result;
 }
 
-HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode, bool isFrameGrabber)
+HRESULT FFmpegInteropMSS::InitFFmpegContext()
 {
 	HRESULT hr = S_OK;
 
@@ -333,7 +371,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		}
 	}
 
-	if (SUCCEEDED(hr) && !isFrameGrabber)
+	if (SUCCEEDED(hr) && !config->IsFrameGrabber)
 	{
 		// Find the audio stream and its decoder
 		AVCodec* avAudioCodec = nullptr;
@@ -390,7 +428,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					else
 					{
 						// Detect audio format and create audio stream descriptor accordingly
-						hr = CreateAudioStreamDescriptor(forceAudioDecode);
+						hr = CreateAudioStreamDescriptor();
 						if (SUCCEEDED(hr))
 						{
 							hr = audioSampleProvider->AllocateResources();
@@ -468,7 +506,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					if (threads > 0)
 					{
 						avVideoCodecCtx->thread_count = threads;
-						avVideoCodecCtx->thread_type = isFrameGrabber ? FF_THREAD_SLICE : FF_THREAD_FRAME | FF_THREAD_SLICE;
+						avVideoCodecCtx->thread_type = config->IsFrameGrabber ? FF_THREAD_SLICE : FF_THREAD_FRAME | FF_THREAD_SLICE;
 					}
 
 					if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
@@ -479,7 +517,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					else
 					{
 						// Detect video format and create video stream descriptor accordingly
-						hr = CreateVideoStreamDescriptor(forceVideoDecode, isFrameGrabber);
+						hr = CreateVideoStreamDescriptor();
 						if (SUCCEEDED(hr))
 						{
 							hr = videoSampleProvider->AllocateResources();
@@ -620,9 +658,9 @@ HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outpu
 	return hr;
 }
 
-HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
+HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor()
 {
-	if (avAudioCodecCtx->codec_id == AV_CODEC_ID_AAC && !forceAudioDecode)
+	if (avAudioCodecCtx->codec_id == AV_CODEC_ID_AAC && config->PassthroughAudioAAC)
 	{
 		if (avAudioCodecCtx->extradata_size == 0)
 		{
@@ -632,12 +670,12 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 		{
 			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateAac(avAudioCodecCtx->profile == FF_PROFILE_AAC_HE || avAudioCodecCtx->profile == FF_PROFILE_AAC_HE_V2 ? avAudioCodecCtx->sample_rate / 2 : avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int)avAudioCodecCtx->bit_rate));
 		}
-		audioSampleProvider = ref new CompressedSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
+		audioSampleProvider = ref new CompressedSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx, config, audioStreamIndex);
 	}
-	else if (avAudioCodecCtx->codec_id == AV_CODEC_ID_MP3 && !forceAudioDecode)
+	else if (avAudioCodecCtx->codec_id == AV_CODEC_ID_MP3 && config->PassthroughAudioMP3)
 	{
 		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateMp3(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int)avAudioCodecCtx->bit_rate));
-		audioSampleProvider = ref new CompressedSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
+		audioSampleProvider = ref new CompressedSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx, config, audioStreamIndex);
 	}
 	else
 	{
@@ -661,17 +699,17 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 			// Use S16 for all other cases
 			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 16));
 		}
-		audioSampleProvider = ref new UncompressedAudioSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
+		audioSampleProvider = ref new UncompressedAudioSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx, config, audioStreamIndex);
 	}
 
 	return (audioStreamDescriptor != nullptr && audioSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
 }
 
-HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode, bool isFrameGrabber)
+HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor()
 {
 	VideoEncodingProperties^ videoProperties;
 
-	if (avVideoCodecCtx->codec_id == AV_CODEC_ID_H264 && !forceVideoDecode)
+	if (avVideoCodecCtx->codec_id == AV_CODEC_ID_H264 && config->PassthroughVideoH264 && (avVideoCodecCtx->profile < 100 || config->PassthroughVideoH264Hi10P))
 	{
 		videoProperties = VideoEncodingProperties::CreateH264();
 		videoProperties->ProfileId = avVideoCodecCtx->profile;
@@ -681,15 +719,15 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode, boo
 		// Check for H264 bitstream flavor. H.264 AVC extradata starts with 1 while non AVC one starts with 0
 		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 0 && avVideoCodecCtx->extradata[0] == 1)
 		{
-			videoSampleProvider = ref new H264AVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+			videoSampleProvider = ref new H264AVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, config, videoStreamIndex);
 		}
 		else
 		{
-			videoSampleProvider = ref new NALPacketSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+			videoSampleProvider = ref new NALPacketSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, config, videoStreamIndex);
 		}
 	}
 #if _WIN32_WINNT >= 0x0A00 // only compile if platform toolset is Windows 10 or higher
-	else if (avVideoCodecCtx->codec_id == AV_CODEC_ID_HEVC && !forceVideoDecode &&
+	else if (avVideoCodecCtx->codec_id == AV_CODEC_ID_HEVC && config->PassthroughVideoHEVC &&
 		Windows::Foundation::Metadata::ApiInformation::IsMethodPresent("Windows.Media.MediaProperties.VideoEncodingProperties", "CreateHevc"))
 	{
 		videoProperties = VideoEncodingProperties::CreateHevc();
@@ -701,17 +739,17 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode, boo
 		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 22 && 
 			(avVideoCodecCtx->extradata[0] || avVideoCodecCtx->extradata[1] || avVideoCodecCtx->extradata[2] > 1))
 		{
-			videoSampleProvider = ref new HEVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+			videoSampleProvider = ref new HEVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, config, videoStreamIndex);
 		}
 		else
 		{
-			videoSampleProvider = ref new NALPacketSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+			videoSampleProvider = ref new NALPacketSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, config, videoStreamIndex);
 		}
 	}
 #endif
 	else
 	{
-		auto sampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, isFrameGrabber);
+		auto sampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, config, videoStreamIndex);
 		videoProperties = VideoEncodingProperties::CreateUncompressed(sampleProvider->OutputMediaSubtype, sampleProvider->DecoderWidth, sampleProvider->DecoderHeight);
 		videoSampleProvider = sampleProvider;
 
@@ -962,8 +1000,15 @@ IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAc
 	{
 		return create_task([stream, position, exactSeek, maxFrameSkip]
 		{
-			auto interopMSS = ref new FFmpegInteropMSS();
-			if (FAILED(interopMSS->CreateMediaStreamSource(stream, false, true, true, nullptr, nullptr)))
+			auto cfg = ref new FFmpegInteropConfig();
+			cfg->MaxVideoThreads = 1;
+			cfg->VideoOutputAllowIyuv = false;
+			cfg->VideoOutputAllowNv12 = false;
+			cfg->VideoOutputAllowBgra8 = true;
+			cfg->IsFrameGrabber = true;
+
+			auto interopMSS = ref new FFmpegInteropMSS(cfg);
+			if (FAILED(interopMSS->CreateMediaStreamSource(stream, nullptr)))
 			{
 				throw ref new Exception(E_FAIL, "Unable to open file.");
 			}

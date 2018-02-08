@@ -72,19 +72,11 @@ void FFmpegReader::SetAudioStream(int audioStreamIndex, MediaSampleProvider^ aud
 {
 	m_audioStreamIndex = audioStreamIndex;
 	m_audioSampleProvider = audioSampleProvider;
-	if (audioSampleProvider != nullptr)
-	{
-		audioSampleProvider->SetCurrentStreamIndex(m_audioStreamIndex);
-	}
 }
 
 void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider^ videoSampleProvider)
 {
 	m_videoStreamIndex = videoStreamIndex;
 	m_videoSampleProvider = videoSampleProvider;
-	if (videoSampleProvider != nullptr)
-	{
-		videoSampleProvider->SetCurrentStreamIndex(m_videoStreamIndex);
-	}
 }
 

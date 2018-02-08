@@ -227,6 +227,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\Source\CompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\CritSec.h" />
+    <ClInclude Include="..\..\Source\FFmpegInteropConfig.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropLogging.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="..\..\Source\FFmpegReader.h" />

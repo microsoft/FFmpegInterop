@@ -845,8 +845,12 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 	// Perform seek operation when MediaStreamSource received seek event from MediaElement
 	if (request->StartPosition && request->StartPosition->Value.Duration <= mediaDuration.Duration && (!isFirstSeek || request->StartPosition->Value.Duration > 0))
 	{
-		Seek(request->StartPosition->Value);
-		request->SetActualStartPosition(request->StartPosition->Value);
+		isFirstSeek = false;
+		auto hr = Seek(request->StartPosition->Value);
+		if (SUCCEEDED(hr))
+		{
+			request->SetActualStartPosition(request->StartPosition->Value);
+		}
 	}
 }
 
@@ -873,7 +877,7 @@ void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource
 
 HRESULT FFmpegInteropMSS::Seek(TimeSpan position)
 {
-	auto hr = S_OK;;
+	auto hr = S_OK;
 
 	// Select the first valid stream either from video or audio
 	int streamIndex = videoStreamIndex >= 0 ? videoStreamIndex : audioStreamIndex >= 0 ? audioStreamIndex : -1;

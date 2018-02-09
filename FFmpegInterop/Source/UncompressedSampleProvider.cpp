@@ -63,7 +63,7 @@ HRESULT UncompressedSampleProvider::CreateNextSampleBuffer(IBuffer^* pBuffer, in
 			}
 		}
 
-		if (!SUCCEEDED(hr) && errorCount < 50)
+		if (!SUCCEEDED(hr) && errorCount++ < m_config->SkipErrors)
 		{
 			// unref any buffers in old frame
 			av_frame_unref(avFrame);

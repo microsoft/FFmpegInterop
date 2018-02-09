@@ -416,7 +416,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 					unsigned threads = std::thread::hardware_concurrency();
 					if (threads > 0)
 					{
-						avAudioCodecCtx->thread_count = min(threads, 4);
+						avAudioCodecCtx->thread_count = config->MaxAudioThreads == 0 ? threads : min(threads, config->MaxAudioThreads);
 						avAudioCodecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
 					}
 
@@ -505,7 +505,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 					unsigned threads = std::thread::hardware_concurrency();
 					if (threads > 0)
 					{
-						avVideoCodecCtx->thread_count = threads;
+						avVideoCodecCtx->thread_count = config->MaxVideoThreads == 0 ? threads : min(threads, config->MaxVideoThreads);
 						avVideoCodecCtx->thread_type = config->IsFrameGrabber ? FF_THREAD_SLICE : FF_THREAD_FRAME | FF_THREAD_SLICE;
 					}
 

@@ -36,7 +36,7 @@ HRESULT UncompressedSampleProvider::CreateNextSampleBuffer(IBuffer^* pBuffer, in
 	HRESULT hr = S_OK;
 
 	AVFrame *avFrame = av_frame_alloc();
-	int errorCount = 0;
+	unsigned int errorCount = 0;
 
 	if (!avFrame)
 	{

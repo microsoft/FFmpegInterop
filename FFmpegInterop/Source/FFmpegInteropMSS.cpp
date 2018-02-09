@@ -40,9 +40,6 @@ using namespace Platform;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
 
-// Size of the buffer when reading a stream
-const int FILESTREAMBUFFERSZ = 16384;
-
 // Static functions passed to FFmpeg
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
@@ -100,6 +97,38 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	}
 	mutexGuard.unlock();
 }
+
+IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromStreamAsync(IRandomAccessStream^ stream, FFmpegInteropConfig^ config)
+{
+	return create_async([stream, config]
+	{
+		return create_task([stream, config]
+		{
+			auto result = CreateFFmpegInteropMSSFromStream(stream, config);
+			if (result == nullptr)
+			{
+				throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
+			}
+			return result;
+		});
+	});
+};
+
+IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromUriAsync(String^ uri, FFmpegInteropConfig^ config)
+{
+	return create_async([uri, config]
+	{
+		return create_task([uri, config]
+		{
+			auto result = CreateFFmpegInteropMSSFromUri(uri, config);
+			if (result == nullptr)
+			{
+				throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
+			}
+			return result;
+		});
+	});
+};
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
 {
@@ -261,7 +290,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, M
 	{
 		// Setup FFmpeg custom IO to access file as stream. This is necessary when accessing any file outside of app installation directory and appdata folder.
 		// Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
-		fileStreamBuffer = (unsigned char*)av_malloc(FILESTREAMBUFFERSZ);
+		fileStreamBuffer = (unsigned char*)av_malloc(config->StreamBufferSize);
 		if (fileStreamBuffer == nullptr)
 		{
 			hr = E_OUTOFMEMORY;
@@ -270,7 +299,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, M
 
 	if (SUCCEEDED(hr))
 	{
-		avIOCtx = avio_alloc_context(fileStreamBuffer, FILESTREAMBUFFERSZ, 0, fileStreamData, FileStreamRead, 0, FileStreamSeek);
+		avIOCtx = avio_alloc_context(fileStreamBuffer, config->StreamBufferSize, 0, fileStreamData, FileStreamRead, 0, FileStreamSeek);
 		if (avIOCtx == nullptr)
 		{
 			hr = E_OUTOFMEMORY;
@@ -403,11 +432,11 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 					{
 						avAudioCodecCtx->request_sample_fmt = AV_SAMPLE_FMT_S16;
 					}
-					if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P)
+					else if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P)
 					{
 						avAudioCodecCtx->request_sample_fmt = AV_SAMPLE_FMT_S32;
 					}
-					if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
+					else if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
 					{
 						avAudioCodecCtx->request_sample_fmt = AV_SAMPLE_FMT_FLT;
 					}

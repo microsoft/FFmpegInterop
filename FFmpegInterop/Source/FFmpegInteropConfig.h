@@ -20,6 +20,7 @@ namespace FFmpegInterop
 
 			SkipErrors = 50;
 			MaxAudioThreads = 2;
+			StreamBufferSize = 16384;
 
 			FFmpegOptions = ref new PropertySet();
 		};
@@ -39,6 +40,8 @@ namespace FFmpegInterop
 
 		property unsigned int MaxVideoThreads;
 		property unsigned int MaxAudioThreads;
+
+		property unsigned int StreamBufferSize;
 
 		property PropertySet^ FFmpegOptions;
 

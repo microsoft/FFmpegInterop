@@ -129,13 +129,21 @@ HRESULT UncompressedAudioSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 	if (SUCCEEDED(hr))
 	{
 		// always update duration with real decoded sample duration
-		frameDuration = (long long)avFrame->nb_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / m_pAvCodecCtx->time_base.den;
+		auto actualDuration = (long long)avFrame->nb_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (m_pAvCodecCtx->sample_rate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
 	
-		// compensate for start encoder padding (gapless playback)
-		if (framePts == 0 && m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples > 0)
+		if (frameDuration != actualDuration)
 		{
-			auto skipDuration = (long long)m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / m_pAvCodecCtx->time_base.den;
-			framePts += skipDuration;
+			// compensate for start encoder padding (gapless playback)
+			if (m_pAvFormatCtx->streams[m_streamIndex]->nb_decoded_frames == 1 && m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples > 0)
+			{
+				// check if duration difference matches encoder padding
+				auto skipDuration = (long long)m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (m_pAvCodecCtx->sample_rate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
+				if (skipDuration == frameDuration - actualDuration)
+				{
+					framePts += skipDuration;
+				}
+			}
+			frameDuration = actualDuration;
 		}
 	}
 

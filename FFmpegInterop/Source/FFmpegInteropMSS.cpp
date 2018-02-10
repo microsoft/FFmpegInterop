@@ -913,8 +913,9 @@ HRESULT FFmpegInteropMSS::Seek(TimeSpan position)
 
 	if (streamIndex >= 0)
 	{
-		// Convert TimeSpan unit to AV_TIME_BASE
-		int64_t seekTarget = static_cast<int64_t>(position.Duration / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
+		// Compensate for file start_time, then convert to stream time_base
+		auto correctedPosition = position.Duration + (avFormatCtx->start_time * 10); 
+		int64_t seekTarget = static_cast<int64_t>(correctedPosition / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
 
 		if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
 		{

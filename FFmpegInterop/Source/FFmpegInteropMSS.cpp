@@ -874,13 +874,14 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 	// Perform seek operation when MediaStreamSource received seek event from MediaElement
 	if (request->StartPosition && request->StartPosition->Value.Duration <= mediaDuration.Duration && (!isFirstSeek || request->StartPosition->Value.Duration > 0))
 	{
-		isFirstSeek = false;
 		auto hr = Seek(request->StartPosition->Value);
 		if (SUCCEEDED(hr))
 		{
 			request->SetActualStartPosition(request->StartPosition->Value);
 		}
 	}
+
+	isFirstSeek = false;
 }
 
 void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)

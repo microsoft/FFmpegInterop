@@ -104,7 +104,7 @@ IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromStreamAsync(IRan
 	{
 		return create_task([stream, config]
 		{
-			auto result = CreateFFmpegInteropMSSFromStream(stream, config);
+			auto result = CreateFromStream(stream, config, nullptr);
 			if (result == nullptr)
 			{
 				throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
@@ -120,7 +120,7 @@ IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromUriAsync(String^
 	{
 		return create_task([uri, config]
 		{
-			auto result = CreateFFmpegInteropMSSFromUri(uri, config);
+			auto result = CreateFromUri(uri, config);
 			if (result == nullptr)
 			{
 				throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
@@ -129,6 +129,28 @@ IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromUriAsync(String^
 		});
 	});
 };
+
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config, MediaStreamSource^ mss)
+{
+	auto interopMSS = ref new FFmpegInteropMSS(config);
+	auto hr = interopMSS->CreateMediaStreamSource(stream, mss);
+	if (!SUCCEEDED(hr))
+	{
+		throw ref new Exception(hr, "Failed to open media.");
+	}
+	return interopMSS;
+}
+
+FFmpegInteropMSS^ FFmpegInteropMSS::CreateFromUri(String^ uri, FFmpegInteropConfig^ config)
+{
+	auto interopMSS = ref new FFmpegInteropMSS(config);
+	auto hr = interopMSS->CreateMediaStreamSource(uri);
+	if (!SUCCEEDED(hr))
+	{
+		throw ref new Exception(hr, "Failed to open media.");
+	}
+	return interopMSS;
+}
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
 {
@@ -142,7 +164,14 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAcce
 	{
 		config->FFmpegOptions = ffmpegOptions;
 	}
-	return CreateFFmpegInteropMSSFromStream(stream, config);
+	try
+	{
+		return CreateFromStream(stream, config, nullptr);
+	}
+	catch (...)
+	{
+		return nullptr;
+	}
 }
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
@@ -153,27 +182,6 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAcce
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
 {
 	return CreateFFmpegInteropMSSFromStream(stream, forceAudioDecode, forceVideoDecode, nullptr);
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config, MediaStreamSource^ mss)
-{
-	auto interopMSS = ref new FFmpegInteropMSS(config);
-	if (FAILED(interopMSS->CreateMediaStreamSource(stream, mss)))
-	{
-		// We failed to initialize, clear the variable to return failure
-		interopMSS = nullptr;
-	}
-	return interopMSS;
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config)
-{
-	return CreateFFmpegInteropMSSFromStream(stream, config, nullptr);
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream)
-{
-	return CreateFFmpegInteropMSSFromStream(stream, ref new FFmpegInteropConfig());
 }
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
@@ -188,29 +196,19 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, b
 	{
 		config->FFmpegOptions = ffmpegOptions;
 	}
-	return CreateFFmpegInteropMSSFromUri(uri, config);
+	try
+	{
+		return CreateFromUri(uri, config);
+	}
+	catch (...)
+	{
+		return nullptr;
+	}
 }
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode)
 {
 	return CreateFFmpegInteropMSSFromUri(uri, forceAudioDecode, forceVideoDecode, nullptr);
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, FFmpegInteropConfig^ config)
-{
-	auto interopMSS = ref new FFmpegInteropMSS(config);
-	if (FAILED(interopMSS->CreateMediaStreamSource(uri)))
-	{
-		// We failed to initialize, clear the variable to return failure
-		interopMSS = nullptr;
-	}
-
-	return interopMSS;
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri)
-{
-	return CreateFFmpegInteropMSSFromUri(uri, ref new FFmpegInteropConfig());
 }
 
 MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()

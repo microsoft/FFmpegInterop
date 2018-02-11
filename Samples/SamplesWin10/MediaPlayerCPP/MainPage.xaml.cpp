@@ -46,6 +46,8 @@ using namespace Windows::UI::Xaml::Navigation;
 
 MainPage::MainPage()
 {
+	Config = ref new FFmpegInteropConfig();
+
 	InitializeComponent();
 
 	// Show the control panel on startup so user can start opening media
@@ -72,15 +74,11 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 			{
 				try
 				{
-					// Read toggle switches states and use them to setup FFmpeg MSS
-					bool forceDecodeAudio = toggleSwitchAudioDecode->IsOn;
-					bool forceDecodeVideo = toggleSwitchVideoDecode->IsOn;
-
 					// Instantiate FFmpegInteropMSS using the opened local file stream
 					IRandomAccessStream^ readStream = stream.get();
-					FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
-					if (FFmpegMSS != nullptr)
+					create_task(FFmpegInteropMSS::CreateFromStreamAsync(readStream, Config)).then([this](FFmpegInteropMSS^ result)
 					{
+						FFmpegMSS = result;
 						MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
 
 						if (mss)
@@ -95,13 +93,9 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 						{
 							DisplayErrorMessage("Cannot open media");
 						}
-					}
-					else
-					{
-						DisplayErrorMessage("Cannot open media");
-					}
+					});
 				}
-				catch (COMException^ ex)
+				catch (Exception^ ex)
 				{
 					DisplayErrorMessage(ex->Message);
 				}
@@ -120,40 +114,38 @@ void MainPage::URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::K
 		// Mark event as handled to prevent duplicate event to re-triggered
 		e->Handled = true;
 
-		// Read toggle switches states and use them to setup FFmpeg MSS
-		bool forceDecodeAudio = toggleSwitchAudioDecode->IsOn;
-		bool forceDecodeVideo = toggleSwitchVideoDecode->IsOn;
-
 		// Set FFmpeg specific options. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-		PropertySet^ options = ref new PropertySet();
 
 		// Below are some sample options that you can set to configure RTSP streaming
-		// options->Insert("rtsp_flags", "prefer_tcp");
-		// options->Insert("stimeout", 100000);
-
+		// Config->FFmpegOptions->Insert("rtsp_flags", "prefer_tcp");
+		// Config->FFmpegOptions->Insert("stimeout", 100000);
+		
 		// Instantiate FFmpegInteropMSS using the URI
 		mediaElement->Stop();
-		FFmpegMSS = FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(uri, forceDecodeAudio, forceDecodeVideo, options);
-		if (FFmpegMSS != nullptr)
+		try
 		{
-			MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
-
-			if (mss)
+			create_task(FFmpegInteropMSS::CreateFromUriAsync(uri, Config)).then([this](FFmpegInteropMSS^ result)
 			{
-				// Pass MediaStreamSource to Media Element
-				mediaElement->SetMediaStreamSource(mss);
+				FFmpegMSS = result;
+				MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
 
-				// Close control panel after opening media
-				Splitter->IsPaneOpen = false;
-			}
-			else
-			{
-				DisplayErrorMessage("Cannot open media");
-			}
+				if (mss)
+				{
+					// Pass MediaStreamSource to Media Element
+					mediaElement->SetMediaStreamSource(mss);
+
+					// Close control panel after opening media
+					Splitter->IsPaneOpen = false;
+				}
+				else
+				{
+					DisplayErrorMessage("Cannot open media");
+				}
+			});
 		}
-		else
+		catch (Exception^ ex)
 		{
-			DisplayErrorMessage("Cannot open media");
+			DisplayErrorMessage(ex->Message);
 		}
 	}
 }
@@ -204,7 +196,7 @@ void MainPage::ExtractFrame(Platform::Object^ sender, Windows::UI::Xaml::RoutedE
 					});
 				});
 			}
-			catch (COMException^ ex)
+			catch (Exception^ ex)
 			{
 				DisplayErrorMessage(ex->Message);
 			}

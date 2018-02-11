@@ -38,8 +38,14 @@
                         <AppBarButton Content="Open Local File" Icon="OpenFile" Margin="0, 10, 10, 0" Click="OpenLocalFile"/>
                         <TextBox PlaceholderText="Enter URI and press Enter" InputScope="Url" Width="210" Height="30" KeyUp="URIBoxKeyUp"/>
                     </StackPanel>
-                    <ToggleSwitch x:Name="toggleSwitchAudioDecode" Header="Force Decode Audio" OffContent="OFF" OnContent="ON" IsOn="False"/>
-                    <ToggleSwitch x:Name="toggleSwitchVideoDecode" Header="Force Decode Video" OffContent="OFF" OnContent="ON" IsOn="False"/>
+                    <ToggleSwitch Header="Passthrough Audio MP3" OffContent="OFF" OnContent="ON" IsOn="{x:Bind Mode=TwoWay, Path=Config.PassthroughAudioMP3}"/>
+                    <ToggleSwitch Header="Passthrough Audio AAC" OffContent="OFF" OnContent="ON" IsOn="{x:Bind Mode=TwoWay, Path=Config.PassthroughAudioAAC}" Margin="0,0,0,20" />
+
+                    <ToggleSwitch Header="Passthrough Video H264" OffContent="OFF" OnContent="ON" IsOn="{x:Bind Mode=TwoWay, Path=Config.PassthroughVideoH264}"/>
+                    <ToggleSwitch Header="Passthrough Video H264 Hi10P" OffContent="OFF" OnContent="ON" IsOn="{x:Bind Mode=TwoWay, Path=Config.PassthroughVideoH264Hi10P}"/>
+                    <ToggleSwitch Header="Passthrough Video HEVC" OffContent="OFF" OnContent="ON" IsOn="{x:Bind Mode=TwoWay, Path=Config.PassthroughVideoHEVC}"/>
+                    <ToggleSwitch Header="Allow Iyuv Video Output" OffContent="OFF" OnContent="ON" IsOn="{x:Bind Mode=TwoWay, Path=Config.VideoOutputAllowIyuv}"/>
+
                     <Button Content="Extract Frame" Click="ExtractFrame"  Margin="0,20,10,10" />
                     <ToggleSwitch x:Name="grabFrameExactSeek" Header="Exact Seek for Extract Frame" OffContent="OFF" OnContent="ON" IsOn="True"/>
                 </StackPanel>

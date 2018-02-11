@@ -48,11 +48,15 @@ namespace MediaPlayerCS
 
         public MainPage()
         {
+            Config = new FFmpegInteropConfig();
+
             this.InitializeComponent();
 
             // Show the control panel on startup so user can start opening media
             Splitter.IsPaneOpen = true;
         }
+
+        public FFmpegInteropConfig Config { get; set; }
 
         private async void OpenLocalFile(object sender, RoutedEventArgs e)
         {
@@ -74,12 +78,8 @@ namespace MediaPlayerCS
 
                 try
                 {
-                    // Read toggle switches states and use them to setup FFmpeg MSS
-                    bool forceDecodeAudio = toggleSwitchAudioDecode.IsOn;
-                    bool forceDecodeVideo = toggleSwitchVideoDecode.IsOn;
-
-					// Instantiate FFmpegInteropMSS using the opened local file stream
-                    FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
+                    // Instantiate FFmpegInteropMSS using the opened local file stream
+                    FFmpegMSS = await FFmpegInteropMSS.CreateFromStreamAsync(readStream, Config);
                     MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
 
                     if (mss != null)
@@ -102,7 +102,7 @@ namespace MediaPlayerCS
             }
         }
 
-        private void URIBoxKeyUp(object sender, KeyRoutedEventArgs e)
+        private async void URIBoxKeyUp(object sender, KeyRoutedEventArgs e)
         {
             var textBox = sender as TextBox;
             String uri = textBox.Text;
@@ -115,20 +115,15 @@ namespace MediaPlayerCS
 
                 try
                 {
-                    // Read toggle switches states and use them to setup FFmpeg MSS
-                    bool forceDecodeAudio = toggleSwitchAudioDecode.IsOn;
-                    bool forceDecodeVideo = toggleSwitchVideoDecode.IsOn;
-
                     // Set FFmpeg specific options. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-                    PropertySet options = new PropertySet();
-
+                    
                     // Below are some sample options that you can set to configure RTSP streaming
-                    // options.Add("rtsp_flags", "prefer_tcp");
-                    // options.Add("stimeout", 100000);
+                    // Config.FFmpegOptions.Add("rtsp_flags", "prefer_tcp");
+                    // Config.FFmpegOptions.Add("stimeout", 100000);
 
                     // Instantiate FFmpegInteropMSS using the URI
                     mediaElement.Stop();
-                    FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(uri, forceDecodeAudio, forceDecodeVideo, options);
+                    FFmpegMSS = await FFmpegInteropMSS.CreateFromUriAsync(uri, Config);
                     if (FFmpegMSS != null)
                     {
                         MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();

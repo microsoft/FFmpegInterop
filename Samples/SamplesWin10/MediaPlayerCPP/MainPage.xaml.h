@@ -32,6 +32,8 @@ namespace MediaPlayerCPP
 	public:
 		MainPage();
 
+		property FFmpegInterop::FFmpegInteropConfig^ Config;
+
 	private:
 		void OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 		void URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::KeyRoutedEventArgs^ e);

@@ -9,14 +9,15 @@ namespace FFmpegInterop
 	public:
 		FFmpegInteropConfig()
 		{
-			VideoOutputAllowIyuv = false;
-			VideoOutputAllowBgra8 = false;
-
 			PassthroughAudioMP3 = true;
 			PassthroughAudioAAC = true;
+
 			PassthroughVideoH264 = true;
 			PassthroughVideoH264Hi10P = false; // neither Windows codecs nor known HW decoders support Hi10P
-			PassthroughVideoHEVC = true;
+			PassthroughVideoHEVC = false; // shoule we try to detect windows version and set this to "true" automatically?
+
+			VideoOutputAllowIyuv = false;
+			VideoOutputAllowBgra8 = false;
 
 			SkipErrors = 50;
 			MaxAudioThreads = 2;

@@ -45,6 +45,17 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 		m_OutputPixelFormat = m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P ? AV_PIX_FMT_YUVJ420P : AV_PIX_FMT_YUV420P;
 		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
 	}
+	else if (m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P10LE && config->VideoOutputAllow10bit)
+	{
+		m_OutputPixelFormat = AV_PIX_FMT_P010LE;
+		OLECHAR* guidString;
+		StringFromCLSID(MFVideoFormat_P010, &guidString);
+
+		OutputMediaSubtype = ref new String(guidString);
+
+		// ensure memory is freed
+		::CoTaskMemFree(guidString);
+	}
 	else if (config->VideoOutputAllowNv12)
 	{
 		// NV12 is generally the preferred format

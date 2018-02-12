@@ -17,7 +17,9 @@ namespace FFmpegInterop
 			PassthroughVideoHEVC = false; // shoule we try to detect windows version and set this to "true" automatically?
 
 			VideoOutputAllowIyuv = false;
+			VideoOutputAllow10bit = false;
 			VideoOutputAllowBgra8 = false;
+			VideoOutputAllowNv12 = true;
 
 			SkipErrors = 50;
 			MaxAudioThreads = 2;
@@ -34,6 +36,7 @@ namespace FFmpegInterop
 		property bool PassthroughVideoHEVC;
 
 		property bool VideoOutputAllowIyuv;
+		property bool VideoOutputAllow10bit;
 		property bool VideoOutputAllowBgra8;
 		property bool VideoOutputAllowNv12;
 

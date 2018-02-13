@@ -19,17 +19,18 @@
 #include "pch.h"
 
 #include "UncompressedAudioSampleProvider.h"
+#include "NativeBufferFactory.h"
+#include "AudioEffectFactory.h"
 
 using namespace FFmpegInterop;
-
-// Minimum duration for uncompressed audio samples (50 ms)
-const LONGLONG MINAUDIOSAMPLEDURATION = 500000;
 
 UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
+	AVCodecContext* avCodecCtx,
+	FFmpegInteropConfig^ config,
+	int streamIndex)
+	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex, new AudioEffectFactory(avCodecCtx))
 	, m_pSwrCtx(nullptr)
 {
 }
@@ -41,33 +42,43 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 	if (SUCCEEDED(hr))
 	{
 		// Set default channel layout when the value is unknown (0)
-		int64 inChannelLayout = m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels);
-		int64 outChannelLayout = av_get_default_channel_layout(m_pAvCodecCtx->channels);
+		int channels = m_pAvCodecCtx->profile == FF_PROFILE_AAC_HE_V2 && m_pAvCodecCtx->extradata_size != 0 ? m_pAvCodecCtx->channels * 2 : m_pAvCodecCtx->channels;
+		int64 inChannelLayout = m_pAvCodecCtx->channel_layout && (m_pAvCodecCtx->profile != FF_PROFILE_AAC_HE_V2 || m_pAvCodecCtx->extradata_size == 0) ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(channels);
+		int64 outChannelLayout = av_get_default_channel_layout(channels);
 
-		// Set up resampler to convert any PCM format (e.g. AV_SAMPLE_FMT_FLTP) to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element.
-		// Additional logic can be added to avoid resampling PCM data that is already in AV_SAMPLE_FMT_S16_PCM.
-		m_pSwrCtx = swr_alloc_set_opts(
-			NULL,
-			outChannelLayout,
-			AV_SAMPLE_FMT_S16,
-			m_pAvCodecCtx->sample_rate,
-			inChannelLayout,
-			m_pAvCodecCtx->sample_fmt,
-			m_pAvCodecCtx->sample_rate,
-			0,
-			NULL);
+		m_outputSampleFormat =
+			(m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32 || m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P) ? AV_SAMPLE_FMT_S32 :
+			(m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP) ? AV_SAMPLE_FMT_FLT :
+			AV_SAMPLE_FMT_S16;
 
-		if (!m_pSwrCtx)
+		auto needsResampler = m_outputSampleFormat != m_pAvCodecCtx->sample_fmt || outChannelLayout != inChannelLayout;
+		
+		if (needsResampler)
 		{
-			hr = E_OUTOFMEMORY;
-		}
-	}
+			// Set up resampler to convert to output format and channel layout.
+			m_pSwrCtx = swr_alloc_set_opts(
+				NULL,
+				outChannelLayout,
+				m_outputSampleFormat,
+				m_pAvCodecCtx->sample_rate,
+				inChannelLayout,
+				m_pAvCodecCtx->sample_fmt,
+				m_pAvCodecCtx->sample_rate,
+				0,
+				NULL);
 
-	if (SUCCEEDED(hr))
-	{
-		if (swr_init(m_pSwrCtx) < 0)
-		{
-			hr = E_FAIL;
+			if (!m_pSwrCtx)
+			{
+				hr = E_OUTOFMEMORY;
+			}
+
+			if (SUCCEEDED(hr))
+			{
+				if (swr_init(m_pSwrCtx) < 0)
+				{
+					hr = E_FAIL;
+				}
+			}
 		}
 	}
 
@@ -76,94 +87,67 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 
 UncompressedAudioSampleProvider::~UncompressedAudioSampleProvider()
 {
-	if (m_pAvFrame)
-	{
-		av_frame_free(&m_pAvFrame);
-	}
-
 	// Free 
 	swr_free(&m_pSwrCtx);
 }
 
-HRESULT UncompressedAudioSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT UncompressedAudioSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration)
 {
-	// Because each packet can contain multiple frames, we have already written the packet to the stream
-	// during the decode stage.
-	return S_OK;
-}
-
-HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWriter)
-{
-	// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
-	uint8_t *resampledData = nullptr;
-	unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-	int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-	auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
-	dataWriter->WriteBytes(aBuffer);
-	av_freep(&resampledData);
-	av_frame_unref(m_pAvFrame);
-	av_frame_free(&m_pAvFrame);
-
-	return S_OK;
-}
-
-MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
-{
-	// Similar to GetNextSample in MediaSampleProvider, 
-	// but we concatenate samples until reaching a minimum duration
-	DebugMessage(L"GetNextSample\n");
-
 	HRESULT hr = S_OK;
 
-	MediaStreamSample^ sample;
-	DataWriter^ dataWriter = ref new DataWriter();
-
-	LONGLONG finalPts = -1;
-	LONGLONG finalDur = 0;
-	bool isFirstPacket = true;
-	bool isDiscontinuous;
-
-	do
+	if (m_pSwrCtx)
 	{
-		LONGLONG pts = 0;
-		LONGLONG dur = 0;
+		// Resample uncompressed frame to output format
+		uint8_t **resampledData = nullptr;
+		unsigned int aBufferSize = av_samples_alloc_array_and_samples(&resampledData, NULL, m_pAvCodecCtx->channels, avFrame->nb_samples, m_outputSampleFormat, 0);
+		int resampledDataSize = swr_convert(m_pSwrCtx, resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
 
-		hr = GetNextPacket(dataWriter, pts, dur, isFirstPacket);
-		if (isFirstPacket)
+		if (resampledDataSize < 0)
 		{
-			isDiscontinuous = m_isDiscontinuous;
+			hr = E_FAIL;
 		}
-		isFirstPacket = false;
-
-		if (SUCCEEDED(hr))
+		else
 		{
-			if (finalPts == -1)
-			{
-				finalPts = pts;
-			}
-			finalDur += dur;
-		}
-
-	} while (SUCCEEDED(hr) && finalDur < MINAUDIOSAMPLEDURATION);
-
-	if (finalDur > 0)
-	{
-		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
-		sample->Duration = { finalDur };
-		sample->Discontinuous = isDiscontinuous;
-		;
-		if (SUCCEEDED(hr))
-		{
-			// only reset flag if last packet was read successfully
-			m_isDiscontinuous = false;
+			auto size = min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvCodecCtx->channels * av_get_bytes_per_sample(m_outputSampleFormat)));
+			*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(resampledData[0], size, av_freep, resampledData);
 		}
 	}
 	else
 	{
-		// flush stream and disable any further processing
-		DebugMessage(L"Too many broken packets - disable stream\n");
-		DisableStream();
+		// Using direct buffer: just create a buffer reference to hand out to MSS pipeline
+		auto bufferRef = av_buffer_ref(avFrame->buf[0]);
+		if (bufferRef)
+		{
+			auto size = min(bufferRef->size, avFrame->nb_samples * m_pAvCodecCtx->channels * av_get_bytes_per_sample(m_outputSampleFormat));
+			*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(bufferRef->data, size, free_buffer, bufferRef);
+		}
+		else
+		{
+			hr = E_FAIL;
+		}
 	}
 
-	return sample;
+	if (SUCCEEDED(hr))
+	{
+		// always update duration with real decoded sample duration
+		auto actualDuration = (long long)avFrame->nb_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (m_pAvCodecCtx->sample_rate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
+	
+		if (frameDuration != actualDuration)
+		{
+			// compensate for start encoder padding (gapless playback)
+			if (m_pAvFormatCtx->streams[m_streamIndex]->nb_decoded_frames == 1 && m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples > 0)
+			{
+				// check if duration difference matches encoder padding
+				auto skipDuration = (long long)m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (m_pAvCodecCtx->sample_rate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
+				if (skipDuration == frameDuration - actualDuration)
+				{
+					framePts += skipDuration;
+				}
+			}
+			frameDuration = actualDuration;
+		}
+	}
+
+	return hr;
 }
+

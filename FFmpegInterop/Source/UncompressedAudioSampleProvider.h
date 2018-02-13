@@ -30,19 +30,20 @@ namespace FFmpegInterop
 	{
 	public:
 		virtual ~UncompressedAudioSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
 
 	internal:
 		UncompressedAudioSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter) override;
+			AVCodecContext* avCodecCtx,
+			FFmpegInteropConfig^ config, 
+			int streamIndex);
+		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) override;
 		virtual HRESULT AllocateResources() override;
 
 	private:
 		SwrContext* m_pSwrCtx;
+		AVSampleFormat m_outputSampleFormat;
 	};
 }
 

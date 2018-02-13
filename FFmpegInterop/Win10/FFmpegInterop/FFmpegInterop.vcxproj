@@ -35,7 +35,7 @@
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
     <ApplicationType>Windows Store</ApplicationType>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
     <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
   </PropertyGroup>
@@ -43,35 +43,35 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -225,27 +225,36 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Source\CompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\CritSec.h" />
+    <ClInclude Include="..\..\Source\FFmpegInteropConfig.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropLogging.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="..\..\Source\FFmpegReader.h" />
     <ClInclude Include="..\..\Source\H264AVCSampleProvider.h" />
-    <ClInclude Include="..\..\Source\H264SampleProvider.h" />
+    <ClInclude Include="..\..\Source\NALPacketSampleProvider.h" />
+    <ClInclude Include="..\..\Source\HEVCSampleProvider.h" />
     <ClInclude Include="..\..\Source\ILogProvider.h" />
     <ClInclude Include="..\..\Source\MediaSampleProvider.h" />
     <ClInclude Include="..\..\Source\MediaThumbnailData.h" />
+    <ClInclude Include="..\..\Source\NativeBuffer.h" />
+    <ClInclude Include="..\..\Source\NativeBufferFactory.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedVideoSampleProvider.h" />
+    <ClInclude Include="..\..\Source\VideoFrame.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Source\CompressedSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\FFmpegInteropLogging.cpp" />
     <ClCompile Include="..\..\Source\FFmpegInteropMSS.cpp" />
     <ClCompile Include="..\..\Source\FFmpegReader.cpp" />
     <ClCompile Include="..\..\Source\H264AVCSampleProvider.cpp" />
-    <ClCompile Include="..\..\Source\H264SampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\NALPacketSampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\HEVCSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\MediaSampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\NativeBufferFactory.cpp" />
     <ClCompile Include="..\..\Source\UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedVideoSampleProvider.cpp" />

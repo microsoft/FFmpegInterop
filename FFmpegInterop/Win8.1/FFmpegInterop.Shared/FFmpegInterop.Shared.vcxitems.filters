@@ -5,8 +5,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\CritSec.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegReader.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\H264SampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\NALPacketSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\MediaSampleProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\NativeBuffer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\NativeBufferFactory.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedVideoSampleProvider.h" />
@@ -20,8 +22,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropMSS.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegReader.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\H264SampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\NALPacketSampleProvider.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\MediaSampleProvider.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\NativeBufferFactory.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedSampleProvider.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedVideoSampleProvider.cpp" />

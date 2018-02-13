@@ -19,6 +19,7 @@
 #pragma once
 #include <queue>
 #include "FFmpegInteropConfig.h"
+#include "AvEffectDefinition.h"
 
 extern "C"
 {
@@ -47,6 +48,8 @@ namespace FFmpegInterop
 		virtual HRESULT CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration) { return E_FAIL; }; // must be overridden
 		virtual HRESULT SetSampleProperties(MediaStreamSample^ sample) { return S_OK; }; // can be overridded for setting extended properties
 		void DisableStream();
+		virtual void SetFilters(IVectorView<AvEffectDefinition^>^ effects) { };// override for setting effects in sample providers
+		virtual void DisableFilters() {};//override for disabling filters in sample providers;
 
 	protected private:
 		MediaSampleProvider(

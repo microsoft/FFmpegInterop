@@ -20,6 +20,7 @@
 
 #include "UncompressedAudioSampleProvider.h"
 #include "NativeBufferFactory.h"
+#include "AudioEffectFactory.h"
 
 using namespace FFmpegInterop;
 
@@ -29,7 +30,7 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	AVCodecContext* avCodecCtx,
 	FFmpegInteropConfig^ config,
 	int streamIndex)
-	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
+	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex, new AudioEffectFactory(avCodecCtx))
 	, m_pSwrCtx(nullptr)
 {
 }

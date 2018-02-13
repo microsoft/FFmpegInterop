@@ -90,7 +90,7 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
 	av_dict_free(&avDict);
-	
+
 	if (fileStreamData != nullptr)
 	{
 		fileStreamData->Release();
@@ -628,6 +628,28 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 	return hr;
 }
 
+
+
+void FFmpegInterop::FFmpegInteropMSS::SetAudioEffects(IVectorView<AvEffectDefinition^>^ audioEffects)
+{
+	audioSampleProvider->SetFilters(audioEffects);
+}
+
+void FFmpegInterop::FFmpegInteropMSS::SetVideoEffects(IVectorView<AvEffectDefinition^>^ videoEffects)
+{
+	videoSampleProvider->SetFilters(videoEffects);
+}
+
+void FFmpegInterop::FFmpegInteropMSS::DisableAudioEffects()
+{
+	audioSampleProvider->DisableFilters();
+}
+
+void FFmpegInterop::FFmpegInteropMSS::DisableVideoEffects()
+{
+	videoSampleProvider->DisableFilters();
+}
+
 MediaThumbnailData ^ FFmpegInterop::FFmpegInteropMSS::ExtractThumbnail()
 {
 	if (thumbnailStreamIndex != AVERROR_STREAM_NOT_FOUND)
@@ -711,7 +733,7 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor()
 		{
 			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 32));
 		}
-		else if(avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
+		else if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
 		{
 			auto properties = ref new AudioEncodingProperties();
 			properties->Subtype = MediaEncodingSubtypes::Float;
@@ -763,7 +785,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor()
 		videoProperties->Width = avVideoCodecCtx->width;
 
 		// Check for HEVC bitstream flavor.
-		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 22 && 
+		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 22 &&
 			(avVideoCodecCtx->extradata[0] || avVideoCodecCtx->extradata[1] || avVideoCodecCtx->extradata[2] > 1))
 		{
 			videoSampleProvider = ref new HEVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, config, videoStreamIndex);
@@ -913,7 +935,7 @@ HRESULT FFmpegInteropMSS::Seek(TimeSpan position)
 	if (streamIndex >= 0)
 	{
 		// Compensate for file start_time, then convert to stream time_base
-		auto correctedPosition = position.Duration + (avFormatCtx->start_time * 10); 
+		auto correctedPosition = position.Duration + (avFormatCtx->start_time * 10);
 		int64_t seekTarget = static_cast<int64_t>(correctedPosition / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
 
 		if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
@@ -1080,8 +1102,8 @@ IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAc
 				}
 
 				// if exact seek, continue decoding until we have the right sample
-				if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) && 
-				    (maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
+				if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) &&
+					(maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
 				{
 					continue;
 				}

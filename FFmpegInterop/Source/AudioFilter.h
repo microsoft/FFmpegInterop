@@ -37,8 +37,8 @@ class AudioFilter : public IAvEffect
 	AVFilter  *AVSource;
 	AVFilter  *AVSink;
 
-	AVFilterContext *aformat_ctx;
-	AVFilter        *aformat;
+	AVFilterContext *aResampler_ctx;
+	AVFilter        *aResampler;
 	AVFilterGraph	*graph;
 	AVFilterContext *avSource_ctx, *avSink_ctx;
 
@@ -102,8 +102,8 @@ class AudioFilter : public IAvEffect
 
 		}
 
-		AVFilters.push_back(aformat);
-		AVFilterContexts.push_back(aformat_ctx);
+		AVFilters.push_back(aResampler);
+		AVFilterContexts.push_back(aResampler_ctx);
 
 		AVFilters.push_back(AVSink);
 		AVFilterContexts.push_back(avSink_ctx);
@@ -131,7 +131,7 @@ class AudioFilter : public IAvEffect
 		graph = avfilter_graph_alloc();
 
 		if (graph)
-			return 0;
+			return S_OK;
 		else return E_FAIL;
 	}
 
@@ -195,14 +195,14 @@ class AudioFilter : public IAvEffect
 
 	HRESULT AllocResampler()
 	{
-		aformat = avfilter_get_by_name("aresample");
-		if (!aformat) {
+		aResampler = avfilter_get_by_name("aresample");
+		if (!aResampler) {
 			fprintf(stderr, "Could not find the aresample filter.\n");
 			return AVERROR_FILTER_NOT_FOUND;
 		}
 
-		aformat_ctx = avfilter_graph_alloc_filter(graph, aformat, "aformat_ctx");
-		if (!aformat_ctx) {
+		aResampler_ctx = avfilter_graph_alloc_filter(graph, aResampler, "aResampler_ctx");
+		if (!aResampler_ctx) {
 			fprintf(stderr, "Could not allocate the aresample instance.\n");
 			return AVERROR(ENOMEM);
 		}
@@ -216,9 +216,9 @@ class AudioFilter : public IAvEffect
 
 		auto configStringC = resamplerConfigString.str();
 		auto configString = configStringC.c_str();
-		auto err = avfilter_init_str(aformat_ctx, configString);
+		auto err = avfilter_init_str(aResampler_ctx, configString);
 		if (err < 0) {
-			fprintf(stderr, "Could not initialize the abuffersink instance.\n");
+			fprintf(stderr, "Could not initialize the aresample instance.\n");
 			return err;
 		}
 		return 0;
@@ -258,10 +258,9 @@ class AudioFilter : public IAvEffect
 		/* Configure the graph. */
 		err = avfilter_graph_config(graph, NULL);
 		if (err < 0) {
-			av_log(NULL, AV_LOG_ERROR, "Error configuring the filter graph\n");
 			return err;
 		}
-		return 0;
+		return S_OK;
 	}
 
 
@@ -276,7 +275,6 @@ public:
 	HRESULT AllocResources(IVectorView<AvEffectDefinition^>^ effects)
 	{
 		av_get_channel_layout_string(channel_layout_name, sizeof(channel_layout_name), inputCodecCtx->channels, inputCodecCtx->channel_layout);
-
 		return init_filter_graph(effects);
 	}
 

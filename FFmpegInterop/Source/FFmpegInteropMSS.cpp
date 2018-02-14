@@ -736,7 +736,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor()
 {
 	VideoEncodingProperties^ videoProperties;
 
-	if (avVideoCodecCtx->codec_id == AV_CODEC_ID_H264 && config->PassthroughVideoH264 && (avVideoCodecCtx->profile <= 100 || config->PassthroughVideoH264Hi10P))
+	if (avVideoCodecCtx->codec_id == AV_CODEC_ID_H264 && config->PassthroughVideoH264 && !config->IsFrameGrabber && (avVideoCodecCtx->profile <= 100 || config->PassthroughVideoH264Hi10P))
 	{
 		videoProperties = VideoEncodingProperties::CreateH264();
 		videoProperties->ProfileId = avVideoCodecCtx->profile;
@@ -754,7 +754,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor()
 		}
 	}
 #if _WIN32_WINNT >= 0x0A00 // only compile if platform toolset is Windows 10 or higher
-	else if (avVideoCodecCtx->codec_id == AV_CODEC_ID_HEVC && config->PassthroughVideoHEVC &&
+	else if (avVideoCodecCtx->codec_id == AV_CODEC_ID_HEVC && config->PassthroughVideoHEVC && !config->IsFrameGrabber &&
 		Windows::Foundation::Metadata::ApiInformation::IsMethodPresent("Windows.Media.MediaProperties.VideoEncodingProperties", "CreateHevc"))
 	{
 		videoProperties = VideoEncodingProperties::CreateHevc();
@@ -1035,9 +1035,6 @@ IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAc
 		{
 			auto cfg = ref new FFmpegInteropConfig();
 			cfg->MaxVideoThreads = 1;
-			cfg->VideoOutputAllowIyuv = false;
-			cfg->VideoOutputAllowNv12 = false;
-			cfg->VideoOutputAllowBgra8 = true;
 			cfg->IsFrameGrabber = true;
 
 			auto interopMSS = ref new FFmpegInteropMSS(cfg);

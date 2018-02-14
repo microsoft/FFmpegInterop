@@ -38,7 +38,12 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	int streamIndex)
 	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
 {
-	if (config->VideoOutputAllowIyuv && (m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P || m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P)
+	if (config->IsFrameGrabber)
+	{
+		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
+		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
+	}
+	else if (config->VideoOutputAllowIyuv && (m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P || m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P)
 		&& m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
 	{
 		// if format is yuv and yuv is allowed and codec supports direct buffer decoding, use yuv

@@ -24,6 +24,7 @@
 #include "MediaThumbnailData.h"
 #include "VideoFrame.h"
 #include <pplawait.h>
+#include "AvEffectDefinition.h"
 
 using namespace Platform;
 using namespace Windows::Foundation;
@@ -57,7 +58,11 @@ namespace FFmpegInterop
 		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(stream, position, exactSeek, 0); };
 		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position) { return ExtractVideoFrameAsync(stream, position, false, 0); };
 		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream) { return ExtractVideoFrameAsync(stream, { 0 }, false, 0); };
-		
+
+		void SetAudioEffects(IVectorView<AvEffectDefinition^>^ audioEffects);
+		void SetVideoEffects(IVectorView<AvEffectDefinition^>^ videoEffects);
+		void DisableAudioEffects();
+		void DisableVideoEffects();
 		MediaThumbnailData^ ExtractThumbnail();
 
 		// Contructor
@@ -124,25 +129,25 @@ namespace FFmpegInterop
 		EventRegistrationToken startingRequestedToken;
 		EventRegistrationToken sampleRequestedToken;
 
-		internal:
-		AVDictionary* avDict;
+	internal:
+		AVDictionary * avDict;
 		AVIOContext* avIOCtx;
 		AVFormatContext* avFormatCtx;
 		AVCodecContext* avAudioCodecCtx;
 		AVCodecContext* avVideoCodecCtx;
 
-		private:
+	private:
 		FFmpegInteropConfig ^ config;
 		AudioStreamDescriptor^ audioStreamDescriptor;
 		VideoStreamDescriptor^ videoStreamDescriptor;
 		int audioStreamIndex;
 		int videoStreamIndex;
 		int thumbnailStreamIndex;
-		
+
 		bool rotateVideo;
 		int rotationAngle;
 		std::recursive_mutex mutexGuard;
-		
+
 		MediaSampleProvider^ audioSampleProvider;
 		MediaSampleProvider^ videoSampleProvider;
 

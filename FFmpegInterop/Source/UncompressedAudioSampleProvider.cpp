@@ -20,6 +20,12 @@
 
 #include "UncompressedAudioSampleProvider.h"
 #include "NativeBufferFactory.h"
+#include "AudioEffectFactory.h"
+
+extern "C"
+{
+#include <libswresample/swresample.h>
+}
 
 using namespace FFmpegInterop;
 
@@ -37,49 +43,99 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 HRESULT UncompressedAudioSampleProvider::AllocateResources()
 {
 	HRESULT hr = S_OK;
+
 	hr = UncompressedSampleProvider::AllocateResources();
 	if (SUCCEEDED(hr))
 	{
-		// Set default channel layout when the value is unknown (0)
-		int channels = m_pAvCodecCtx->profile == FF_PROFILE_AAC_HE_V2 && m_pAvCodecCtx->extradata_size != 0 ? m_pAvCodecCtx->channels * 2 : m_pAvCodecCtx->channels;
-		int64 inChannelLayout = m_pAvCodecCtx->channel_layout && (m_pAvCodecCtx->profile != FF_PROFILE_AAC_HE_V2 || m_pAvCodecCtx->extradata_size == 0) ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(channels);
-		int64 outChannelLayout = av_get_default_channel_layout(channels);
-
-		m_outputSampleFormat =
-			(m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32 || m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P) ? AV_SAMPLE_FMT_S32 :
-			(m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || m_pAvCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP) ? AV_SAMPLE_FMT_FLT :
+		inChannels = outChannels = m_pAvCodecCtx->profile == FF_PROFILE_AAC_HE_V2 && m_pAvCodecCtx->channels == 1 ? 2 : m_pAvCodecCtx->channels;
+		inChannelLayout = m_pAvCodecCtx->channel_layout && (m_pAvCodecCtx->profile != FF_PROFILE_AAC_HE_V2 || m_pAvCodecCtx->channels > 1) ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(inChannels);
+		outChannelLayout = av_get_default_channel_layout(outChannels);
+		inSampleRate = outSampleRate = m_pAvCodecCtx->sample_rate;
+		inSampleFormat = m_pAvCodecCtx->sample_fmt;
+		outSampleFormat =
+			(inSampleFormat == AV_SAMPLE_FMT_S32 || inSampleFormat == AV_SAMPLE_FMT_S32P) ? AV_SAMPLE_FMT_S32 :
+			(inSampleFormat == AV_SAMPLE_FMT_FLT || inSampleFormat == AV_SAMPLE_FMT_FLTP) ? AV_SAMPLE_FMT_FLT :
 			AV_SAMPLE_FMT_S16;
+	
+		frameProvider = ref new UncompressedFrameProvider(m_pAvFormatCtx, m_pAvCodecCtx, ref new AudioEffectFactory(m_pAvCodecCtx, inChannelLayout, inChannels));
+	
+		needsUpdateResampler = inSampleFormat != outSampleFormat || inChannels != outChannels || inChannelLayout != outChannelLayout || inSampleRate != outSampleRate;
+	}
 
-		auto needsResampler = m_outputSampleFormat != m_pAvCodecCtx->sample_fmt || outChannelLayout != inChannelLayout;
-		
-		if (needsResampler)
+	return hr;
+}
+
+HRESULT UncompressedAudioSampleProvider::CheckFormatChanged(AVFrame* frame)
+{
+	HRESULT hr = S_OK;
+
+	bool hasFormatChanged = frame->channels != inChannels || frame->sample_rate != inSampleRate || frame->format != inSampleFormat;
+	if (hasFormatChanged)
+	{
+		inChannels = frame->channels;
+		inChannelLayout = frame->channel_layout ? frame->channel_layout : av_get_default_channel_layout(inChannels);
+		inSampleRate = frame->sample_rate;
+		inSampleFormat = (AVSampleFormat)frame->format;
+		needsUpdateResampler = true;
+	}
+
+	if (needsUpdateResampler)
+	{
+		hr = UpdateResampler();
+	}
+
+	return hr;
+}
+
+HRESULT UncompressedAudioSampleProvider::UpdateResampler()
+{
+	HRESULT hr = S_OK;
+
+	auto needsResampler = inChannels != outChannels || inChannelLayout != outChannelLayout || inSampleRate != outSampleRate || inSampleFormat != outSampleFormat;
+	if (needsResampler)
+	{
+		if (m_pSwrCtx)
 		{
-			// Set up resampler to convert to output format and channel layout.
-			m_pSwrCtx = swr_alloc_set_opts(
-				NULL,
-				outChannelLayout,
-				m_outputSampleFormat,
-				m_pAvCodecCtx->sample_rate,
-				inChannelLayout,
-				m_pAvCodecCtx->sample_fmt,
-				m_pAvCodecCtx->sample_rate,
-				0,
-				NULL);
+			swr_free(&m_pSwrCtx);
+		}
 
-			if (!m_pSwrCtx)
-			{
-				hr = E_OUTOFMEMORY;
-			}
+		// Set up resampler to convert to output format and channel layout.
+		m_pSwrCtx = swr_alloc_set_opts(
+			NULL,
+			outChannelLayout,
+			outSampleFormat,
+			outSampleRate,
+			inChannelLayout,
+			inSampleFormat,
+			inSampleRate,
+			0,
+			NULL);
 
-			if (SUCCEEDED(hr))
+		if (!m_pSwrCtx)
+		{
+			hr = E_OUTOFMEMORY;
+		}
+
+		if (SUCCEEDED(hr))
+		{
+			if (swr_init(m_pSwrCtx) < 0)
 			{
-				if (swr_init(m_pSwrCtx) < 0)
-				{
-					hr = E_FAIL;
-				}
+				hr = E_FAIL;
+				swr_free(&m_pSwrCtx);
 			}
 		}
 	}
+	else
+	{
+		//dispose of it if we don't need it anymore
+		if (m_pSwrCtx)
+		{
+			swr_free(&m_pSwrCtx);
+		}
+	}
+
+	// force update next time if there was an error
+	needsUpdateResampler = FAILED(hr);
 
 	return hr;
 }
@@ -93,51 +149,56 @@ UncompressedAudioSampleProvider::~UncompressedAudioSampleProvider()
 HRESULT UncompressedAudioSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration)
 {
 	HRESULT hr = S_OK;
-
-	if (m_pSwrCtx)
+	
+	hr = CheckFormatChanged(avFrame);
+	
+	if (SUCCEEDED(hr))
 	{
-		// Resample uncompressed frame to output format
-		uint8_t **resampledData = nullptr;
-		unsigned int aBufferSize = av_samples_alloc_array_and_samples(&resampledData, NULL, m_pAvCodecCtx->channels, avFrame->nb_samples, m_outputSampleFormat, 0);
-		int resampledDataSize = swr_convert(m_pSwrCtx, resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
-
-		if (resampledDataSize < 0)
+		if (m_pSwrCtx)
 		{
-			hr = E_FAIL;
+			// Resample uncompressed frame to output format
+			uint8_t **resampledData = nullptr;
+			unsigned int aBufferSize = av_samples_alloc_array_and_samples(&resampledData, NULL, outChannels, avFrame->nb_samples, outSampleFormat, 0);
+			int resampledDataSize = swr_convert(m_pSwrCtx, resampledData, aBufferSize, (const uint8_t **)avFrame->extended_data, avFrame->nb_samples);
+
+			if (resampledDataSize < 0)
+			{
+				hr = E_FAIL;
+			}
+			else
+			{
+				auto size = min(aBufferSize, (unsigned int)(resampledDataSize * outChannels * av_get_bytes_per_sample(outSampleFormat)));
+				*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(resampledData[0], size, av_freep, resampledData);
+			}
 		}
 		else
 		{
-			auto size = min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvCodecCtx->channels * av_get_bytes_per_sample(m_outputSampleFormat)));
-			*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(resampledData[0], size, av_freep, resampledData);
-		}
-	}
-	else
-	{
-		// Using direct buffer: just create a buffer reference to hand out to MSS pipeline
-		auto bufferRef = av_buffer_ref(avFrame->buf[0]);
-		if (bufferRef)
-		{
-			auto size = min(bufferRef->size, avFrame->nb_samples * m_pAvCodecCtx->channels * av_get_bytes_per_sample(m_outputSampleFormat));
-			*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(bufferRef->data, size, free_buffer, bufferRef);
-		}
-		else
-		{
-			hr = E_FAIL;
+			// Using direct buffer: just create a buffer reference to hand out to MSS pipeline
+			auto bufferRef = av_buffer_ref(avFrame->buf[0]);
+			if (bufferRef)
+			{
+				auto size = min(bufferRef->size, avFrame->nb_samples * outChannels * av_get_bytes_per_sample(outSampleFormat));
+				*pBuffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(bufferRef->data, size, free_buffer, bufferRef);
+			}
+			else
+			{
+				hr = E_FAIL;
+			}
 		}
 	}
 
 	if (SUCCEEDED(hr))
 	{
 		// always update duration with real decoded sample duration
-		auto actualDuration = (long long)avFrame->nb_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (m_pAvCodecCtx->sample_rate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
-	
+		auto actualDuration = (long long)avFrame->nb_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (outSampleRate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
+
 		if (frameDuration != actualDuration)
 		{
 			// compensate for start encoder padding (gapless playback)
 			if (m_pAvFormatCtx->streams[m_streamIndex]->nb_decoded_frames == 1 && m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples > 0)
 			{
 				// check if duration difference matches encoder padding
-				auto skipDuration = (long long)m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (m_pAvCodecCtx->sample_rate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
+				auto skipDuration = (long long)m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (outSampleRate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
 				if (skipDuration == frameDuration - actualDuration)
 				{
 					framePts += skipDuration;

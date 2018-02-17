@@ -225,6 +225,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Source\AbstractEffectFactory.h" />
+    <ClInclude Include="..\..\Source\AudioEffectFactory.h" />
+    <ClInclude Include="..\..\Source\AudioFilter.h" />
+    <ClInclude Include="..\..\Source\AvEffectDefinition.h" />
     <ClInclude Include="..\..\Source\CompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\CritSec.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropConfig.h" />
@@ -232,6 +236,7 @@
     <ClInclude Include="..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="..\..\Source\FFmpegReader.h" />
     <ClInclude Include="..\..\Source\H264AVCSampleProvider.h" />
+    <ClInclude Include="..\..\Source\IAvEffect.h" />
     <ClInclude Include="..\..\Source\NALPacketSampleProvider.h" />
     <ClInclude Include="..\..\Source\HEVCSampleProvider.h" />
     <ClInclude Include="..\..\Source\ILogProvider.h" />
@@ -240,8 +245,10 @@
     <ClInclude Include="..\..\Source\NativeBuffer.h" />
     <ClInclude Include="..\..\Source\NativeBufferFactory.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
+    <ClInclude Include="..\..\Source\UncompressedFrameProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedVideoSampleProvider.h" />
+    <ClInclude Include="..\..\Source\VideoEffectFactory.h" />
     <ClInclude Include="..\..\Source\VideoFrame.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>

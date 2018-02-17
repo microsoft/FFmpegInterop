@@ -20,6 +20,7 @@
 #include "UncompressedVideoSampleProvider.h"
 #include "NativeBufferFactory.h"
 #include <mfapi.h>
+#include "VideoEffectFactory.h"
 
 extern "C"
 {
@@ -38,78 +39,79 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
 	int streamIndex)
 	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
 {
-	if (config->IsFrameGrabber)
-	{
-		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
-		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
-	}
-	else if (config->VideoOutputAllowIyuv && (m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P || m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P)
-		&& m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
-	{
-		// if format is yuv and yuv is allowed and codec supports direct buffer decoding, use yuv
-		m_OutputPixelFormat = m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P ? AV_PIX_FMT_YUVJ420P : AV_PIX_FMT_YUV420P;
-		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
-	}
-	else if (m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P10LE && config->VideoOutputAllow10bit)
-	{
-		m_OutputPixelFormat = AV_PIX_FMT_P010LE;
-		OLECHAR* guidString;
-		StringFromCLSID(MFVideoFormat_P010, &guidString);
+if (config->IsFrameGrabber)
+{
+	m_OutputPixelFormat = AV_PIX_FMT_BGRA;
+	OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
+}
+else if (config->VideoOutputAllowIyuv && (m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P || m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P)
+	&& m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
+{
+	// if format is yuv and yuv is allowed and codec supports direct buffer decoding, use yuv
+	m_OutputPixelFormat = m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P ? AV_PIX_FMT_YUVJ420P : AV_PIX_FMT_YUV420P;
+	OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
+}
+else if (m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUV420P10LE && config->VideoOutputAllow10bit)
+{
+	m_OutputPixelFormat = AV_PIX_FMT_P010LE;
+	OLECHAR* guidString;
+	StringFromCLSID(MFVideoFormat_P010, &guidString);
 
-		OutputMediaSubtype = ref new String(guidString);
+	OutputMediaSubtype = ref new String(guidString);
 
-		// ensure memory is freed
-		::CoTaskMemFree(guidString);
-	}
-	else if (config->VideoOutputAllowNv12)
-	{
-		// NV12 is generally the preferred format
-		m_OutputPixelFormat = AV_PIX_FMT_NV12;
-		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
-	}
-	else if (config->VideoOutputAllowIyuv)
-	{
-		m_OutputPixelFormat = m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P 	? AV_PIX_FMT_YUVJ420P : AV_PIX_FMT_YUV420P;
-		OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
-	}
-	else if (config->VideoOutputAllowBgra8)
-	{
-		m_OutputPixelFormat = AV_PIX_FMT_BGRA;
-		OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
-	}
-	else // if no format is allowed, we still use NV12
-	{
-		m_OutputPixelFormat = AV_PIX_FMT_NV12;
-		OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
-	}
+	// ensure memory is freed
+	::CoTaskMemFree(guidString);
+}
+else if (config->VideoOutputAllowNv12)
+{
+	// NV12 is generally the preferred format
+	m_OutputPixelFormat = AV_PIX_FMT_NV12;
+	OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
+}
+else if (config->VideoOutputAllowIyuv)
+{
+	m_OutputPixelFormat = m_pAvCodecCtx->pix_fmt == AV_PIX_FMT_YUVJ420P ? AV_PIX_FMT_YUVJ420P : AV_PIX_FMT_YUV420P;
+	OutputMediaSubtype = MediaEncodingSubtypes::Iyuv;
+}
+else if (config->VideoOutputAllowBgra8)
+{
+	m_OutputPixelFormat = AV_PIX_FMT_BGRA;
+	OutputMediaSubtype = MediaEncodingSubtypes::Bgra8;
+}
+else // if no format is allowed, we still use NV12
+{
+	m_OutputPixelFormat = AV_PIX_FMT_NV12;
+	OutputMediaSubtype = MediaEncodingSubtypes::Nv12;
+}
 
-	auto width = avCodecCtx->width;
-	auto height = avCodecCtx->height;
+auto width = avCodecCtx->width;
+auto height = avCodecCtx->height;
 
-	if (m_pAvCodecCtx->pix_fmt == m_OutputPixelFormat)
+if (m_pAvCodecCtx->pix_fmt == m_OutputPixelFormat)
+{
+	if (m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
 	{
-		if (m_pAvCodecCtx->codec->capabilities & AV_CODEC_CAP_DR1)
-		{
-			// This codec supports direct buffer decoding.
-			// Get decoder frame size and override get_buffer2...
-			avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
+		// This codec supports direct buffer decoding.
+		// Get decoder frame size and override get_buffer2...
+		avcodec_align_dimensions(m_pAvCodecCtx, &width, &height);
 
-			m_pAvCodecCtx->get_buffer2 = get_buffer2;
-			m_pAvCodecCtx->opaque = (void*)this;
-		}
-		else
-		{
-			m_bUseScaler = true;
-		}
+		m_pAvCodecCtx->get_buffer2 = get_buffer2;
+		m_pAvCodecCtx->opaque = (void*)this;
 	}
 	else
 	{
-		// Scaler required to convert pixel format
 		m_bUseScaler = true;
 	}
+}
+else
+{
+	// Scaler required to convert pixel format
+	m_bUseScaler = true;
+}
 
-	DecoderWidth = width;
-	DecoderHeight = height;
+DecoderWidth = width;
+DecoderHeight = height;
+UncompressedSampleProvider::frameProvider = ref new UncompressedFrameProvider(m_pAvFormatCtx, m_pAvCodecCtx, ref new VideoEffectFactory(m_pAvCodecCtx));
 }
 
 HRESULT UncompressedVideoSampleProvider::InitializeScalerIfRequired()

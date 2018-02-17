@@ -22,13 +22,14 @@
 using namespace FFmpegInterop;
 
 UncompressedSampleProvider::UncompressedSampleProvider(
-	FFmpegReader^ reader, 
-	AVFormatContext* avFormatCtx, 
+	FFmpegReader^ reader,
+	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx,
 	FFmpegInteropConfig^ config,
-	int streamIndex)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
+	int streamIndex
+): MediaSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
 {
+	
 }
 
 HRESULT UncompressedSampleProvider::CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration)
@@ -89,7 +90,7 @@ HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVFrame* avFrame, 
 	while (SUCCEEDED(hr))
 	{
 		// Try to get a frame from the decoder.
-		auto decodeFrame = avcodec_receive_frame(m_pAvCodecCtx, avFrame);
+		auto decodeFrame = frameProvider->GetFrameFromCodec(avFrame);
 
 		if (decodeFrame == AVERROR(EAGAIN))
 		{

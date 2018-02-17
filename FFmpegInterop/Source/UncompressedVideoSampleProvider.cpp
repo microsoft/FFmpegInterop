@@ -201,7 +201,7 @@ HRESULT UncompressedVideoSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 	if (hr == S_OK)
 	{
 		// Try to get the best effort timestamp for the frame.
-		framePts = avFrame->best_effort_timestamp;
+		framePts = av_frame_get_best_effort_timestamp(avFrame);
 		m_interlaced_frame = avFrame->interlaced_frame == 1;
 		m_top_field_first = avFrame->top_field_first == 1;
 		m_chroma_location = avFrame->chroma_location;

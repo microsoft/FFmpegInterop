@@ -58,7 +58,7 @@ HRESULT UncompressedSampleProvider::CreateNextSampleBuffer(IBuffer^* pBuffer, in
 			if (SUCCEEDED(hr))
 			{
 				// sample created. update m_nextFramePts in case pts or duration have changed
-				m_nextFramePts = samplePts + sampleDuration;
+				nextFramePts = samplePts + sampleDuration;
 				break;
 			}
 		}
@@ -118,10 +118,10 @@ HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVFrame* avFrame, 
 			}
 			else
 			{
-				framePts = m_nextFramePts;
+				framePts = nextFramePts;
 			}
 			frameDuration = avFrame->pkt_duration;
-			m_nextFramePts = framePts + frameDuration;
+			nextFramePts = framePts + frameDuration;
 
 			hr = S_OK;
 			break;
@@ -171,6 +171,13 @@ HRESULT UncompressedSampleProvider::FeedPacketToDecoder()
 			hr = E_FAIL;
 			DebugMessage(L"Decoder failed on the sample.\n");
 		}
+
+		// store first packet pts as nextFramePts, in case frames do not carry correct pts values
+		if (SUCCEEDED(hr) && !hasNextFramePts)
+		{
+			nextFramePts = pts;
+			hasNextFramePts = true;
+		}
 	}
 
 	if (avPacket)
@@ -179,4 +186,12 @@ HRESULT UncompressedSampleProvider::FeedPacketToDecoder()
 	}
 
 	return hr;
+}
+
+void UncompressedSampleProvider::Flush()
+{
+	MediaSampleProvider::Flush();
+
+	// after seek we need to get first packet pts again
+	hasNextFramePts = false;
 }

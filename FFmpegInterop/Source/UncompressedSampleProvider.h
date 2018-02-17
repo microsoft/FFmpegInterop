@@ -40,8 +40,12 @@ namespace FFmpegInterop
 		virtual HRESULT GetFrameFromFFmpegDecoder(AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration);
 		virtual HRESULT FeedPacketToDecoder();
 
+	public:
+		virtual void Flush() override;
+
 	private:
-		int64 m_nextFramePts;
+		int64 nextFramePts;
+		bool hasNextFramePts;
 	};
 }
 

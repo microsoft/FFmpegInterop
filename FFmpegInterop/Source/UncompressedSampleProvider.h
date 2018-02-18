@@ -50,8 +50,12 @@ namespace FFmpegInterop
 		}
 		UncompressedFrameProvider ^ frameProvider;
 
+	public:
+		virtual void Flush() override;
+
 	private:
-		int64 m_nextFramePts;
+		int64 nextFramePts;
+		bool hasNextFramePts;
 	};
 }
 

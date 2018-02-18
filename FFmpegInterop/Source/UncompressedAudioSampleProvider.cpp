@@ -69,10 +69,11 @@ HRESULT UncompressedAudioSampleProvider::CheckFormatChanged(AVFrame* frame)
 {
 	HRESULT hr = S_OK;
 
-	bool hasFormatChanged = frame->channels != inChannels || frame->sample_rate != inSampleRate || frame->format != inSampleFormat;
+	auto channels = av_frame_get_channels(frame);
+	bool hasFormatChanged = channels != inChannels || frame->sample_rate != inSampleRate || frame->format != inSampleFormat;
 	if (hasFormatChanged)
 	{
-		inChannels = frame->channels;
+		inChannels = channels;
 		inChannelLayout = frame->channel_layout ? frame->channel_layout : av_get_default_channel_layout(inChannels);
 		inSampleRate = frame->sample_rate;
 		inSampleFormat = (AVSampleFormat)frame->format;

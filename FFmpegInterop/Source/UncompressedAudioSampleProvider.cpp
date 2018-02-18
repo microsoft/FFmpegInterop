@@ -40,29 +40,42 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 {
 }
 
-HRESULT UncompressedAudioSampleProvider::AllocateResources()
+IMediaStreamDescriptor^ UncompressedAudioSampleProvider::CreateStreamDescriptor()
 {
-	HRESULT hr = S_OK;
+	inChannels = outChannels = m_pAvCodecCtx->profile == FF_PROFILE_AAC_HE_V2 && m_pAvCodecCtx->channels == 1 ? 2 : m_pAvCodecCtx->channels;
+	inChannelLayout = m_pAvCodecCtx->channel_layout && (m_pAvCodecCtx->profile != FF_PROFILE_AAC_HE_V2 || m_pAvCodecCtx->channels > 1) ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(inChannels);
+	outChannelLayout = av_get_default_channel_layout(outChannels);
+	inSampleRate = outSampleRate = m_pAvCodecCtx->sample_rate;
+	inSampleFormat = m_pAvCodecCtx->sample_fmt;
+	outSampleFormat =
+		(inSampleFormat == AV_SAMPLE_FMT_S32 || inSampleFormat == AV_SAMPLE_FMT_S32P) ? AV_SAMPLE_FMT_S32 :
+		(inSampleFormat == AV_SAMPLE_FMT_FLT || inSampleFormat == AV_SAMPLE_FMT_FLTP) ? AV_SAMPLE_FMT_FLT :
+		AV_SAMPLE_FMT_S16;
 
-	hr = UncompressedSampleProvider::AllocateResources();
-	if (SUCCEEDED(hr))
+	frameProvider = ref new UncompressedFrameProvider(m_pAvFormatCtx, m_pAvCodecCtx, ref new AudioEffectFactory(m_pAvCodecCtx, inChannelLayout, inChannels));
+
+	needsUpdateResampler = inSampleFormat != outSampleFormat || inChannels != outChannels || inChannelLayout != outChannelLayout || inSampleRate != outSampleRate;
+
+	// We try to preserve source format
+	if (outSampleFormat == AV_SAMPLE_FMT_S32)
 	{
-		inChannels = outChannels = m_pAvCodecCtx->profile == FF_PROFILE_AAC_HE_V2 && m_pAvCodecCtx->channels == 1 ? 2 : m_pAvCodecCtx->channels;
-		inChannelLayout = m_pAvCodecCtx->channel_layout && (m_pAvCodecCtx->profile != FF_PROFILE_AAC_HE_V2 || m_pAvCodecCtx->channels > 1) ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(inChannels);
-		outChannelLayout = av_get_default_channel_layout(outChannels);
-		inSampleRate = outSampleRate = m_pAvCodecCtx->sample_rate;
-		inSampleFormat = m_pAvCodecCtx->sample_fmt;
-		outSampleFormat =
-			(inSampleFormat == AV_SAMPLE_FMT_S32 || inSampleFormat == AV_SAMPLE_FMT_S32P) ? AV_SAMPLE_FMT_S32 :
-			(inSampleFormat == AV_SAMPLE_FMT_FLT || inSampleFormat == AV_SAMPLE_FMT_FLTP) ? AV_SAMPLE_FMT_FLT :
-			AV_SAMPLE_FMT_S16;
-	
-		frameProvider = ref new UncompressedFrameProvider(m_pAvFormatCtx, m_pAvCodecCtx, ref new AudioEffectFactory(m_pAvCodecCtx, inChannelLayout, inChannels));
-	
-		needsUpdateResampler = inSampleFormat != outSampleFormat || inChannels != outChannels || inChannelLayout != outChannelLayout || inSampleRate != outSampleRate;
+		return ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(outSampleRate, outChannels, 32));
 	}
-
-	return hr;
+	else if (outSampleFormat == AV_SAMPLE_FMT_FLT)
+	{
+		auto properties = ref new AudioEncodingProperties();
+		properties->Subtype = MediaEncodingSubtypes::Float;
+		properties->BitsPerSample = 32;
+		properties->SampleRate = outSampleRate;
+		properties->ChannelCount = outChannels;
+		properties->Bitrate = 32 * outSampleRate * outChannels;
+		return ref new AudioStreamDescriptor(properties);
+	}
+	else
+	{
+		// Use S16 for all other cases
+		return ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(outSampleRate, outChannels, 16));
+	}
 }
 
 HRESULT UncompressedAudioSampleProvider::CheckFormatChanged(AVFrame* frame)

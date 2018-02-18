@@ -32,9 +32,6 @@ namespace FFmpegInterop
 	{
 	public:
 		virtual ~UncompressedVideoSampleProvider();
-		property String^ OutputMediaSubtype;
-		property int DecoderWidth;
-		property int DecoderHeight;
 
 	internal:
 		UncompressedVideoSampleProvider(
@@ -43,15 +40,21 @@ namespace FFmpegInterop
 			AVCodecContext* avCodecCtx,
 			FFmpegInteropConfig^ config, 
 			int streamIndex);
+		IMediaStreamDescriptor^ CreateStreamDescriptor() override;
 		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) override;
 		virtual HRESULT SetSampleProperties(MediaStreamSample^ sample) override;
 		AVPixelFormat GetOutputPixelFormat() { return m_OutputPixelFormat; }
 
 	private:
+		void SelectOutputFormat();
 		HRESULT InitializeScalerIfRequired();
 		HRESULT FillLinesAndBuffer(int* linesize, byte** data, AVBufferRef** buffer);
 		AVBufferRef* AllocateBuffer(int totalSize);
 		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
+
+		String^ outputMediaSubtype;
+		int decoderWidth;
+		int decoderHeight;
 
 		AVBufferPool *m_pBufferPool;
 		AVPixelFormat m_OutputPixelFormat;

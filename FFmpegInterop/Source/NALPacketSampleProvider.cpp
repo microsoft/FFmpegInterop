@@ -26,8 +26,9 @@ NALPacketSampleProvider::NALPacketSampleProvider(
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx,
 	FFmpegInteropConfig^ config,
-	int streamIndex)
-	: CompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
+	int streamIndex,
+	VideoEncodingProperties^ encodingProperties)
+	: CompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex, encodingProperties)
 {
 }
 

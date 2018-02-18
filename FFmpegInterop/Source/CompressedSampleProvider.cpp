@@ -8,8 +8,23 @@ CompressedSampleProvider::CompressedSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx,
-	FFmpegInteropConfig^ config, 
-	int streamIndex) : MediaSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
+	FFmpegInteropConfig^ config,
+	int streamIndex,
+	VideoEncodingProperties^ encodingProperties) :
+	MediaSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex),
+	videoEncodingProperties(encodingProperties)
+{
+}
+
+CompressedSampleProvider::CompressedSampleProvider(
+	FFmpegReader^ reader,
+	AVFormatContext* avFormatCtx,
+	AVCodecContext* avCodecCtx,
+	FFmpegInteropConfig^ config,
+	int streamIndex,
+	AudioEncodingProperties^ encodingProperties) :
+	MediaSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex),
+	audioEncodingProperties(encodingProperties)
 {
 }
 
@@ -49,4 +64,19 @@ HRESULT CompressedSampleProvider::CreateBufferFromPacket(AVPacket* avPacket, IBu
 	}
 
 	return hr;
+}
+
+IMediaStreamDescriptor^ CompressedSampleProvider::CreateStreamDescriptor()
+{
+	IMediaStreamDescriptor^ mediaStreamDescriptor;
+	if (videoEncodingProperties != nullptr)
+	{
+		SetCommonVideoEncodingProperties(videoEncodingProperties, true);
+		mediaStreamDescriptor = ref new VideoStreamDescriptor(videoEncodingProperties);
+	}
+	else
+	{
+		mediaStreamDescriptor = ref new AudioStreamDescriptor(audioEncodingProperties);
+	}
+	return mediaStreamDescriptor;
 }

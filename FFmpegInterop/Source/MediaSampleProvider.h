@@ -28,28 +28,36 @@ extern "C"
 
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::Core;
+using namespace Windows::Media::MediaProperties;
 
 namespace FFmpegInterop
 {
 	ref class FFmpegReader;
 
-	ref class MediaSampleProvider
+	ref class MediaSampleProvider abstract
 	{
 	public:
 		virtual ~MediaSampleProvider();
 		virtual MediaStreamSample^ GetNextSample();
 		virtual void Flush();
 
+		property IMediaStreamDescriptor^ StreamDescriptor
+		{
+			IMediaStreamDescriptor^ get() { return m_streamDescriptor; }
+		}
+
 	internal:
-		virtual HRESULT AllocateResources();
+		virtual HRESULT Initialize();
 		void QueuePacket(AVPacket *packet);
 		AVPacket* PopPacket();
 		HRESULT GetNextPacket(AVPacket** avPacket, LONGLONG & packetPts, LONGLONG & packetDuration);
-		virtual HRESULT CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration) { return E_FAIL; }; // must be overridden
+		virtual HRESULT CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration) = 0;
+		virtual IMediaStreamDescriptor^ CreateStreamDescriptor() = 0;
 		virtual HRESULT SetSampleProperties(MediaStreamSample^ sample) { return S_OK; }; // can be overridded for setting extended properties
 		void DisableStream();
 		virtual void SetFilters(IVectorView<AvEffectDefinition^>^ effects) { };// override for setting effects in sample providers
 		virtual void DisableFilters() {};//override for disabling filters in sample providers;
+		virtual void SetCommonVideoEncodingProperties(VideoEncodingProperties^ videoEncodingProperties, bool isCompressedFormat);
 
 	protected private:
 		MediaSampleProvider(
@@ -62,6 +70,7 @@ namespace FFmpegInterop
 	private:
 		std::queue<AVPacket*> m_packetQueue;
 		int64 m_nextPacketPts;
+		IMediaStreamDescriptor^ m_streamDescriptor;
 
 	internal:
 		// The FFmpeg context. Because they are complex types

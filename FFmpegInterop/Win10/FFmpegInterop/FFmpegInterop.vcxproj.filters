@@ -41,5 +41,12 @@
     <ClInclude Include="..\..\Source\CompressedSampleProvider.h" />
     <ClInclude Include="..\..\Source\VideoFrame.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropConfig.h" />
+    <ClInclude Include="..\..\Source\AbstractEffectFactory.h" />
+    <ClInclude Include="..\..\Source\AudioEffectFactory.h" />
+    <ClInclude Include="..\..\Source\AudioFilter.h" />
+    <ClInclude Include="..\..\Source\AvEffectDefinition.h" />
+    <ClInclude Include="..\..\Source\IAvEffect.h" />
+    <ClInclude Include="..\..\Source\UncompressedFrameProvider.h" />
+    <ClInclude Include="..\..\Source\VideoEffectFactory.h" />
   </ItemGroup>
 </Project>

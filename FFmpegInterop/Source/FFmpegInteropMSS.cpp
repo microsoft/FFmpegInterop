@@ -47,6 +47,7 @@ static int lock_manager(void **mtx, enum AVLockOp op);
 
 // Flag for ffmpeg global setup
 static bool isRegistered = false;
+std::mutex isRegisteredMutex;
 
 // Initialize an FFmpegInteropObject
 FFmpegInteropMSS::FFmpegInteropMSS(FFmpegInteropConfig^ interopConfig)
@@ -58,9 +59,14 @@ FFmpegInteropMSS::FFmpegInteropMSS(FFmpegInteropConfig^ interopConfig)
 {
 	if (!isRegistered)
 	{
-		av_register_all();
-		av_lockmgr_register(lock_manager);
-		isRegistered = true;
+		isRegisteredMutex.lock();
+		if (!isRegistered)
+		{
+			av_register_all();
+			av_lockmgr_register(lock_manager);
+			isRegistered = true;
+		}
+		isRegisteredMutex.unlock();
 	}
 }
 
@@ -90,7 +96,7 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
 	av_dict_free(&avDict);
-	
+
 	if (fileStreamData != nullptr)
 	{
 		fileStreamData->Release();
@@ -628,7 +634,35 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 	return hr;
 }
 
-MediaThumbnailData ^ FFmpegInterop::FFmpegInteropMSS::ExtractThumbnail()
+void FFmpegInteropMSS::SetAudioEffects(IVectorView<AvEffectDefinition^>^ audioEffects)
+{
+	mutexGuard.lock();
+	audioSampleProvider->SetFilters(audioEffects);
+	mutexGuard.unlock();
+}
+
+void FFmpegInteropMSS::SetVideoEffects(IVectorView<AvEffectDefinition^>^ videoEffects)
+{
+	mutexGuard.lock();
+	videoSampleProvider->SetFilters(videoEffects);
+	mutexGuard.unlock();
+}
+
+void FFmpegInteropMSS::DisableAudioEffects()
+{
+	mutexGuard.lock();
+	audioSampleProvider->DisableFilters();
+	mutexGuard.unlock();
+}
+
+void FFmpegInteropMSS::DisableVideoEffects()
+{
+	mutexGuard.lock();
+	videoSampleProvider->DisableFilters();
+	mutexGuard.unlock();
+}
+
+MediaThumbnailData ^ FFmpegInteropMSS::ExtractThumbnail()
 {
 	if (thumbnailStreamIndex != AVERROR_STREAM_NOT_FOUND)
 	{
@@ -706,25 +740,27 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor()
 	}
 	else
 	{
+		auto channels = avAudioCodecCtx->profile == FF_PROFILE_AAC_HE_V2 && avAudioCodecCtx->channels == 1 ? 2 : avAudioCodecCtx->channels;
+
 		// We try to preserve source format
 		if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32 || avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_S32P)
 		{
-			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 32));
+			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, channels, 32));
 		}
-		else if(avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
+		else if (avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLT || avAudioCodecCtx->sample_fmt == AV_SAMPLE_FMT_FLTP)
 		{
 			auto properties = ref new AudioEncodingProperties();
 			properties->Subtype = MediaEncodingSubtypes::Float;
 			properties->BitsPerSample = 32;
 			properties->SampleRate = avAudioCodecCtx->sample_rate;
-			properties->ChannelCount = avAudioCodecCtx->channels;
-			properties->Bitrate = properties->BitsPerSample * properties->SampleRate * properties->ChannelCount;
+			properties->ChannelCount = channels;
+			properties->Bitrate = properties->BitsPerSample * properties->SampleRate * channels;
 			audioStreamDescriptor = ref new AudioStreamDescriptor(properties);
 		}
 		else
 		{
 			// Use S16 for all other cases
-			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 16));
+			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, channels, 16));
 		}
 		audioSampleProvider = ref new UncompressedAudioSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx, config, audioStreamIndex);
 	}
@@ -763,7 +799,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor()
 		videoProperties->Width = avVideoCodecCtx->width;
 
 		// Check for HEVC bitstream flavor.
-		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 22 && 
+		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 22 &&
 			(avVideoCodecCtx->extradata[0] || avVideoCodecCtx->extradata[1] || avVideoCodecCtx->extradata[2] > 1))
 		{
 			videoSampleProvider = ref new HEVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, config, videoStreamIndex);
@@ -913,7 +949,7 @@ HRESULT FFmpegInteropMSS::Seek(TimeSpan position)
 	if (streamIndex >= 0)
 	{
 		// Compensate for file start_time, then convert to stream time_base
-		auto correctedPosition = position.Duration + (avFormatCtx->start_time * 10); 
+		auto correctedPosition = position.Duration + (avFormatCtx->start_time * 10);
 		int64_t seekTarget = static_cast<int64_t>(correctedPosition / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
 
 		if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
@@ -1077,8 +1113,8 @@ IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAc
 				}
 
 				// if exact seek, continue decoding until we have the right sample
-				if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) && 
-				    (maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
+				if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) &&
+					(maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
 				{
 					continue;
 				}

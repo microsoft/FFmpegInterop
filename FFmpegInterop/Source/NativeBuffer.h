@@ -13,6 +13,8 @@ namespace NativeBuffer
 		ABI::Windows::Storage::Streams::IBuffer,
 		Windows::Storage::Streams::IBufferByteAccess>
 	{
+		InspectableClass(L"NativeBuffer.NativeBuffer", BaseTrust)
+
 	public:
 		virtual ~NativeBuffer()
 		{
@@ -22,6 +24,7 @@ namespace NativeBuffer
 			}
 			m_pObject = nullptr;
 		}
+
 
 		STDMETHODIMP RuntimeClassInitialize(byte *buffer, UINT totalSize)
 		{

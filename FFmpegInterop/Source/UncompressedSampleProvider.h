@@ -18,6 +18,7 @@
 
 #pragma once
 #include "MediaSampleProvider.h"
+#include "UncompressedFrameProvider.h"
 
 extern "C"
 {
@@ -33,12 +34,21 @@ namespace FFmpegInterop
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx,
-			FFmpegInteropConfig^ config, 
-			int streamIndex);
+			FFmpegInteropConfig^ config,
+			int streamIndex
+		);
 		virtual HRESULT CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration) override;
 		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) { return E_FAIL; }; // must be overridden by specific decoders
 		virtual HRESULT GetFrameFromFFmpegDecoder(AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration);
 		virtual HRESULT FeedPacketToDecoder();
+		void SetFilters(IVectorView<AvEffectDefinition^>^ effects) override {
+			frameProvider->UpdateFilter(effects);
+		}
+		void DisableFilters() override
+		{
+			frameProvider->DisableFilter();
+		}
+		UncompressedFrameProvider ^ frameProvider;
 
 	public:
 		virtual void Flush() override;

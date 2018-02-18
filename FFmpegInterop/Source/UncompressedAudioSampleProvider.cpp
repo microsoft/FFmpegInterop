@@ -203,15 +203,15 @@ HRESULT UncompressedAudioSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 	if (SUCCEEDED(hr))
 	{
 		// always update duration with real decoded sample duration
-		auto actualDuration = (long long)avFrame->nb_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (outSampleRate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
+		auto actualDuration = (long long)avFrame->nb_samples * m_pAvStream->time_base.den / (outSampleRate * m_pAvStream->time_base.num);
 
 		if (frameDuration != actualDuration)
 		{
 			// compensate for start encoder padding (gapless playback)
-			if (m_pAvFormatCtx->streams[m_streamIndex]->nb_decoded_frames == 1 && m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples > 0)
+			if (m_pAvStream->nb_decoded_frames == 1 && m_pAvStream->start_skip_samples > 0)
 			{
 				// check if duration difference matches encoder padding
-				auto skipDuration = (long long)m_pAvFormatCtx->streams[m_streamIndex]->start_skip_samples * m_pAvFormatCtx->streams[m_streamIndex]->time_base.den / (outSampleRate * m_pAvFormatCtx->streams[m_streamIndex]->time_base.num);
+				auto skipDuration = (long long)m_pAvStream->start_skip_samples * m_pAvStream->time_base.den / (outSampleRate * m_pAvStream->time_base.num);
 				if (skipDuration == frameDuration - actualDuration)
 				{
 					framePts += skipDuration;

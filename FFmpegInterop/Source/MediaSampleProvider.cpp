@@ -33,20 +33,20 @@ MediaSampleProvider::MediaSampleProvider(
 	: m_pReader(reader)
 	, m_pAvFormatCtx(avFormatCtx)
 	, m_pAvCodecCtx(avCodecCtx)
+	, m_pAvStream(avFormatCtx->streams[streamIndex])
 	, m_isEnabled(true)
 	, m_config(config)
 	, m_streamIndex(streamIndex)
 {
 	DebugMessage(L"MediaSampleProvider\n");
-
 	if (m_pAvFormatCtx->start_time != 0)
 	{
-		auto streamStartTime = (long long)(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_pAvFormatCtx->streams[m_streamIndex]->start_time * 1000000);
+		auto streamStartTime = (long long)(av_q2d(m_pAvStream->time_base) * m_pAvStream->start_time * 1000000);
 
 		if (m_pAvFormatCtx->start_time == streamStartTime)
 		{
 			// calculate more precise start time
-			m_startOffset = (long long)(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * m_pAvFormatCtx->streams[m_streamIndex]->start_time * 10000000);
+			m_startOffset = (long long)(av_q2d(m_pAvStream->time_base) * m_pAvStream->start_time * 10000000);
 		}
 		else
 		{
@@ -83,8 +83,8 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 
 		if (hr == S_OK)
 		{
-			pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * pts) - m_startOffset;
-			dur = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * dur);
+			pts = LONGLONG(av_q2d(m_pAvStream->time_base) * 10000000 * pts) - m_startOffset;
+			dur = LONGLONG(av_q2d(m_pAvStream->time_base) * 10000000 * dur);
 
 			sample = MediaStreamSample::CreateFromBuffer(buffer, { pts });
 			sample->Duration = { dur };
@@ -211,7 +211,7 @@ void MediaSampleProvider::SetCommonVideoEncodingProperties(VideoEncodingProperti
 	// set video rotation
 	bool rotateVideo = false;
 	int rotationAngle;
-	AVDictionaryEntry *rotate_tag = av_dict_get(m_pAvFormatCtx->streams[m_streamIndex]->metadata, "rotate", NULL, 0);
+	AVDictionaryEntry *rotate_tag = av_dict_get(m_pAvStream->metadata, "rotate", NULL, 0);
 	if (rotate_tag != NULL)
 	{
 		rotateVideo = true;
@@ -233,10 +233,10 @@ void MediaSampleProvider::SetCommonVideoEncodingProperties(VideoEncodingProperti
 		videoProperties->FrameRate->Numerator = m_pAvCodecCtx->framerate.num;
 		videoProperties->FrameRate->Denominator = m_pAvCodecCtx->framerate.den;
 	}
-	else if (m_pAvFormatCtx->streams[m_streamIndex]->avg_frame_rate.num != 0 || m_pAvFormatCtx->streams[m_streamIndex]->avg_frame_rate.den != 0)
+	else if (m_pAvStream->avg_frame_rate.num != 0 || m_pAvStream->avg_frame_rate.den != 0)
 	{
-		videoProperties->FrameRate->Numerator = m_pAvFormatCtx->streams[m_streamIndex]->avg_frame_rate.num;
-		videoProperties->FrameRate->Denominator = m_pAvFormatCtx->streams[m_streamIndex]->avg_frame_rate.den;
+		videoProperties->FrameRate->Numerator = m_pAvStream->avg_frame_rate.num;
+		videoProperties->FrameRate->Denominator = m_pAvStream->avg_frame_rate.den;
 	}
 
 	videoProperties->Bitrate = (unsigned int)m_pAvCodecCtx->bit_rate;

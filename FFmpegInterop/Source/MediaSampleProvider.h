@@ -80,6 +80,7 @@ namespace FFmpegInterop
 		FFmpegReader^ m_pReader;
 		AVFormatContext* m_pAvFormatCtx;
 		AVCodecContext* m_pAvCodecCtx;
+		AVStream* m_pAvStream;
 		bool m_isEnabled;
 		bool m_isDiscontinuous;
 		int m_streamIndex;

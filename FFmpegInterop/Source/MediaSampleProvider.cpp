@@ -52,6 +52,9 @@ MediaSampleProvider::MediaSampleProvider(
 			m_startOffset = m_pAvFormatCtx->start_time * 10;
 		}
 	}
+
+	// init first packet pts time from start_time
+	m_nextPacketPts = m_pAvFormatCtx->streams[m_streamIndex]->start_time;
 }
 
 HRESULT MediaSampleProvider::AllocateResources()

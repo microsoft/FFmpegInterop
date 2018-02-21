@@ -37,6 +37,7 @@ extern "C"
 using namespace concurrency;
 using namespace FFmpegInterop;
 using namespace Platform;
+using namespace Platform::Collections;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
 
@@ -402,9 +403,13 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 		}
 	}
 
+	auto audioStrInfos = ref new Vector<AudioStreamInfo^>();
+	auto subtitleStrInfos = ref new Vector<SubtitleStreamInfo^>();
+
 	AVCodec* avVideoCodec;
 	auto videoStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &avVideoCodec, 0);
 	auto audioStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+	auto subtitleStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_SUBTITLE, -1, -1, NULL, 0);
 
 	for (int index = 0; index < avFormatCtx->nb_streams; index++)
 	{
@@ -416,11 +421,23 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 			stream = CreateAudioStream(avStream, index);
 			if (stream)
 			{
-				if (index == audioStreamIndex)
+				bool isDefault = index == audioStreamIndex;
+
+				// TODO get info from sample provider
+				auto info = ref new AudioStreamInfo(stream->Name, stream->Language, stream->CodecName, avStream->codecpar->bit_rate, isDefault,
+					avStream->codecpar->channels, avStream->codecpar->sample_rate, 
+					max(avStream->codecpar->bits_per_raw_sample, avStream->codecpar->bits_per_coded_sample));
+				if (isDefault)
 				{
 					currentAudioStream = stream;
+					audioStrInfos->InsertAt(0, info);
+					audioStreams.insert(audioStreams.begin(), stream);
 				}
-				audioStreams.push_back(stream);
+				else
+				{
+					audioStrInfos->Append(info);
+					audioStreams.push_back(stream);
+				}
 			}
 		}
 		else if(avStream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && avStream->disposition == AV_DISPOSITION_ATTACHED_PIC && thumbnailStreamIndex == AVERROR_STREAM_NOT_FOUND)
@@ -430,9 +447,36 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 		else if (avStream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && index == videoStreamIndex)
 		{
 			videoStream = stream = CreateVideoStream(avStream, index);
+
+			if (videoStream)
+			{
+				videoStreamInfo = ref new VideoStreamInfo(stream->Name, stream->Language, stream->CodecName, avStream->codecpar->bit_rate, true,
+					avStream->codecpar->width, avStream->codecpar->height,
+					max(avStream->codecpar->bits_per_raw_sample, avStream->codecpar->bits_per_coded_sample));
+			}
 		}
 		else if (avStream->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
 		{
+			auto title = av_dict_get(avStream->metadata, "title", NULL, 0);
+			auto language = av_dict_get(avStream->metadata, "language", NULL, 0);
+			auto codec = avcodec_find_decoder(avStream->codecpar->codec_id);
+			auto codecName = codec ? codec->name : NULL;
+			auto isDefault = index == subtitleStreamIndex;
+			auto info = ref new SubtitleStreamInfo(
+				ConvertString(title ? title->value : NULL), 
+				ConvertString(language ? language->value : NULL), 
+				ConvertString(codecName), 
+				isDefault,
+				(avStream->disposition & AV_DISPOSITION_FORCED) == AV_DISPOSITION_FORCED);
+
+			if (isDefault)
+			{
+				subtitleStrInfos->InsertAt(0, info);
+			}
+			else
+			{
+				subtitleStrInfos->Append(info);
+			}
 		}
 	
 		sampleProviders.push_back(stream);
@@ -442,6 +486,9 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 	{
 		currentAudioStream = audioStreams[0];
 	}
+
+	audioStreamInfos = audioStrInfos->GetView();
+	subtitleStreamInfos = subtitleStrInfos->GetView();
 
 	if (videoStream && currentAudioStream)
 	{

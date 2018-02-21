@@ -48,5 +48,6 @@
     <ClInclude Include="..\..\Source\IAvEffect.h" />
     <ClInclude Include="..\..\Source\UncompressedFrameProvider.h" />
     <ClInclude Include="..\..\Source\VideoEffectFactory.h" />
+    <ClInclude Include="..\..\Source\StreamInfo.h" />
   </ItemGroup>
 </Project>

@@ -57,7 +57,8 @@ namespace FFmpegInterop
 		}
 
 		property String^ Name;
-		property String^ LanguageCode;
+		property String^ Language;
+		property String^ CodecName;
 
 	internal:
 		virtual HRESULT Initialize();
@@ -72,7 +73,6 @@ namespace FFmpegInterop
 		virtual void SetFilters(IVectorView<AvEffectDefinition^>^ effects) { };// override for setting effects in sample providers
 		virtual void DisableFilters() {};//override for disabling filters in sample providers;
 		virtual void SetCommonVideoEncodingProperties(VideoEncodingProperties^ videoEncodingProperties, bool isCompressedFormat);
-		String^ ConvertString(const char* charString);
 
 	protected private:
 		MediaSampleProvider(
@@ -103,6 +103,8 @@ namespace FFmpegInterop
 
 	};
 }
+
+String^ ConvertString(const char* charString);
 
 // free AVBufferRef*
 void free_buffer(void *lpVoid);

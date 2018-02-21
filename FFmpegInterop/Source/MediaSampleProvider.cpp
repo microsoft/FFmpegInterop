@@ -77,30 +77,16 @@ HRESULT MediaSampleProvider::Initialize()
 		auto language = av_dict_get(m_pAvStream->metadata, "language", NULL, 0);
 		if (language)
 		{
-			LanguageCode = ConvertString(language->value);
+			Language = ConvertString(language->value);
+		}
+
+		auto codec = m_pAvCodecCtx->codec_descriptor->name;
+		if (codec)
+		{
+			CodecName = ConvertString(codec);
 		}
 	}
 	return m_streamDescriptor ? S_OK : E_FAIL;
-}
-
-
-String^ MediaSampleProvider::ConvertString(const char* charString)
-{
-	String^ result;
-
-	// Convert codec name from const char* to Platform::String
-	auto codecNameChars = charString;
-	size_t newsize = strlen(codecNameChars) + 1;
-	wchar_t * wcstring = new(std::nothrow) wchar_t[newsize];
-	if (wcstring != nullptr)
-	{
-		size_t convertedChars = 0;
-		mbstowcs_s(&convertedChars, wcstring, newsize, codecNameChars, _TRUNCATE);
-		result = ref new Platform::String(wcstring);
-		delete[] wcstring;
-	}
-
-	return result;
 }
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample()
@@ -123,8 +109,9 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 			pts = LONGLONG(av_q2d(m_pAvStream->time_base) * 10000000 * pts) - m_startOffset;
 			dur = LONGLONG(av_q2d(m_pAvStream->time_base) * 10000000 * dur);
 
+			TimeSpan duration = { dur };
 			sample = MediaStreamSample::CreateFromBuffer(buffer, { pts });
-			sample->Duration = { dur };
+			sample->Duration = duration;
 			sample->Discontinuous = m_isDiscontinuous;
 
 			hr = SetSampleProperties(sample);
@@ -283,6 +270,28 @@ void MediaSampleProvider::SetCommonVideoEncodingProperties(VideoEncodingProperti
 	}
 
 	videoProperties->Bitrate = (unsigned int)m_pAvCodecCtx->bit_rate;
+}
+
+String^ ConvertString(const char* charString)
+{
+	String^ result;
+
+	if (charString)
+	{
+		// Convert string from const char* to Platform::String
+		auto codecNameChars = charString;
+		size_t newsize = strlen(codecNameChars) + 1;
+		wchar_t * wcstring = new(std::nothrow) wchar_t[newsize];
+		if (wcstring != nullptr)
+		{
+			size_t convertedChars = 0;
+			mbstowcs_s(&convertedChars, wcstring, newsize, codecNameChars, _TRUNCATE);
+			result = ref new Platform::String(wcstring);
+			delete[] wcstring;
+		}
+	}
+
+	return result;
 }
 
 void free_buffer(void *lpVoid)

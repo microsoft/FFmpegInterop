@@ -19,12 +19,13 @@
 #pragma once
 #include <queue>
 #include <mutex>
+#include <pplawait.h>
 #include "FFmpegReader.h"
 #include "MediaSampleProvider.h"
 #include "MediaThumbnailData.h"
 #include "VideoFrame.h"
-#include <pplawait.h>
 #include "AvEffectDefinition.h"
+#include "StreamInfo.h"
 
 using namespace Platform;
 using namespace Windows::Foundation;
@@ -87,6 +88,20 @@ namespace FFmpegInterop
 		//		return videoStreamDescriptor;
 		//	};
 		//};
+		property String^ VideoCodecName
+		{
+			String^ get()
+			{
+				return videoStream ? videoStream->CodecName : nullptr;
+			};
+		};
+		property String^ AudioCodecName
+		{
+			String^ get()
+			{
+				return audioStreamInfos->Size > 0 ? audioStreamInfos->GetAt(0)->CodecName : nullptr;
+			};
+		};
 		property TimeSpan Duration
 		{
 			TimeSpan get()
@@ -94,20 +109,22 @@ namespace FFmpegInterop
 				return mediaDuration;
 			};
 		};
-		property String^ VideoCodecName
+
+		property VideoStreamInfo^ VideoStream
 		{
-			String^ get()
-			{
-				return videoCodecName;
-			};
-		};
-		property String^ AudioCodecName
+			VideoStreamInfo^ get() { return videoStreamInfo; }
+		}
+
+		property IVectorView<AudioStreamInfo^>^ AudioStreams
 		{
-			String^ get()
-			{
-				return audioCodecName;
-			};
-		};
+			IVectorView<AudioStreamInfo^>^ get() { return audioStreamInfos; }
+		}
+
+		property IVectorView<SubtitleStreamInfo^>^ SubtitleStreams
+		{
+			IVectorView<SubtitleStreamInfo^>^ get() { return subtitleStreamInfos; }
+		}
+
 		property bool HasThumbnail
 		{
 			bool get() { return thumbnailStreamIndex; }
@@ -150,6 +167,9 @@ namespace FFmpegInterop
 		IVectorView<AvEffectDefinition^>^ currentAudioEffects;
 		int thumbnailStreamIndex;
 
+		VideoStreamInfo^ videoStreamInfo;
+		IVectorView<AudioStreamInfo^>^ audioStreamInfos;
+		IVectorView<SubtitleStreamInfo^>^ subtitleStreamInfos;
 
 		std::recursive_mutex mutexGuard;
 

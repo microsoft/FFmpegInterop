@@ -244,6 +244,7 @@
     <ClInclude Include="..\..\Source\MediaThumbnailData.h" />
     <ClInclude Include="..\..\Source\NativeBuffer.h" />
     <ClInclude Include="..\..\Source\NativeBufferFactory.h" />
+    <ClInclude Include="..\..\Source\StreamInfo.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedFrameProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />

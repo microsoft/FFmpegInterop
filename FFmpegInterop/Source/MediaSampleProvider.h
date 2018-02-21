@@ -46,6 +46,19 @@ namespace FFmpegInterop
 			IMediaStreamDescriptor^ get() { return m_streamDescriptor; }
 		}
 
+		property int StreamIndex
+		{
+			int get() { return m_streamIndex; }
+		}
+
+		property bool IsEnabled
+		{
+			bool get() { return m_isEnabled; }
+		}
+
+		property String^ Name;
+		property String^ LanguageCode;
+
 	internal:
 		virtual HRESULT Initialize();
 		void QueuePacket(AVPacket *packet);
@@ -54,10 +67,12 @@ namespace FFmpegInterop
 		virtual HRESULT CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration) = 0;
 		virtual IMediaStreamDescriptor^ CreateStreamDescriptor() = 0;
 		virtual HRESULT SetSampleProperties(MediaStreamSample^ sample) { return S_OK; }; // can be overridded for setting extended properties
+		void EnableStream();
 		void DisableStream();
 		virtual void SetFilters(IVectorView<AvEffectDefinition^>^ effects) { };// override for setting effects in sample providers
 		virtual void DisableFilters() {};//override for disabling filters in sample providers;
 		virtual void SetCommonVideoEncodingProperties(VideoEncodingProperties^ videoEncodingProperties, bool isCompressedFormat);
+		String^ ConvertString(const char* charString);
 
 	protected private:
 		MediaSampleProvider(
@@ -81,7 +96,7 @@ namespace FFmpegInterop
 		AVFormatContext* m_pAvFormatCtx;
 		AVCodecContext* m_pAvCodecCtx;
 		AVStream* m_pAvStream;
-		bool m_isEnabled;
+		bool m_isEnabled = false;
 		bool m_isDiscontinuous;
 		int m_streamIndex;
 		int64 m_startOffset;

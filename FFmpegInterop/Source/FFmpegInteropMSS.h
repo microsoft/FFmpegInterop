@@ -70,20 +70,23 @@ namespace FFmpegInterop
 		virtual ~FFmpegInteropMSS();
 
 		// Properties
-		property AudioStreamDescriptor^ AudioDescriptor
-		{
-			AudioStreamDescriptor^ get()
-			{
-				return audioStreamDescriptor;
-			};
-		};
-		property VideoStreamDescriptor^ VideoDescriptor
-		{
-			VideoStreamDescriptor^ get()
-			{
-				return videoStreamDescriptor;
-			};
-		};
+
+		//TODO do we need backwards compatibility??
+		//
+		//property AudioStreamDescriptor^ AudioDescriptor
+		//{
+		//	AudioStreamDescriptor^ get()
+		//	{
+		//		return audioStreamDescriptor;
+		//	};
+		//};
+		//property VideoStreamDescriptor^ VideoDescriptor
+		//{
+		//	VideoStreamDescriptor^ get()
+		//	{
+		//		return videoStreamDescriptor;
+		//	};
+		//};
 		property TimeSpan Duration
 		{
 			TimeSpan get()
@@ -105,9 +108,10 @@ namespace FFmpegInterop
 				return audioCodecName;
 			};
 		};
-
-	internal:
-		int ReadPacket();
+		property bool HasThumbnail
+		{
+			bool get() { return thumbnailStreamIndex; }
+		}
 
 	private:
 		FFmpegInteropMSS(FFmpegInteropConfig^ config);
@@ -117,37 +121,37 @@ namespace FFmpegInterop
 		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, MediaStreamSource^ mss);
 		HRESULT CreateMediaStreamSource(String^ uri);
 		HRESULT InitFFmpegContext();
-		HRESULT CreateAudioStreamDescriptor();
-		HRESULT CreateVideoStreamDescriptor();
-		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
+		MediaSampleProvider^ CreateAudioStream(AVStream * avStream, int index);
+		MediaSampleProvider^ CreateVideoStream(AVStream * avStream, int index);
+		MediaSampleProvider^ CreateAudioSampleProvider(AVStream * avStream, AVCodecContext* avCodecCtx, int index);
+		MediaSampleProvider^ CreateVideoSampleProvider(AVStream * avStream, AVCodecContext* avCodecCtx, int index);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
+		void OnSwitchStreamsRequested(MediaStreamSource^ sender, MediaStreamSourceSwitchStreamsRequestedEventArgs^ args);
 		HRESULT Seek(TimeSpan position);
 
 		MediaStreamSource^ mss;
 		EventRegistrationToken startingRequestedToken;
 		EventRegistrationToken sampleRequestedToken;
+		EventRegistrationToken switchStreamRequestedToken;
 
 	internal:
 		AVDictionary * avDict;
 		AVIOContext* avIOCtx;
 		AVFormatContext* avFormatCtx;
-		AVCodecContext* avAudioCodecCtx;
-		AVCodecContext* avVideoCodecCtx;
 
 	private:
 		FFmpegInteropConfig ^ config;
-		AudioStreamDescriptor^ audioStreamDescriptor;
-		VideoStreamDescriptor^ videoStreamDescriptor;
-		int audioStreamIndex;
-		int videoStreamIndex;
+		std::vector<MediaSampleProvider^> sampleProviders;
+		std::vector<MediaSampleProvider^> audioStreams;
+		MediaSampleProvider^ videoStream;
+		MediaSampleProvider^ currentAudioStream;
+		IVectorView<AvEffectDefinition^>^ currentAudioEffects;
 		int thumbnailStreamIndex;
 
-		std::recursive_mutex mutexGuard;
 
-		MediaSampleProvider^ audioSampleProvider;
-		MediaSampleProvider^ videoSampleProvider;
+		std::recursive_mutex mutexGuard;
 
 		String^ videoCodecName;
 		String^ audioCodecName;

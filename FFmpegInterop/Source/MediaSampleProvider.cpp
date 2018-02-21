@@ -34,7 +34,6 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvFormatCtx(avFormatCtx)
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_pAvStream(avFormatCtx->streams[streamIndex])
-	, m_isEnabled(true)
 	, m_config(config)
 	, m_streamIndex(streamIndex)
 {
@@ -58,12 +57,50 @@ MediaSampleProvider::MediaSampleProvider(
 MediaSampleProvider::~MediaSampleProvider()
 {
 	DebugMessage(L"~MediaSampleProvider\n");
+
+	avcodec_close(m_pAvCodecCtx);
+	avcodec_free_context(&m_pAvCodecCtx);
 }
 
 HRESULT MediaSampleProvider::Initialize()
 {
 	m_streamDescriptor = CreateStreamDescriptor();
+	if (m_streamDescriptor)
+	{
+		// unfortunately, setting Name or Language on MediaStreamDescriptor does not have any effect, they are not shown in track selection list
+		auto title = av_dict_get(m_pAvStream->metadata, "title", NULL, 0);
+		if (title)
+		{
+			Name = ConvertString(title->value);
+		}
+
+		auto language = av_dict_get(m_pAvStream->metadata, "language", NULL, 0);
+		if (language)
+		{
+			LanguageCode = ConvertString(language->value);
+		}
+	}
 	return m_streamDescriptor ? S_OK : E_FAIL;
+}
+
+
+String^ MediaSampleProvider::ConvertString(const char* charString)
+{
+	String^ result;
+
+	// Convert codec name from const char* to Platform::String
+	auto codecNameChars = charString;
+	size_t newsize = strlen(codecNameChars) + 1;
+	wchar_t * wcstring = new(std::nothrow) wchar_t[newsize];
+	if (wcstring != nullptr)
+	{
+		size_t convertedChars = 0;
+		mbstowcs_s(&convertedChars, wcstring, newsize, codecNameChars, _TRUNCATE);
+		result = ref new Platform::String(wcstring);
+		delete[] wcstring;
+	}
+
+	return result;
 }
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample()
@@ -188,7 +225,13 @@ void MediaSampleProvider::Flush()
 		AVPacket *avPacket = PopPacket();
 		av_packet_free(&avPacket);
 	}
+	avcodec_flush_buffers(m_pAvCodecCtx);
 	m_isDiscontinuous = true;
+}
+
+void MediaSampleProvider::EnableStream()
+{
+	DebugMessage(L"EnableStream\n");
 	m_isEnabled = true;
 }
 

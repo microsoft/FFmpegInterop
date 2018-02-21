@@ -120,13 +120,20 @@ MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
 
 	LONGLONG finalPts = -1;
 	LONGLONG finalDur = 0;
+	bool isFirstPacket = true;
+	bool isDiscontinuous;
 
 	do
 	{
 		LONGLONG pts = 0;
 		LONGLONG dur = 0;
 
-		hr = GetNextPacket(dataWriter, pts, dur);
+		hr = GetNextPacket(dataWriter, pts, dur, isFirstPacket);
+		if (isFirstPacket)
+		{
+			isDiscontinuous = m_isDiscontinuous;
+		}
+		isFirstPacket = false;
 
 		if (SUCCEEDED(hr))
 		{
@@ -143,6 +150,19 @@ MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
 	{
 		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
 		sample->Duration = { finalDur };
+		sample->Discontinuous = isDiscontinuous;
+		;
+		if (SUCCEEDED(hr))
+		{
+			// only reset flag if last packet was read successfully
+			m_isDiscontinuous = false;
+		}
+	}
+	else
+	{
+		// flush stream and disable any further processing
+		DebugMessage(L"Too many broken packets - disable stream\n");
+		DisableStream();
 	}
 
 	return sample;

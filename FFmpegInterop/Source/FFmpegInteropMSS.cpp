@@ -23,6 +23,7 @@
 #include "H264SampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
+#include "CritSec.h"
 #include "shcore.h"
 #include <mfapi.h>
 #include "collection.h"
@@ -53,9 +54,13 @@ IMapView<int, String^>^ create_map()
 }
 IMapView<int, String^>^ AvCodecMap = create_map();
 
-// Static functions passed to FFmpeg for stream interop
+// Static functions passed to FFmpeg
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
+static int lock_manager(void **mtx, enum AVLockOp op);
+
+// Flag for ffmpeg global setup
+static bool isRegistered = false;
 
 // Initialize an FFmpegInteropObject
 FFmpegInteropMSS::FFmpegInteropMSS()
@@ -70,7 +75,12 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 	, fileStreamData(nullptr)
 	, fileStreamBuffer(nullptr)
 {
-	av_register_all();
+	if (!isRegistered)
+	{
+		av_register_all();
+		av_lockmgr_register(lock_manager);
+		isRegistered = true;
+	}
 }
 
 FFmpegInteropMSS::~FFmpegInteropMSS()
@@ -448,6 +458,14 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 				if (SUCCEEDED(hr))
 				{
+					// enable multi threading
+					unsigned threads = std::thread::hardware_concurrency();
+					if (threads > 0)
+					{
+						avVideoCodecCtx->thread_count = threads;
+						avVideoCodecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+					}
+
 					if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
 					{
 						avVideoCodecCtx = nullptr;
@@ -847,4 +865,35 @@ static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
 	}
 
 	return out.QuadPart; // Return the new position:
+}
+
+static int lock_manager(void **mtx, enum AVLockOp op)
+{
+	switch (op)
+	{
+	case AV_LOCK_CREATE:
+	{
+		*mtx = new CritSec();
+		return 0;
+	}
+	case AV_LOCK_OBTAIN:
+	{
+		auto mutex = static_cast<CritSec*>(*mtx);
+		mutex->Lock();
+		return 0;
+	}
+	case AV_LOCK_RELEASE:
+	{
+		auto mutex = static_cast<CritSec*>(*mtx);
+		mutex->Unlock();
+		return 0;
+	}
+	case AV_LOCK_DESTROY:
+	{
+		auto mutex = static_cast<CritSec*>(*mtx);
+		delete mutex;
+		return 0;
+	}
+	}
+	return 1;
 }

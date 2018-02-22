@@ -32,6 +32,8 @@ using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Media::Core;
 
+namespace WFM = Windows::Foundation::Metadata;
+
 extern "C"
 {
 #include <libavformat/avformat.h>
@@ -48,11 +50,16 @@ namespace FFmpegInterop
 		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFromUriAsync(String^ uri, FFmpegInteropConfig^ config);
 		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFromUriAsync(String^ uri) { return CreateFromUriAsync(uri, ref new FFmpegInteropConfig()); }
 
+		[WFM::Deprecated("Use the CreateFromStreamAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss);
+		[WFM::Deprecated("Use the CreateFromStreamAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
+		[WFM::Deprecated("Use the CreateFromStreamAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
 
+		[WFM::Deprecated("Use the CreateFromUriAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
+		[WFM::Deprecated("Use the CreateFromUriAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
 
 		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek, int maxFrameSkip);
@@ -72,36 +79,6 @@ namespace FFmpegInterop
 
 		// Properties
 
-		//TODO do we need backwards compatibility??
-		//
-		//property AudioStreamDescriptor^ AudioDescriptor
-		//{
-		//	AudioStreamDescriptor^ get()
-		//	{
-		//		return audioStreamDescriptor;
-		//	};
-		//};
-		//property VideoStreamDescriptor^ VideoDescriptor
-		//{
-		//	VideoStreamDescriptor^ get()
-		//	{
-		//		return videoStreamDescriptor;
-		//	};
-		//};
-		property String^ VideoCodecName
-		{
-			String^ get()
-			{
-				return videoStream ? videoStream->CodecName : nullptr;
-			};
-		};
-		property String^ AudioCodecName
-		{
-			String^ get()
-			{
-				return audioStreamInfos->Size > 0 ? audioStreamInfos->GetAt(0)->CodecName : nullptr;
-			};
-		};
 		property TimeSpan Duration
 		{
 			TimeSpan get()
@@ -129,6 +106,43 @@ namespace FFmpegInterop
 		{
 			bool get() { return thumbnailStreamIndex; }
 		}
+
+		[WFM::Deprecated("Use the AudioStreams property.", WFM::DeprecationType::Deprecate, 0x0)]
+		property AudioStreamDescriptor^ AudioDescriptor
+		{
+			AudioStreamDescriptor^ get()
+			{
+				return currentAudioStream ? dynamic_cast<AudioStreamDescriptor^>(currentAudioStream->StreamDescriptor) : nullptr;
+			};
+		};
+
+		[WFM::Deprecated("Use the VideoStream property.", WFM::DeprecationType::Deprecate, 0x0)]
+		property VideoStreamDescriptor^ VideoDescriptor
+		{
+			VideoStreamDescriptor^ get()
+			{
+				return videoStream ? dynamic_cast<VideoStreamDescriptor^>(videoStream->StreamDescriptor) : nullptr;
+			};
+		};
+
+		[WFM::Deprecated("Use the VideoStream property.", WFM::DeprecationType::Deprecate, 0x0)]
+		property String^ VideoCodecName
+		{
+			String^ get()
+			{
+				return videoStream ? videoStream->CodecName : nullptr;
+			};
+		};
+
+		[WFM::Deprecated("Use the AudioStreams property.", WFM::DeprecationType::Deprecate, 0x0)]
+		property String^ AudioCodecName
+		{
+			String^ get()
+			{
+				return audioStreamInfos->Size > 0 ? audioStreamInfos->GetAt(0)->CodecName : nullptr;
+			};
+		};
+
 
 	private:
 		FFmpegInteropMSS(FFmpegInteropConfig^ config);

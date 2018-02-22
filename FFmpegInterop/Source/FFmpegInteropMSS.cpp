@@ -181,11 +181,13 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAcce
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
 {
+#pragma warning(suppress:4973)
 	return CreateFFmpegInteropMSSFromStream(stream, forceAudioDecode, forceVideoDecode, nullptr, nullptr);
 }
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
 {
+#pragma warning(suppress:4973)
 	return CreateFFmpegInteropMSSFromStream(stream, forceAudioDecode, forceVideoDecode, nullptr);
 }
 
@@ -213,6 +215,7 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, b
 
 FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode)
 {
+#pragma warning(suppress:4973)
 	return CreateFFmpegInteropMSSFromUri(uri, forceAudioDecode, forceVideoDecode, nullptr);
 }
 
@@ -411,7 +414,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 	auto audioStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
 	auto subtitleStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_SUBTITLE, -1, -1, NULL, 0);
 
-	for (int index = 0; index < avFormatCtx->nb_streams; index++)
+	for (unsigned int index = 0; index < avFormatCtx->nb_streams; index++)
 	{
 		auto avStream = avFormatCtx->streams[index];
 		MediaSampleProvider^ stream;
@@ -524,6 +527,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 
 		TimeSpan buffer = { 0 };
 		mss->BufferTime = buffer;
+		mss->MaxSupportedPlaybackRate = config->MaxSupportedPlaybackRate;
 		if (mediaDuration.Duration > 0)
 		{
 			mss->Duration = mediaDuration;
@@ -919,21 +923,22 @@ void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource
 void FFmpegInteropMSS::OnSwitchStreamsRequested(MediaStreamSource ^ sender, MediaStreamSourceSwitchStreamsRequestedEventArgs ^ args)
 {
 	mutexGuard.lock();
-	if (currentAudioStream && args->Request->OldStreamDescriptor && currentAudioStream->StreamDescriptor)
+	if (currentAudioStream && args->Request->OldStreamDescriptor == currentAudioStream->StreamDescriptor)
 	{
-		for each (auto stream in audioStreams)
+		if (currentAudioEffects)
 		{
-			if (stream->StreamDescriptor == args->Request->NewStreamDescriptor)
-			{
-				if (currentAudioEffects)
-				{
-					currentAudioStream->DisableFilters();
-				}
-				currentAudioStream->DisableStream();
-				currentAudioStream = stream;
-				currentAudioStream->EnableStream();
-				currentAudioStream->SetFilters(currentAudioEffects);
-			}
+			currentAudioStream->DisableFilters();
+		}
+		currentAudioStream->DisableStream();
+		currentAudioStream = nullptr;
+	}
+	for each (auto stream in audioStreams)
+	{
+		if (stream->StreamDescriptor == args->Request->NewStreamDescriptor)
+		{
+			currentAudioStream = stream;
+			currentAudioStream->EnableStream();
+			currentAudioStream->SetFilters(currentAudioEffects);
 		}
 	}
 	mutexGuard.unlock();

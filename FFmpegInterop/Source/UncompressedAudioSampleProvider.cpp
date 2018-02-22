@@ -25,6 +25,9 @@ using namespace FFmpegInterop;
 // Minimum duration for uncompressed audio samples (50 ms)
 const LONGLONG MINAUDIOSAMPLEDURATION = 500000;
 
+// Maximum duration for uncompressed audio samples (50000 ms = 50 sec)
+const LONGLONG MAXAUDIOSAMPLEDURATION = 500000000;
+
 UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	FFmpegReader^ reader,
 	AVFormatContext* avFormatCtx,
@@ -149,9 +152,14 @@ MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
 	if (finalDur > 0)
 	{
 		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
-		sample->Duration = { finalDur };
+
+		// Recalculate duration after appending samples
+		// FFMPEG does not seem to always output correct duration for uncompressed
+		LONGLONG numerator = sample->Buffer->Length * 10000000;
+		LONGLONG denominator = m_pAvFormatCtx->streams[m_streamIndex]->codecpar->channels * m_pAvFormatCtx->streams[m_streamIndex]->codecpar->sample_rate * m_pAvFormatCtx->streams[m_streamIndex]->codecpar->bit_rate;
+		sample->Duration = { numerator / denominator };
+
 		sample->Discontinuous = isDiscontinuous;
-		;
 		if (SUCCEEDED(hr))
 		{
 			// only reset flag if last packet was read successfully

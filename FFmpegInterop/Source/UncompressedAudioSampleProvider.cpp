@@ -146,14 +146,14 @@ MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
 
 	} while (SUCCEEDED(hr) && finalDur < MINAUDIOSAMPLEDURATION);
 
-	if (finalDur > 0)
+	if (finalPts != -1)
 	{
 		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
 
 		// Recalculate duration after appending samples
 		// FFMPEG does not seem to always output correct duration for uncompressed
-		LONGLONG numerator = sample->Buffer->Length * 10000000LL;
-		LONGLONG denominator = m_pAvFormatCtx->streams[m_streamIndex]->codecpar->channels * m_pAvFormatCtx->streams[m_streamIndex]->codecpar->sample_rate * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
+		const LONGLONG numerator = sample->Buffer->Length * 10000000LL;
+		const LONGLONG denominator = m_pAvFormatCtx->streams[m_streamIndex]->codecpar->channels * m_pAvFormatCtx->streams[m_streamIndex]->codecpar->sample_rate * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 		if (denominator != 0)
 		{
 			sample->Duration = { numerator / denominator };

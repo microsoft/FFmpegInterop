@@ -527,7 +527,12 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 
 		TimeSpan buffer = { 0 };
 		mss->BufferTime = buffer;
-		mss->MaxSupportedPlaybackRate = config->MaxSupportedPlaybackRate;
+		
+		if (Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent("Windows.Media.Core.MediaStreamSource", "MaxSupportedPlaybackRate"))
+		{
+			mss->MaxSupportedPlaybackRate = config->MaxSupportedPlaybackRate;
+		}
+
 		if (mediaDuration.Duration > 0)
 		{
 			mss->Duration = mediaDuration;
@@ -938,7 +943,10 @@ void FFmpegInteropMSS::OnSwitchStreamsRequested(MediaStreamSource ^ sender, Medi
 		{
 			currentAudioStream = stream;
 			currentAudioStream->EnableStream();
-			currentAudioStream->SetFilters(currentAudioEffects);
+			if (currentAudioEffects)
+			{
+				currentAudioStream->SetFilters(currentAudioEffects);
+			}
 		}
 	}
 	mutexGuard.unlock();

@@ -76,7 +76,19 @@ IMediaStreamDescriptor^ CompressedSampleProvider::CreateStreamDescriptor()
 	}
 	else
 	{
-		mediaStreamDescriptor = ref new AudioStreamDescriptor(audioEncodingProperties);
+		auto audioStreamDescriptor = ref new AudioStreamDescriptor(audioEncodingProperties);
+		if (Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent("Windows.Media.Core.AudioStreamDescriptor", "MaxSupportedPlaybackRate"))
+		{
+			if (m_pAvStream->codecpar->initial_padding > 0)
+			{
+				audioStreamDescriptor->LeadingEncoderPadding = (unsigned int)m_pAvStream->codecpar->initial_padding;
+			}
+			if (m_pAvStream->codecpar->trailing_padding > 0)
+			{
+				audioStreamDescriptor->TrailingEncoderPadding = (unsigned int)m_pAvStream->codecpar->trailing_padding;
+			}
+		}
+		mediaStreamDescriptor = audioStreamDescriptor;
 	}
 	return mediaStreamDescriptor;
 }

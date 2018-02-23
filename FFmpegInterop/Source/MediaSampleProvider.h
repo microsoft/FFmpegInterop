@@ -47,7 +47,6 @@ namespace FFmpegInterop
 
 	private:
 		std::vector<AVPacket> m_packetQueue;
-		int m_streamIndex;
 		int64 m_startOffset;
 		int64 m_nextFramePts;
 		bool m_isEnabled;
@@ -60,6 +59,7 @@ namespace FFmpegInterop
 		AVFormatContext* m_pAvFormatCtx;
 		AVCodecContext* m_pAvCodecCtx;
 		bool m_isDiscontinuous;
+		int m_streamIndex;
 
 	internal:
 		MediaSampleProvider(

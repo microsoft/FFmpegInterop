@@ -28,17 +28,12 @@ namespace FFmpegInterop
 	public:
 		virtual ~FFmpegReader();
 		int ReadPacket();
-		void SetAudioStream(int audioStreamIndex, MediaSampleProvider^ audioSampleProvider);
-		void SetVideoStream(int videoStreamIndex, MediaSampleProvider^ videoSampleProvider);
 
 	internal:
-		FFmpegReader(AVFormatContext* avFormatCtx);
+		FFmpegReader(AVFormatContext* avFormatCtx, std::vector<MediaSampleProvider^>* sampleProviders);
 
 	private:
 		AVFormatContext* m_pAvFormatCtx;
-		MediaSampleProvider^ m_audioSampleProvider;
-		int m_audioStreamIndex;
-		MediaSampleProvider^ m_videoSampleProvider;
-		int m_videoStreamIndex;
+		std::vector<MediaSampleProvider^>* sampleProviders;
 	};
 }

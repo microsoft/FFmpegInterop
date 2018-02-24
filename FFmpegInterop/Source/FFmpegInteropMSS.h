@@ -19,17 +19,20 @@
 #pragma once
 #include <queue>
 #include <mutex>
+#include <pplawait.h>
 #include "FFmpegReader.h"
 #include "MediaSampleProvider.h"
 #include "MediaThumbnailData.h"
 #include "VideoFrame.h"
-#include <pplawait.h>
 #include "AvEffectDefinition.h"
+#include "StreamInfo.h"
 
 using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Media::Core;
+
+namespace WFM = Windows::Foundation::Metadata;
 
 extern "C"
 {
@@ -47,11 +50,16 @@ namespace FFmpegInterop
 		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFromUriAsync(String^ uri, FFmpegInteropConfig^ config);
 		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFromUriAsync(String^ uri) { return CreateFromUriAsync(uri, ref new FFmpegInteropConfig()); }
 
+		[WFM::Deprecated("Use the CreateFromStreamAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss);
+		[WFM::Deprecated("Use the CreateFromStreamAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
+		[WFM::Deprecated("Use the CreateFromStreamAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
 
+		[WFM::Deprecated("Use the CreateFromUriAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
+		[WFM::Deprecated("Use the CreateFromUriAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
 
 		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek, int maxFrameSkip);
@@ -70,20 +78,7 @@ namespace FFmpegInterop
 		virtual ~FFmpegInteropMSS();
 
 		// Properties
-		property AudioStreamDescriptor^ AudioDescriptor
-		{
-			AudioStreamDescriptor^ get()
-			{
-				return audioStreamDescriptor;
-			};
-		};
-		property VideoStreamDescriptor^ VideoDescriptor
-		{
-			VideoStreamDescriptor^ get()
-			{
-				return videoStreamDescriptor;
-			};
-		};
+
 		property TimeSpan Duration
 		{
 			TimeSpan get()
@@ -91,23 +86,63 @@ namespace FFmpegInterop
 				return mediaDuration;
 			};
 		};
+
+		property VideoStreamInfo^ VideoStream
+		{
+			VideoStreamInfo^ get() { return videoStreamInfo; }
+		}
+
+		property IVectorView<AudioStreamInfo^>^ AudioStreams
+		{
+			IVectorView<AudioStreamInfo^>^ get() { return audioStreamInfos; }
+		}
+
+		property IVectorView<SubtitleStreamInfo^>^ SubtitleStreams
+		{
+			IVectorView<SubtitleStreamInfo^>^ get() { return subtitleStreamInfos; }
+		}
+
+		property bool HasThumbnail
+		{
+			bool get() { return thumbnailStreamIndex; }
+		}
+
+		[WFM::Deprecated("Use the AudioStreams property.", WFM::DeprecationType::Deprecate, 0x0)]
+		property AudioStreamDescriptor^ AudioDescriptor
+		{
+			AudioStreamDescriptor^ get()
+			{
+				return currentAudioStream ? dynamic_cast<AudioStreamDescriptor^>(currentAudioStream->StreamDescriptor) : nullptr;
+			};
+		};
+
+		[WFM::Deprecated("Use the VideoStream property.", WFM::DeprecationType::Deprecate, 0x0)]
+		property VideoStreamDescriptor^ VideoDescriptor
+		{
+			VideoStreamDescriptor^ get()
+			{
+				return videoStream ? dynamic_cast<VideoStreamDescriptor^>(videoStream->StreamDescriptor) : nullptr;
+			};
+		};
+
+		[WFM::Deprecated("Use the VideoStream property.", WFM::DeprecationType::Deprecate, 0x0)]
 		property String^ VideoCodecName
 		{
 			String^ get()
 			{
-				return videoCodecName;
+				return videoStream ? videoStream->CodecName : nullptr;
 			};
 		};
+
+		[WFM::Deprecated("Use the AudioStreams property.", WFM::DeprecationType::Deprecate, 0x0)]
 		property String^ AudioCodecName
 		{
 			String^ get()
 			{
-				return audioCodecName;
+				return audioStreamInfos->Size > 0 ? audioStreamInfos->GetAt(0)->CodecName : nullptr;
 			};
 		};
 
-	internal:
-		int ReadPacket();
 
 	private:
 		FFmpegInteropMSS(FFmpegInteropConfig^ config);
@@ -117,39 +152,40 @@ namespace FFmpegInterop
 		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, MediaStreamSource^ mss);
 		HRESULT CreateMediaStreamSource(String^ uri);
 		HRESULT InitFFmpegContext();
-		HRESULT CreateAudioStreamDescriptor();
-		HRESULT CreateVideoStreamDescriptor();
-		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
+		MediaSampleProvider^ CreateAudioStream(AVStream * avStream, int index);
+		MediaSampleProvider^ CreateVideoStream(AVStream * avStream, int index);
+		MediaSampleProvider^ CreateAudioSampleProvider(AVStream * avStream, AVCodecContext* avCodecCtx, int index);
+		MediaSampleProvider^ CreateVideoSampleProvider(AVStream * avStream, AVCodecContext* avCodecCtx, int index);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
+		void OnSwitchStreamsRequested(MediaStreamSource^ sender, MediaStreamSourceSwitchStreamsRequestedEventArgs^ args);
 		HRESULT Seek(TimeSpan position);
 
 		MediaStreamSource^ mss;
 		EventRegistrationToken startingRequestedToken;
 		EventRegistrationToken sampleRequestedToken;
+		EventRegistrationToken switchStreamRequestedToken;
 
 	internal:
 		AVDictionary * avDict;
 		AVIOContext* avIOCtx;
 		AVFormatContext* avFormatCtx;
-		AVCodecContext* avAudioCodecCtx;
-		AVCodecContext* avVideoCodecCtx;
 
 	private:
 		FFmpegInteropConfig ^ config;
-		AudioStreamDescriptor^ audioStreamDescriptor;
-		VideoStreamDescriptor^ videoStreamDescriptor;
-		int audioStreamIndex;
-		int videoStreamIndex;
+		std::vector<MediaSampleProvider^> sampleProviders;
+		std::vector<MediaSampleProvider^> audioStreams;
+		MediaSampleProvider^ videoStream;
+		MediaSampleProvider^ currentAudioStream;
+		IVectorView<AvEffectDefinition^>^ currentAudioEffects;
 		int thumbnailStreamIndex;
 
-		bool rotateVideo;
-		int rotationAngle;
-		std::recursive_mutex mutexGuard;
+		VideoStreamInfo^ videoStreamInfo;
+		IVectorView<AudioStreamInfo^>^ audioStreamInfos;
+		IVectorView<SubtitleStreamInfo^>^ subtitleStreamInfos;
 
-		MediaSampleProvider^ audioSampleProvider;
-		MediaSampleProvider^ videoSampleProvider;
+		std::recursive_mutex mutexGuard;
 
 		String^ videoCodecName;
 		String^ audioCodecName;

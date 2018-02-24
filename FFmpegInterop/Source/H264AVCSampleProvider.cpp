@@ -26,8 +26,9 @@ H264AVCSampleProvider::H264AVCSampleProvider(
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx,
 	FFmpegInteropConfig^ config,
-	int streamIndex)
-	: NALPacketSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
+	int streamIndex,
+	VideoEncodingProperties^ encodingProperties)
+	: NALPacketSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex, encodingProperties)
 {
 }
 

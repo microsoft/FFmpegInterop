@@ -21,10 +21,9 @@
 
 using namespace FFmpegInterop;
 
-FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx)
+FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx, std::vector<MediaSampleProvider^>* initProviders)
 	: m_pAvFormatCtx(avFormatCtx)
-	, m_audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, m_videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
+	, sampleProviders(initProviders)
 {
 }
 
@@ -50,14 +49,16 @@ int FFmpegReader::ReadPacket()
 		return ret;
 	}
 
-	// Push the packet to the appropriate
-	if (avPacket->stream_index == m_audioStreamIndex && m_audioSampleProvider != nullptr)
+	if (avPacket->stream_index > sampleProviders->size() || avPacket->stream_index < 0)
 	{
-		m_audioSampleProvider->QueuePacket(avPacket);
+		av_packet_free(&avPacket);
+		return E_FAIL;
 	}
-	else if (avPacket->stream_index == m_videoStreamIndex && m_videoSampleProvider != nullptr)
+
+	MediaSampleProvider^ provider = sampleProviders->at(avPacket->stream_index);
+	if (provider)
 	{
-		m_videoSampleProvider->QueuePacket(avPacket);
+		provider->QueuePacket(avPacket);
 	}
 	else
 	{
@@ -66,17 +67,5 @@ int FFmpegReader::ReadPacket()
 	}
 
 	return ret;
-}
-
-void FFmpegReader::SetAudioStream(int audioStreamIndex, MediaSampleProvider^ audioSampleProvider)
-{
-	m_audioStreamIndex = audioStreamIndex;
-	m_audioSampleProvider = audioSampleProvider;
-}
-
-void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider^ videoSampleProvider)
-{
-	m_videoStreamIndex = videoStreamIndex;
-	m_videoSampleProvider = videoSampleProvider;
 }
 

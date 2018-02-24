@@ -9,12 +9,12 @@ namespace FFmpegInterop
 	public:
 		FFmpegInteropConfig()
 		{
-			PassthroughAudioMP3 = true;
-			PassthroughAudioAAC = true;
+			PassthroughAudioMP3 = false;
+			PassthroughAudioAAC = false;
 
 			PassthroughVideoH264 = true;
 			PassthroughVideoH264Hi10P = false; // neither Windows codecs nor known HW decoders support Hi10P
-			PassthroughVideoHEVC = false; // shoule we try to detect windows version and set this to "true" automatically?
+			PassthroughVideoHEVC = true;
 
 			VideoOutputAllowIyuv = false;
 			VideoOutputAllow10bit = false;
@@ -23,6 +23,8 @@ namespace FFmpegInterop
 
 			SkipErrors = 50;
 			MaxAudioThreads = 2;
+
+			MaxSupportedPlaybackRate = 4.0;
 			StreamBufferSize = 16384;
 
 			FFmpegOptions = ref new PropertySet();
@@ -45,6 +47,7 @@ namespace FFmpegInterop
 		property unsigned int MaxVideoThreads;
 		property unsigned int MaxAudioThreads;
 
+		property double MaxSupportedPlaybackRate;
 		property unsigned int StreamBufferSize;
 
 		property PropertySet^ FFmpegOptions;

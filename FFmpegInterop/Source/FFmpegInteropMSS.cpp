@@ -504,6 +504,11 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 		mss = ref new MediaStreamSource(currentAudioStream->StreamDescriptor);
 		currentAudioStream->EnableStream();
 	}
+	else if (videoStream)
+	{
+		mss = ref new MediaStreamSource(videoStream->StreamDescriptor);
+		videoStream->EnableStream();
+	}
 	else
 	{
 		hr = E_FAIL;

@@ -427,6 +427,11 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 				bool isDefault = index == audioStreamIndex;
 
 				// TODO get info from sample provider
+				auto channels = avStream->codecpar->channels;
+				if (channels == 1 && avStream->codecpar->codec_id == AV_CODEC_ID_AAC && avStream->codecpar->profile == FF_PROFILE_AAC_HE_V2)
+				{
+					channels = 2;
+				}
 				auto info = ref new AudioStreamInfo(stream->Name, stream->Language, stream->CodecName, avStream->codecpar->bit_rate, isDefault,
 					avStream->codecpar->channels, avStream->codecpar->sample_rate, 
 					max(avStream->codecpar->bits_per_raw_sample, avStream->codecpar->bits_per_coded_sample));

@@ -5,6 +5,9 @@
       <UniqueIdentifier>65247ed4-8bf5-4cae-b754-fa343845bdc7</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tga;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Build">
+      <UniqueIdentifier>{44fda9a6-fa53-47ae-8634-4e7c973b0598}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -49,5 +52,16 @@
     <ClInclude Include="..\..\Source\UncompressedFrameProvider.h" />
     <ClInclude Include="..\..\Source\VideoEffectFactory.h" />
     <ClInclude Include="..\..\Source\StreamInfo.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\BuildFFmpeg.bat">
+      <Filter>Build</Filter>
+    </None>
+    <None Include="..\..\..\BuildFFmpeg_VS2017.bat">
+      <Filter>Build</Filter>
+    </None>
+    <None Include="..\..\..\FFmpegConfig.sh">
+      <Filter>Build</Filter>
+    </None>
   </ItemGroup>
 </Project>

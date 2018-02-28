@@ -275,6 +275,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\BuildFFmpeg.bat" />
+    <None Include="..\..\..\BuildFFmpeg_VS2017.bat" />
+    <None Include="..\..\..\FFmpegConfig.sh" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

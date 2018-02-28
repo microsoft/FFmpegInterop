@@ -1,8 +1,43 @@
 @setlocal
 @echo off
 
-rem Set the Windows SDK version
-set WindowsSDKversion=10.0.16299.0
+:: Checking that we are running from a clean non-dev cmd
+
+if defined VSINSTALLDIR (
+    echo:
+    echo This script must be run from a clean cmd environment. 
+	echo Do NOT run from VisualStudio Command Prompt such as "ARM Cross Tools Command Prompt".
+	echo:
+	echo Found variable: VSINSTALLDIR
+    goto Cleanup
+)
+
+if defined INCLUDE (
+    echo:
+    echo This script must be run from a clean cmd environment. 
+	echo Do NOT run from VisualStudio Command Prompt such as "ARM Cross Tools Command Prompt".
+	echo:
+	echo Found variable: INCLUDE
+    goto Cleanup
+)
+
+if defined LIB (
+    echo:
+    echo This script must be run from a clean cmd environment. 
+	echo Do NOT run from VisualStudio Command Prompt such as "ARM Cross Tools Command Prompt".
+	echo:
+	echo Found variable: LIB
+    goto Cleanup
+)
+
+if defined LIBPATH (
+    echo:
+    echo This script must be run from a clean cmd environment. 
+	echo Do NOT run from VisualStudio Command Prompt such as "ARM Cross Tools Command Prompt".
+	echo:
+	echo Found variable: LIBPATH
+    goto Cleanup
+)
 
 echo:
 echo Searching VS Installation folder...

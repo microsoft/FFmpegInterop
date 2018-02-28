@@ -433,7 +433,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 					channels = 2;
 				}
 				auto info = ref new AudioStreamInfo(stream->Name, stream->Language, stream->CodecName, avStream->codecpar->bit_rate, isDefault,
-					avStream->codecpar->channels, avStream->codecpar->sample_rate, 
+					channels, avStream->codecpar->sample_rate, 
 					max(avStream->codecpar->bits_per_raw_sample, avStream->codecpar->bits_per_coded_sample));
 				if (isDefault)
 				{

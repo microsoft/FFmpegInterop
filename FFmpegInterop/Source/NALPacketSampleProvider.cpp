@@ -36,6 +36,12 @@ NALPacketSampleProvider::~NALPacketSampleProvider()
 {
 }
 
+void NALPacketSampleProvider::Flush()
+{
+	CompressedSampleProvider::Flush();
+	m_bHasSentExtradata = false;
+}
+
 HRESULT NALPacketSampleProvider::CreateBufferFromPacket(AVPacket* avPacket, IBuffer^* pBuffer)
 {
 	HRESULT hr = S_OK;

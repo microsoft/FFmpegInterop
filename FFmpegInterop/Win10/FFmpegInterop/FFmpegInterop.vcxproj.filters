@@ -5,25 +5,30 @@
       <UniqueIdentifier>65247ed4-8bf5-4cae-b754-fa343845bdc7</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tga;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Build">
+      <UniqueIdentifier>{44fda9a6-fa53-47ae-8634-4e7c973b0598}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="..\..\Source\FFmpegInteropMSS.cpp" />
     <ClCompile Include="..\..\Source\FFmpegReader.cpp" />
     <ClCompile Include="..\..\Source\H264AVCSampleProvider.cpp" />
-    <ClCompile Include="..\..\Source\H264SampleProvider.cpp" />
     <ClCompile Include="..\..\Source\MediaSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\UncompressedVideoSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\FFmpegInteropLogging.cpp" />
+    <ClCompile Include="..\..\Source\HEVCSampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\NALPacketSampleProvider.cpp" />
+    <ClCompile Include="..\..\Source\NativeBufferFactory.cpp" />
+    <ClCompile Include="..\..\Source\CompressedSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="..\..\Source\FFmpegReader.h" />
     <ClInclude Include="..\..\Source\H264AVCSampleProvider.h" />
-    <ClInclude Include="..\..\Source\H264SampleProvider.h" />
     <ClInclude Include="..\..\Source\MediaSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />
@@ -31,6 +36,32 @@
     <ClInclude Include="..\..\Source\ILogProvider.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropLogging.h" />
     <ClInclude Include="..\..\Source\MediaThumbnailData.h" />
+    <ClInclude Include="..\..\Source\HEVCSampleProvider.h" />
     <ClInclude Include="..\..\Source\CritSec.h" />
+    <ClInclude Include="..\..\Source\NALPacketSampleProvider.h" />
+    <ClInclude Include="..\..\Source\NativeBuffer.h" />
+    <ClInclude Include="..\..\Source\NativeBufferFactory.h" />
+    <ClInclude Include="..\..\Source\CompressedSampleProvider.h" />
+    <ClInclude Include="..\..\Source\VideoFrame.h" />
+    <ClInclude Include="..\..\Source\FFmpegInteropConfig.h" />
+    <ClInclude Include="..\..\Source\AbstractEffectFactory.h" />
+    <ClInclude Include="..\..\Source\AudioEffectFactory.h" />
+    <ClInclude Include="..\..\Source\AudioFilter.h" />
+    <ClInclude Include="..\..\Source\AvEffectDefinition.h" />
+    <ClInclude Include="..\..\Source\IAvEffect.h" />
+    <ClInclude Include="..\..\Source\UncompressedFrameProvider.h" />
+    <ClInclude Include="..\..\Source\VideoEffectFactory.h" />
+    <ClInclude Include="..\..\Source\StreamInfo.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\BuildFFmpeg.bat">
+      <Filter>Build</Filter>
+    </None>
+    <None Include="..\..\..\BuildFFmpeg_VS2017.bat">
+      <Filter>Build</Filter>
+    </None>
+    <None Include="..\..\..\FFmpegConfig.sh">
+      <Filter>Build</Filter>
+    </None>
   </ItemGroup>
 </Project>

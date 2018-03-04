@@ -18,6 +18,7 @@
 
 #pragma once
 #include "MediaSampleProvider.h"
+#include "UncompressedFrameProvider.h"
 
 extern "C"
 {
@@ -29,17 +30,32 @@ namespace FFmpegInterop
 	ref class UncompressedSampleProvider abstract : public MediaSampleProvider
 	{
 	internal:
-		// Try to get a frame from FFmpeg, otherwise, feed a frame to start decoding
-		virtual HRESULT GetFrameFromFFmpegDecoder(AVPacket* avPacket);
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter);
 		UncompressedSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
+			AVCodecContext* avCodecCtx,
+			FFmpegInteropConfig^ config,
+			int streamIndex
+		);
+		virtual HRESULT CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration) override;
+		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) { return E_FAIL; }; // must be overridden by specific decoders
+		virtual HRESULT GetFrameFromFFmpegDecoder(AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration);
+		virtual HRESULT FeedPacketToDecoder();
+		void SetFilters(IVectorView<AvEffectDefinition^>^ effects) override {
+			frameProvider->UpdateFilter(effects);
+		}
+		void DisableFilters() override
+		{
+			frameProvider->DisableFilter();
+		}
+		UncompressedFrameProvider ^ frameProvider;
 
-	internal:
-		AVFrame* m_pAvFrame;
+	public:
+		virtual void Flush() override;
+
+	private:
+		int64 nextFramePts;
+		bool hasNextFramePts;
 	};
 }
 

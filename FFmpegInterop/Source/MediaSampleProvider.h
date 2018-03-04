@@ -18,6 +18,8 @@
 
 #pragma once
 #include <queue>
+#include "FFmpegInteropConfig.h"
+#include "AvEffectDefinition.h"
 
 extern "C"
 {
@@ -26,49 +28,83 @@ extern "C"
 
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::Core;
+using namespace Windows::Media::MediaProperties;
 
 namespace FFmpegInterop
 {
-	ref class FFmpegInteropMSS;
 	ref class FFmpegReader;
 
-	ref class MediaSampleProvider
+	ref class MediaSampleProvider abstract
 	{
 	public:
 		virtual ~MediaSampleProvider();
 		virtual MediaStreamSample^ GetNextSample();
 		virtual void Flush();
-		virtual void SetCurrentStreamIndex(int streamIndex);
+
+		property IMediaStreamDescriptor^ StreamDescriptor
+		{
+			IMediaStreamDescriptor^ get() { return m_streamDescriptor; }
+		}
+
+		property int StreamIndex
+		{
+			int get() { return m_streamIndex; }
+		}
+
+		property bool IsEnabled
+		{
+			bool get() { return m_isEnabled; }
+		}
+
+		property String^ Name;
+		property String^ Language;
+		property String^ CodecName;
 
 	internal:
-		void QueuePacket(AVPacket packet);
-		AVPacket PopPacket();
+		virtual HRESULT Initialize();
+		void QueuePacket(AVPacket *packet);
+		AVPacket* PopPacket();
+		HRESULT GetNextPacket(AVPacket** avPacket, LONGLONG & packetPts, LONGLONG & packetDuration);
+		virtual HRESULT CreateNextSampleBuffer(IBuffer^* pBuffer, int64_t& samplePts, int64_t& sampleDuration) = 0;
+		virtual IMediaStreamDescriptor^ CreateStreamDescriptor() = 0;
+		virtual HRESULT SetSampleProperties(MediaStreamSample^ sample) { return S_OK; }; // can be overridded for setting extended properties
+		void EnableStream();
 		void DisableStream();
+		virtual void SetFilters(IVectorView<AvEffectDefinition^>^ effects) { };// override for setting effects in sample providers
+		virtual void DisableFilters() {};//override for disabling filters in sample providers;
+		virtual void SetCommonVideoEncodingProperties(VideoEncodingProperties^ videoEncodingProperties, bool isCompressedFormat);
+
+	protected private:
+		MediaSampleProvider(
+			FFmpegReader^ reader,
+			AVFormatContext* avFormatCtx,
+			AVCodecContext* avCodecCtx,
+			FFmpegInteropConfig^ config,
+			int streamIndex);
 
 	private:
-		std::vector<AVPacket> m_packetQueue;
-		int m_streamIndex;
-		int64 m_startOffset;
-		int64 m_nextFramePts;
-		bool m_isEnabled;
+		std::queue<AVPacket*> m_packetQueue;
+		int64 m_nextPacketPts;
+		IMediaStreamDescriptor^ m_streamDescriptor;
 
 	internal:
 		// The FFmpeg context. Because they are complex types
 		// we declare them as internal so they don't get exposed
 		// externally
+		FFmpegInteropConfig^ m_config;
 		FFmpegReader^ m_pReader;
 		AVFormatContext* m_pAvFormatCtx;
 		AVCodecContext* m_pAvCodecCtx;
+		AVStream* m_pAvStream;
+		bool m_isEnabled = false;
 		bool m_isDiscontinuous;
+		int m_streamIndex;
+		int64 m_startOffset;
 
-	internal:
-		MediaSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT AllocateResources();
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket);
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration);
-		virtual HRESULT GetNextPacket(DataWriter^ writer, LONGLONG& pts, LONGLONG& dur, bool allowSkip);
 	};
 }
+
+String^ ConvertString(const char* charString);
+
+// free AVBufferRef*
+void free_buffer(void *lpVoid);

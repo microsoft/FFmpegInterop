@@ -17,24 +17,31 @@
 //*****************************************************************************
 
 #pragma once
-#include "MediaSampleProvider.h"
+#include "CompressedSampleProvider.h"
 
 namespace FFmpegInterop
 {
-	ref class H264SampleProvider :
-		public MediaSampleProvider
+	ref class NALPacketSampleProvider :
+		public CompressedSampleProvider
 	{
 	public:
-		virtual ~H264SampleProvider();
-
-	private:
-		HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter);
+		virtual ~NALPacketSampleProvider();
+		virtual void Flush() override;
 
 	internal:
-		H264SampleProvider(
+		NALPacketSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
+			AVCodecContext* avCodecCtx,
+			FFmpegInteropConfig^ config, 
+			int streamIndex,
+			VideoEncodingProperties^ encodingProperties);
+		virtual HRESULT CreateBufferFromPacket(AVPacket* avPacket, IBuffer^* pBuffer) override;
+		virtual HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter, byte* buf, int length);
+		virtual HRESULT WriteNALPacket(AVPacket* avPacket, IBuffer^* pBuffer);
+		virtual HRESULT WriteNALPacketAfterExtradata(AVPacket* avPacket, DataWriter^ dataWriter);
+
+	private:
+		bool m_bHasSentExtradata;
 	};
 }

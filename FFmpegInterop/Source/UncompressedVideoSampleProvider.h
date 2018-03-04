@@ -24,6 +24,7 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+using namespace Platform;
 
 namespace FFmpegInterop
 {
@@ -31,22 +32,37 @@ namespace FFmpegInterop
 	{
 	public:
 		virtual ~UncompressedVideoSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
+
 	internal:
 		UncompressedVideoSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT AllocateResources() override;
+			AVCodecContext* avCodecCtx,
+			FFmpegInteropConfig^ config, 
+			int streamIndex);
+		IMediaStreamDescriptor^ CreateStreamDescriptor() override;
+		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) override;
+		virtual HRESULT SetSampleProperties(MediaStreamSample^ sample) override;
+		AVPixelFormat GetOutputPixelFormat() { return m_OutputPixelFormat; }
 
 	private:
+		void SelectOutputFormat();
+		HRESULT InitializeScalerIfRequired();
+		HRESULT FillLinesAndBuffer(int* linesize, byte** data, AVBufferRef** buffer);
+		AVBufferRef* AllocateBuffer(int totalSize);
+		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
+
+		String^ outputMediaSubtype;
+		int decoderWidth;
+		int decoderHeight;
+
+		AVBufferPool *m_pBufferPool;
+		AVPixelFormat m_OutputPixelFormat;
 		SwsContext* m_pSwsCtx;
-		int m_rgVideoBufferLineSize[4];
-		uint8_t* m_rgVideoBufferData[4];
 		bool m_interlaced_frame;
 		bool m_top_field_first;
+		AVChromaLocation m_chroma_location;
+		bool m_bUseScaler;
 	};
 }
 

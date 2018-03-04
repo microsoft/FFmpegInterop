@@ -17,39 +17,24 @@
 //*****************************************************************************
 
 #pragma once
-#include "UncompressedSampleProvider.h"
-
-extern "C"
-{
-#include <libswresample/swresample.h>
-}
+#include "H264AVCSampleProvider.h"
 
 namespace FFmpegInterop
 {
-	ref class UncompressedAudioSampleProvider: UncompressedSampleProvider
+	ref class HEVCSampleProvider :
+		public H264AVCSampleProvider
 	{
 	public:
-		virtual ~UncompressedAudioSampleProvider();
+		virtual ~HEVCSampleProvider();
 
 	internal:
-		UncompressedAudioSampleProvider(
+		HEVCSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx,
 			FFmpegInteropConfig^ config, 
-			int streamIndex);
-		virtual HRESULT CreateBufferFromFrame(IBuffer^* pBuffer, AVFrame* avFrame, int64_t& framePts, int64_t& frameDuration) override;
-		IMediaStreamDescriptor^ CreateStreamDescriptor() override;
-		HRESULT CheckFormatChanged(AVFrame* inputFrame);
-		HRESULT UpdateResampler();
-	
-
-	private:
-		SwrContext* m_pSwrCtx;
-		AVSampleFormat inSampleFormat, outSampleFormat;
-		int inSampleRate, outSampleRate, inChannels, outChannels;
-		int64 inChannelLayout, outChannelLayout;
-		bool needsUpdateResampler;
+			int streamIndex,
+			VideoEncodingProperties^ encodingProperties);
+		virtual HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter, byte* buf, int length) override;
 	};
 }
-

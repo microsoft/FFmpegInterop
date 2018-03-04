@@ -21,6 +21,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="App.xaml.h" />
     <ClInclude Include="MainPage.xaml.h" />
+    <ClInclude Include="..\..\..\FFmpegInterop\Source\UncompressedVideoSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\LockScreenLogo.scale-200.png">
@@ -56,7 +57,7 @@
     <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avutil-55.dll" />
     <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-2.dll" />
     <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-4.dll" />
-    <None Include="MediaPlayerCPP_TemporaryKey.pfx" />
+    <None Include="$(SolutionDir)FFmpegInterop.pfx" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainPage.xaml" />

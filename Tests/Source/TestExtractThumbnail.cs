@@ -40,7 +40,7 @@ namespace UnitTest.Windows
             var stream = await file.OpenAsync(FileAccessMode.Read);
 
             // CreateFFmpegInteropMSSFromUri should return null if uri is blank with default parameter
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(stream, false, false);
+            FFmpegInteropMSS FFmpegMSS = await FFmpegInteropMSS.CreateFromStreamAsync(stream);
             Assert.IsNotNull(FFmpegMSS);
 
             var thumbnailData = FFmpegMSS.ExtractThumbnail();
@@ -53,6 +53,54 @@ namespace UnitTest.Windows
 
                 var bitmap = await decoder.GetFrameAsync(0);
 
+                Assert.IsNotNull(bitmap);
+            }
+        }
+
+        [TestMethod]
+        public async Task TestExtractVideoFrameAsync()
+        {
+            Uri uri = new Uri(Constants.DownloadUriSource);
+            Assert.IsNotNull(uri);
+
+            StorageFile file = await StorageFile.CreateStreamedFileFromUriAsync(Constants.DownloadStreamedFileName, uri, null);
+            Assert.IsNotNull(file);
+
+            IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
+            Assert.IsNotNull(readStream);
+
+            // CreateFromStreamAsync should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
+            var frame = await FFmpegInteropMSS.ExtractVideoFrameAsync(readStream);
+            Assert.IsNotNull(frame);
+
+            using (var stream = new InMemoryRandomAccessStream())
+            {
+                // encode as jpeg
+                await frame.EncodeAsJpegAsync(stream);
+                stream.Seek(0);
+
+                BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+                var bitmap = await decoder.GetFrameAsync(0);
+                Assert.IsNotNull(bitmap);
+                
+                // encode as png
+                stream.Seek(0);
+                stream.Size = 0;
+                await frame.EncodeAsPngAsync(stream);
+                stream.Seek(0);
+
+                decoder = await BitmapDecoder.CreateAsync(stream);
+                bitmap = await decoder.GetFrameAsync(0);
+                Assert.IsNotNull(bitmap);
+
+                // encode as bmp
+                stream.Seek(0);
+                stream.Size = 0;
+                await frame.EncodeAsBmpAsync(stream);
+                stream.Seek(0);
+
+                decoder = await BitmapDecoder.CreateAsync(stream);
+                bitmap = await decoder.GetFrameAsync(0);
                 Assert.IsNotNull(bitmap);
             }
         }

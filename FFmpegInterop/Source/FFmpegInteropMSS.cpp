@@ -119,6 +119,31 @@ IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromStreamAsync(IRan
 	});
 };
 
+
+
+IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFrameGrabberFromStreamAsync(IRandomAccessStream^ stream)
+{
+	return create_async([stream]
+	{
+		return create_task([stream]
+		{
+			FFmpegInteropConfig^ config = ref new FFmpegInteropConfig();
+			config->IsFrameGrabber = true;
+			config->PassthroughVideoH264 = false;
+			config->PassthroughVideoH264 = false;
+			config->PassthroughVideoH264Hi10P = false;
+			config->PassthroughVideoHEVC = false;
+
+			auto result = CreateFromStream(stream, config, nullptr);
+			if (result == nullptr)
+			{
+				throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
+			}
+			return result;
+		});
+	});
+};
+
 IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromUriAsync(String^ uri, FFmpegInteropConfig^ config)
 {
 	return create_async([uri, config]
@@ -221,6 +246,7 @@ FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, b
 
 MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
 {
+	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
 	return mss;
 }
 
@@ -433,7 +459,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 					channels = 2;
 				}
 				auto info = ref new AudioStreamInfo(stream->Name, stream->Language, stream->CodecName, avStream->codecpar->bit_rate, isDefault,
-					channels, avStream->codecpar->sample_rate, 
+					channels, avStream->codecpar->sample_rate,
 					max(avStream->codecpar->bits_per_raw_sample, avStream->codecpar->bits_per_coded_sample));
 				if (isDefault)
 				{
@@ -448,7 +474,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 				}
 			}
 		}
-		else if(avStream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && avStream->disposition == AV_DISPOSITION_ATTACHED_PIC && thumbnailStreamIndex == AVERROR_STREAM_NOT_FOUND)
+		else if (avStream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && avStream->disposition == AV_DISPOSITION_ATTACHED_PIC && thumbnailStreamIndex == AVERROR_STREAM_NOT_FOUND)
 		{
 			thumbnailStreamIndex = index;
 		}
@@ -471,9 +497,9 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 			auto codecName = codec ? codec->name : NULL;
 			auto isDefault = index == subtitleStreamIndex;
 			auto info = ref new SubtitleStreamInfo(
-				ConvertString(title ? title->value : NULL), 
-				ConvertString(language ? language->value : NULL), 
-				ConvertString(codecName), 
+				ConvertString(title ? title->value : NULL),
+				ConvertString(language ? language->value : NULL),
+				ConvertString(codecName),
 				isDefault,
 				(avStream->disposition & AV_DISPOSITION_FORCED) == AV_DISPOSITION_FORCED);
 
@@ -486,7 +512,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 				subtitleStrInfos->Append(info);
 			}
 		}
-	
+
 		sampleProviders.push_back(stream);
 	}
 
@@ -537,7 +563,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 
 		TimeSpan buffer = { 0 };
 		mss->BufferTime = buffer;
-		
+
 		if (Windows::Foundation::Metadata::ApiInformation::IsPropertyPresent("Windows.Media.Core.MediaStreamSource", "MaxSupportedPlaybackRate"))
 		{
 			mss->MaxSupportedPlaybackRate = config->MaxSupportedPlaybackRate;
@@ -840,7 +866,7 @@ MediaSampleProvider^ FFmpegInteropMSS::CreateVideoSampleProvider(AVStream* avStr
 	{
 		videoSampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx, config, index);
 	}
-	
+
 	auto hr = videoSampleProvider->Initialize();
 
 	if (FAILED(hr))
@@ -1084,37 +1110,28 @@ static int lock_manager(void **mtx, enum AVLockOp op)
 	return 1;
 }
 
-IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek, int maxFrameSkip)
+IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(TimeSpan position, bool exactSeek, int maxFrameSkip)
 {
-	return create_async([stream, position, exactSeek, maxFrameSkip]
+	return create_async([this, position, exactSeek, maxFrameSkip]
 	{
-		return create_task([stream, position, exactSeek, maxFrameSkip]
-		{
-			auto cfg = ref new FFmpegInteropConfig();
-			cfg->MaxVideoThreads = 1;
-			cfg->IsFrameGrabber = true;
-
-			auto interopMSS = ref new FFmpegInteropMSS(cfg);
-			if (FAILED(interopMSS->CreateMediaStreamSource(stream, nullptr)))
-			{
-				throw ref new Exception(E_FAIL, "Unable to open file.");
-			}
-			if (interopMSS->videoStream == nullptr)
+		return create_task([this, position, exactSeek, maxFrameSkip]
+		{			
+			if (this->videoStream == nullptr)
 			{
 				throw ref new Exception(E_FAIL, "No video stream found in file (or no suitable decoder available).");
 			}
 
 			bool seekSucceeded = false;
-			if (interopMSS->Duration.Duration > position.Duration)
+			if (this->Duration.Duration > position.Duration)
 			{
-				seekSucceeded = SUCCEEDED(interopMSS->Seek(position));
+				seekSucceeded = SUCCEEDED(this->Seek(position));
 			}
 
 			int framesSkipped = 0;
 			MediaStreamSample^ lastSample = nullptr;
 			while (true)
 			{
-				auto sample = interopMSS->videoStream->GetNextSample();
+				auto sample = this->videoStream->GetNextSample();
 				if (sample == nullptr)
 				{
 					// if we hit end of stream, use last decoded sample (if any), otherwise fail
@@ -1141,8 +1158,8 @@ IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(IRandomAc
 				}
 
 				auto result = ref new VideoFrame(sample->Buffer,
-					interopMSS->videoStream->m_pAvCodecCtx->width,
-					interopMSS->videoStream->m_pAvCodecCtx->height);
+					this->videoStream->m_pAvCodecCtx->width,
+					this->videoStream->m_pAvCodecCtx->height);
 				return result;
 			}
 		});

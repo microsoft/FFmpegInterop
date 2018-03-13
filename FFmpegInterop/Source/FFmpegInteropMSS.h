@@ -44,6 +44,7 @@ namespace FFmpegInterop
 	public ref class FFmpegInteropMSS sealed
 	{
 	public:
+		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFrameGrabberFromStreamAsync(IRandomAccessStream^ stream);
 		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFromStreamAsync(IRandomAccessStream^ stream, FFmpegInteropConfig^ config);
 		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFromStreamAsync(IRandomAccessStream^ stream) { return CreateFromStreamAsync(stream, ref new FFmpegInteropConfig()); }
 
@@ -62,10 +63,10 @@ namespace FFmpegInterop
 		[WFM::Deprecated("Use the CreateFromUriAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
 
-		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek, int maxFrameSkip);
-		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(stream, position, exactSeek, 0); };
-		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream, TimeSpan position) { return ExtractVideoFrameAsync(stream, position, false, 0); };
-		static IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(IRandomAccessStream^ stream) { return ExtractVideoFrameAsync(stream, { 0 }, false, 0); };
+		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek, int maxFrameSkip);
+		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(position, exactSeek, 0); };
+		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position) { return ExtractVideoFrameAsync( position, false, 0); };
+		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync() { return ExtractVideoFrameAsync({ 0 }, false, 0); };
 
 		void SetAudioEffects(IVectorView<AvEffectDefinition^>^ audioEffects);
 		void SetVideoEffects(IVectorView<AvEffectDefinition^>^ videoEffects);

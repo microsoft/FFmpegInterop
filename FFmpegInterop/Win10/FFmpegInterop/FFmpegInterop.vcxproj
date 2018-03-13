@@ -235,6 +235,7 @@
     <ClInclude Include="..\..\Source\FFmpegInteropLogging.h" />
     <ClInclude Include="..\..\Source\FFmpegInteropMSS.h" />
     <ClInclude Include="..\..\Source\FFmpegReader.h" />
+    <ClInclude Include="..\..\Source\FrameGrabber.h" />
     <ClInclude Include="..\..\Source\H264AVCSampleProvider.h" />
     <ClInclude Include="..\..\Source\IAvEffect.h" />
     <ClInclude Include="..\..\Source\NALPacketSampleProvider.h" />
@@ -258,6 +259,7 @@
     <ClCompile Include="..\..\Source\FFmpegInteropLogging.cpp" />
     <ClCompile Include="..\..\Source\FFmpegInteropMSS.cpp" />
     <ClCompile Include="..\..\Source\FFmpegReader.cpp" />
+    <ClCompile Include="..\..\Source\FrameGrabber.cpp" />
     <ClCompile Include="..\..\Source\H264AVCSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\NALPacketSampleProvider.cpp" />
     <ClCompile Include="..\..\Source\HEVCSampleProvider.cpp" />

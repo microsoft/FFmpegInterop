@@ -29,6 +29,7 @@
 #include <mfapi.h>
 #include <dshow.h>
 
+
 extern "C"
 {
 #include <libavutil/imgutils.h>
@@ -121,28 +122,7 @@ IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromStreamAsync(IRan
 
 
 
-IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFrameGrabberFromStreamAsync(IRandomAccessStream^ stream)
-{
-	return create_async([stream]
-	{
-		return create_task([stream]
-		{
-			FFmpegInteropConfig^ config = ref new FFmpegInteropConfig();
-			config->IsFrameGrabber = true;
-			config->PassthroughVideoH264 = false;
-			config->PassthroughVideoH264 = false;
-			config->PassthroughVideoH264Hi10P = false;
-			config->PassthroughVideoHEVC = false;
 
-			auto result = CreateFromStream(stream, config, nullptr);
-			if (result == nullptr)
-			{
-				throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
-			}
-			return result;
-		});
-	});
-};
 
 IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromUriAsync(String^ uri, FFmpegInteropConfig^ config)
 {
@@ -1079,6 +1059,8 @@ static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
 	}
 }
 
+
+
 static int lock_manager(void **mtx, enum AVLockOp op)
 {
 	switch (op)
@@ -1110,58 +1092,3 @@ static int lock_manager(void **mtx, enum AVLockOp op)
 	return 1;
 }
 
-IAsyncOperation<VideoFrame^>^ FFmpegInteropMSS::ExtractVideoFrameAsync(TimeSpan position, bool exactSeek, int maxFrameSkip)
-{
-	return create_async([this, position, exactSeek, maxFrameSkip]
-	{
-		return create_task([this, position, exactSeek, maxFrameSkip]
-		{			
-			if (this->videoStream == nullptr)
-			{
-				throw ref new Exception(E_FAIL, "No video stream found in file (or no suitable decoder available).");
-			}
-
-			bool seekSucceeded = false;
-			if (this->Duration.Duration > position.Duration)
-			{
-				seekSucceeded = SUCCEEDED(this->Seek(position));
-			}
-
-			int framesSkipped = 0;
-			MediaStreamSample^ lastSample = nullptr;
-			while (true)
-			{
-				auto sample = this->videoStream->GetNextSample();
-				if (sample == nullptr)
-				{
-					// if we hit end of stream, use last decoded sample (if any), otherwise fail
-					if (lastSample != nullptr)
-					{
-						sample = lastSample;
-						seekSucceeded = false;
-					}
-					else
-					{
-						throw ref new Exception(E_FAIL, "Failed to decode video frame.");
-					}
-				}
-				else
-				{
-					lastSample = sample;
-				}
-
-				// if exact seek, continue decoding until we have the right sample
-				if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) &&
-					(maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
-				{
-					continue;
-				}
-
-				auto result = ref new VideoFrame(sample->Buffer,
-					this->videoStream->m_pAvCodecCtx->width,
-					this->videoStream->m_pAvCodecCtx->height);
-				return result;
-			}
-		});
-	});
-};

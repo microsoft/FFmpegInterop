@@ -44,7 +44,6 @@ namespace FFmpegInterop
 	public ref class FFmpegInteropMSS sealed
 	{
 	public:
-		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFrameGrabberFromStreamAsync(IRandomAccessStream^ stream);
 		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFromStreamAsync(IRandomAccessStream^ stream, FFmpegInteropConfig^ config);
 		static IAsyncOperation<FFmpegInteropMSS^>^ CreateFromStreamAsync(IRandomAccessStream^ stream) { return CreateFromStreamAsync(stream, ref new FFmpegInteropConfig()); }
 
@@ -63,11 +62,7 @@ namespace FFmpegInterop
 		[WFM::Deprecated("Use the CreateFromUriAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
 
-		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek, int maxFrameSkip);
-		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(position, exactSeek, 0); };
-		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position) { return ExtractVideoFrameAsync( position, false, 0); };
-		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync() { return ExtractVideoFrameAsync({ 0 }, false, 0); };
-
+		
 		void SetAudioEffects(IVectorView<AvEffectDefinition^>^ audioEffects);
 		void SetVideoEffects(IVectorView<AvEffectDefinition^>^ videoEffects);
 		void DisableAudioEffects();
@@ -145,11 +140,11 @@ namespace FFmpegInterop
 		};
 
 
+
+
 	private:
 		FFmpegInteropMSS(FFmpegInteropConfig^ config);
 
-		static FFmpegInteropMSS^ CreateFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config, MediaStreamSource^ mss);
-		static FFmpegInteropMSS^ CreateFromUri(String^ uri, FFmpegInteropConfig^ config);
 		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, MediaStreamSource^ mss);
 		HRESULT CreateMediaStreamSource(String^ uri);
 		HRESULT InitFFmpegContext();
@@ -161,19 +156,34 @@ namespace FFmpegInterop
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
 		void OnSwitchStreamsRequested(MediaStreamSource^ sender, MediaStreamSourceSwitchStreamsRequestedEventArgs^ args);
-		HRESULT Seek(TimeSpan position);
 
-		MediaStreamSource^ mss;
-		EventRegistrationToken startingRequestedToken;
-		EventRegistrationToken sampleRequestedToken;
-		EventRegistrationToken switchStreamRequestedToken;
+		
 
 	internal:
+
+		static FFmpegInteropMSS^ CreateFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config, MediaStreamSource^ mss);
+		static FFmpegInteropMSS^ CreateFromUri(String^ uri, FFmpegInteropConfig^ config);
+		HRESULT Seek(TimeSpan position);
+
+		property MediaSampleProvider^ VideoSampleProvider
+		{
+			MediaSampleProvider^ get()
+			{
+				return videoStream;
+			}
+		}
+
 		AVDictionary * avDict;
 		AVIOContext* avIOCtx;
 		AVFormatContext* avFormatCtx;
 
 	private:
+		
+		MediaStreamSource ^ mss;
+		EventRegistrationToken startingRequestedToken;
+		EventRegistrationToken sampleRequestedToken;
+		EventRegistrationToken switchStreamRequestedToken;
+		
 		FFmpegInteropConfig ^ config;
 		std::vector<MediaSampleProvider^> sampleProviders;
 		std::vector<MediaSampleProvider^> audioStreams;

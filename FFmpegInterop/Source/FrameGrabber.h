@@ -7,125 +7,131 @@ namespace FFmpegInterop {
 	public ref class FrameGrabber sealed
 	{
 
-		FFmpegInteropMSS^ frameSource;
+		FFmpegInteropMSS^ interopMSS;
 
 	internal:
-		FrameGrabber(FFmpegInteropMSS^ m_frameSource) {
-			this->frameSource = m_frameSource;
+		FrameGrabber(FFmpegInteropMSS^ interopMSS) {
+			this->interopMSS = interopMSS;
 		}
-
-
 
 	public:
 
 		virtual ~FrameGrabber() {
-			if (frameSource)
-				delete frameSource;
+			if (interopMSS)
+				delete interopMSS;
 		}
 
 		property TimeSpan Duration
 		{
 			TimeSpan get()
 			{
-				return frameSource->Duration;
+				return interopMSS->Duration;
 			}
 		}
 
-		static IAsyncOperation<FrameGrabber^>^ CreateFrameGrabberFromStreamAsync(IRandomAccessStream^ stream)
+		static IAsyncOperation<FrameGrabber^>^ CreateFromStreamAsync(IRandomAccessStream^ stream)
 		{
 			return create_async([stream]
 			{
-				return create_task([stream]
-				{
-					FFmpegInteropConfig^ config = ref new FFmpegInteropConfig();
-					config->IsFrameGrabber = true;
-					config->PassthroughVideoH264 = false;
-					config->PassthroughVideoH264 = false;
-					config->PassthroughVideoH264Hi10P = false;
-					config->PassthroughVideoHEVC = false;
+				FFmpegInteropConfig^ config = ref new FFmpegInteropConfig();
+				config->IsFrameGrabber = true;
+				config->PassthroughVideoH264 = false;
+				config->PassthroughVideoH264 = false;
+				config->PassthroughVideoH264Hi10P = false;
+				config->PassthroughVideoHEVC = false;
 
-					auto result = FFmpegInteropMSS::CreateFromStream(stream, config, nullptr);
-					if (result == nullptr)
-					{
-						throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
-					}
-					return ref new FrameGrabber(result);
-				});
+				auto result = FFmpegInteropMSS::CreateFromStream(stream, config, nullptr);
+				if (result == nullptr)
+				{
+					throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
+				}
+				if (result->VideoStream == nullptr)
+				{
+					throw ref new Exception(E_FAIL, "No video stream found in file (or no suitable decoder available).");
+				}
+				if (result->VideoSampleProvider == nullptr)
+				{
+					throw ref new Exception(E_FAIL, "No video stream found in file (or no suitable decoder available).");
+				}
+				return ref new FrameGrabber(result);
 			});
 		}
-
 
 		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek, int maxFrameSkip)
 		{
 			return create_async([this, position, exactSeek, maxFrameSkip]
 			{
-				return create_task([this, position, exactSeek, maxFrameSkip]
+				bool seekSucceeded = false;
+				if (interopMSS->Duration.Duration > position.Duration)
 				{
-					auto interopMSS = this->frameSource;
-					if (interopMSS->VideoStream == nullptr)
+					seekSucceeded = SUCCEEDED(interopMSS->Seek(position));
+				}
+
+				int framesSkipped = 0;
+
+				MediaStreamSample^ lastSample = nullptr;
+
+				while (true)
+				{
+
+					auto sample = interopMSS->VideoSampleProvider->GetNextSample();
+					if (sample == nullptr)
 					{
-						throw ref new Exception(E_FAIL, "No video stream found in file (or no suitable decoder available).");
-					}
-
-					bool seekSucceeded = false;
-					if (interopMSS->Duration.Duration > position.Duration)
-					{
-						seekSucceeded = SUCCEEDED(interopMSS->Seek(position));
-					}
-
-					int framesSkipped = 0;
-
-					MediaStreamSample^ lastSample = nullptr;
-
-					while (true)
-					{
-
-						auto sample = interopMSS->VideoSampleProvider->GetNextSample();
-						if (sample == nullptr)
+						// if we hit end of stream, use last decoded sample (if any), otherwise fail
+						if (lastSample != nullptr)
 						{
-							// if we hit end of stream, use last decoded sample (if any), otherwise fail
-							if (lastSample != nullptr)
-							{
-								sample = lastSample;
-								seekSucceeded = false;
-							}
-							else
-							{
-								throw ref new Exception(E_FAIL, "Failed to decode video frame.");
-							}
+							sample = lastSample;
+							seekSucceeded = false;
 						}
 						else
 						{
-							lastSample = sample;
+							throw ref new Exception(E_FAIL, "Failed to decode video frame, or end of stream.");
 						}
-
-						// if exact seek, continue decoding until we have the right sample
-						if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) &&
-							(maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
-						{
-							continue;
-						}
-
-
-
-						auto result = ref new VideoFrame(sample->Buffer,
-							interopMSS->VideoStream->PixelWidth,
-							interopMSS->VideoStream->PixelHeight);
-						interopMSS = nullptr;
-						return result;
-
+					}
+					else
+					{
+						lastSample = sample;
 					}
 
-				});
+					// if exact seek, continue decoding until we have the right sample
+					if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) &&
+						(maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
+					{
+						continue;
+					}
 
+					auto result = ref new VideoFrame(sample->Buffer,
+						interopMSS->VideoStream->PixelWidth,
+						interopMSS->VideoStream->PixelHeight,
+						sample->Timestamp);
+					return result;
+
+				}
 			});
-
 		}
 
+		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameBinaryAsync(int64 filePosition)
+		{
+			return create_async([this, filePosition]
+			{
+				bool seekSucceeded = SUCCEEDED(interopMSS->SeekFile(filePosition));
+
+				auto sample = interopMSS->VideoSampleProvider->GetNextSample();
+				if (sample == nullptr)
+				{
+					throw ref new Exception(E_FAIL, "Failed to decode video frame, or end of stream.");
+				}
+
+				auto result = ref new VideoFrame(sample->Buffer,
+					interopMSS->VideoStream->PixelWidth,
+					interopMSS->VideoStream->PixelHeight,
+					sample->Timestamp);
+				return result;
+			});
+		}
 
 		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(position, exactSeek, 0); };
 		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position) { return ExtractVideoFrameAsync(position, false, 0); };
-		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync() { return ExtractVideoFrameAsync({ 0 }, false, 0); };
 
 	};
 }

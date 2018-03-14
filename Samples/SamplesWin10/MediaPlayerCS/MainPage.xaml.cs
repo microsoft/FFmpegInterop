@@ -165,7 +165,8 @@ namespace MediaPlayerCS
                 {
                     var stream = await currentFile.OpenAsync(FileAccessMode.Read);
                     bool exactSeek = grabFrameExactSeek.IsOn;
-                    var frame = await FFmpegInteropMSS.ExtractVideoFrameAsync(stream, mediaElement.Position, exactSeek);
+                    var frameGrabber = await FrameGrabber.CreateFromStreamAsync(stream);
+                    var frame = await frameGrabber.ExtractVideoFrameAsync(mediaElement.Position, exactSeek);
 
                     var filePicker = new FileSavePicker();
                     filePicker.SuggestedStartLocation = PickerLocationId.VideosLibrary;

@@ -108,15 +108,12 @@ IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromStreamAsync(IRan
 {
 	return create_async([stream, config]
 	{
-		return create_task([stream, config]
+		auto result = CreateFromStream(stream, config, nullptr);
+		if (result == nullptr)
 		{
-			auto result = CreateFromStream(stream, config, nullptr);
-			if (result == nullptr)
-			{
-				throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
-			}
-			return result;
-		});
+			throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
+		}
+		return result;
 	});
 };
 
@@ -128,15 +125,12 @@ IAsyncOperation<FFmpegInteropMSS^>^ FFmpegInteropMSS::CreateFromUriAsync(String^
 {
 	return create_async([uri, config]
 	{
-		return create_task([uri, config]
+		auto result = CreateFromUri(uri, config);
+		if (result == nullptr)
 		{
-			auto result = CreateFromUri(uri, config);
-			if (result == nullptr)
-			{
-				throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
-			}
-			return result;
-		});
+			throw ref new Exception(E_FAIL, "Could not create MediaStreamSource.");
+		}
+		return result;
 	});
 };
 
@@ -982,6 +976,43 @@ HRESULT FFmpegInteropMSS::Seek(TimeSpan position)
 		int64_t seekTarget = static_cast<int64_t>(correctedPosition / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
 
 		if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
+		{
+			hr = E_FAIL;
+			DebugMessage(L" - ### Error while seeking\n");
+		}
+		else
+		{
+			// Flush the AudioSampleProvider
+			if (currentAudioStream != nullptr)
+			{
+				currentAudioStream->Flush();
+			}
+
+			// Flush the VideoSampleProvider
+			if (videoStream != nullptr)
+			{
+				videoStream->Flush();
+			}
+		}
+	}
+	else
+	{
+		hr = E_FAIL;
+	}
+
+	return hr;
+}
+
+HRESULT FFmpegInteropMSS::SeekFile(int64 filePosition)
+{
+	auto hr = S_OK;
+
+	// Select the first valid stream either from video or audio
+	int streamIndex = videoStream ? videoStream->StreamIndex : currentAudioStream ? currentAudioStream->StreamIndex : -1;
+
+	if (streamIndex >= 0)
+	{
+		if (av_seek_frame(avFormatCtx, streamIndex, filePosition, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_BYTE) < 0)
 		{
 			hr = E_FAIL;
 			DebugMessage(L" - ### Error while seeking\n");

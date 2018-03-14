@@ -16,12 +16,14 @@ namespace FFmpegInterop
 		property IBuffer^ PixelData { IBuffer^ get() { return pixelData; }}
 		property unsigned int Width { unsigned int get() { return width; }}
 		property unsigned int Height { unsigned int get() { return height; }}
+		property TimeSpan Timestamp { TimeSpan get() { return timestamp; }}
 
-		VideoFrame(IBuffer^ pixelData, unsigned int width, unsigned int height)
+		VideoFrame(IBuffer^ pixelData, unsigned int width, unsigned int height, TimeSpan timestamp)
 		{
 			this->pixelData = pixelData;
 			this->width = width;
 			this->height = height;
+			this->timestamp = timestamp;
 		}
 
 		IAsyncAction^ EncodeAsBmpAsync(IRandomAccessStream^ stream)
@@ -52,6 +54,7 @@ namespace FFmpegInterop
 		IBuffer^ pixelData;
 		unsigned int width;
 		unsigned int height;
+		TimeSpan timestamp;
 
 		task<void> Encode(IRandomAccessStream^ stream, Guid encoderGuid)
 		{

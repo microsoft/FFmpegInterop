@@ -1,6 +1,8 @@
 #pragma once
 #include "FFmpegInteropMSS.h"
 #include "FFmpegInteropConfig.h"
+#include <ppl.h>
+
 using namespace concurrency;
 
 namespace FFmpegInterop {
@@ -72,7 +74,8 @@ namespace FFmpegInterop {
 
 				while (true)
 				{
-
+					interruption_point();
+					
 					auto sample = interopMSS->VideoSampleProvider->GetNextSample();
 					if (sample == nullptr)
 					{

@@ -1003,43 +1003,6 @@ HRESULT FFmpegInteropMSS::Seek(TimeSpan position)
 	return hr;
 }
 
-HRESULT FFmpegInteropMSS::SeekFile(int64 filePosition)
-{
-	auto hr = S_OK;
-
-	// Select the first valid stream either from video or audio
-	int streamIndex = videoStream ? videoStream->StreamIndex : currentAudioStream ? currentAudioStream->StreamIndex : -1;
-
-	if (streamIndex >= 0)
-	{
-		if (av_seek_frame(avFormatCtx, streamIndex, filePosition, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_BYTE) < 0)
-		{
-			hr = E_FAIL;
-			DebugMessage(L" - ### Error while seeking\n");
-		}
-		else
-		{
-			// Flush the AudioSampleProvider
-			if (currentAudioStream != nullptr)
-			{
-				currentAudioStream->Flush();
-			}
-
-			// Flush the VideoSampleProvider
-			if (videoStream != nullptr)
-			{
-				videoStream->Flush();
-			}
-		}
-	}
-	else
-	{
-		hr = E_FAIL;
-	}
-
-	return hr;
-}
-
 // Static function to read file stream and pass data to FFmpeg. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 {

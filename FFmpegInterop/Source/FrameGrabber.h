@@ -110,26 +110,6 @@ namespace FFmpegInterop {
 			});
 		}
 
-		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameBinaryAsync(int64 filePosition)
-		{
-			return create_async([this, filePosition]
-			{
-				bool seekSucceeded = SUCCEEDED(interopMSS->SeekFile(filePosition));
-
-				auto sample = interopMSS->VideoSampleProvider->GetNextSample();
-				if (sample == nullptr)
-				{
-					throw ref new Exception(E_FAIL, "Failed to decode video frame, or end of stream.");
-				}
-
-				auto result = ref new VideoFrame(sample->Buffer,
-					interopMSS->VideoStream->PixelWidth,
-					interopMSS->VideoStream->PixelHeight,
-					sample->Timestamp);
-				return result;
-			});
-		}
-
 		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(position, exactSeek, 0); };
 		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position) { return ExtractVideoFrameAsync(position, false, 0); };
 

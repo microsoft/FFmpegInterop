@@ -164,7 +164,6 @@ namespace FFmpegInterop
 		static FFmpegInteropMSS^ CreateFromStream(IRandomAccessStream^ stream, FFmpegInteropConfig^ config, MediaStreamSource^ mss);
 		static FFmpegInteropMSS^ CreateFromUri(String^ uri, FFmpegInteropConfig^ config);
 		HRESULT Seek(TimeSpan position);
-		HRESULT SeekFile(int64 filePosition);
 
 		property MediaSampleProvider^ VideoSampleProvider
 		{

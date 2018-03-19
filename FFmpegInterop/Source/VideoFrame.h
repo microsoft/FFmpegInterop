@@ -26,6 +26,10 @@ namespace FFmpegInterop
 			this->timestamp = timestamp;
 		}
 
+		virtual ~VideoFrame()
+		{
+		}
+
 		IAsyncAction^ EncodeAsBmpAsync(IRandomAccessStream^ stream)
 		{
 			return create_async([this, stream]

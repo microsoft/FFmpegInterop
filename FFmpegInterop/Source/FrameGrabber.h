@@ -23,6 +23,7 @@ namespace FFmpegInterop {
 				delete interopMSS;
 		}
 
+		/// <summary>The duration of the video stream.</summary>
 		property TimeSpan Duration
 		{
 			TimeSpan get()
@@ -31,6 +32,7 @@ namespace FFmpegInterop {
 			}
 		}
 
+		/// <summary>Creates a new FrameGrabber from the specified stream.</summary>
 		static IAsyncOperation<FrameGrabber^>^ CreateFromStreamAsync(IRandomAccessStream^ stream)
 		{
 			return create_async([stream]
@@ -58,6 +60,11 @@ namespace FFmpegInterop {
 			});
 		}
 
+		/// <summary>Extracts a video frame at the specififed position.</summary>
+		/// <param name="position">The position of the requested frame.</param>
+		/// <param name="exactSeek">If set to false, this will decode the closest previous key frame, which is faster but not as precise.</param>
+		/// <param name="maxFrameSkip">If exactSeek=true, this limits the number of frames to decode after the key frame.</param>
+		/// <remarks>The IAsyncOperation result supports cancellation, so long running frame requests (exactSeek=true) can be interrupted.</remarks>
 		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek, int maxFrameSkip)
 		{
 			return create_async([this, position, exactSeek, maxFrameSkip]
@@ -69,7 +76,6 @@ namespace FFmpegInterop {
 				}
 
 				int framesSkipped = 0;
-
 				MediaStreamSample^ lastSample = nullptr;
 
 				while (true)
@@ -96,7 +102,7 @@ namespace FFmpegInterop {
 					}
 
 					// if exact seek, continue decoding until we have the right sample
-					if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration / 2) &&
+					if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration) &&
 						(maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
 					{
 						continue;
@@ -112,7 +118,15 @@ namespace FFmpegInterop {
 			});
 		}
 
+		/// <summary>Extracts a video frame at the specififed position.</summary>
+		/// <param name="position">The position of the requested frame.</param>
+		/// <param name="exactSeek">If set to false, this will decode the closest previous key frame, which is faster but not as precise.</param>
+		/// <remarks>The IAsyncOperation result supports cancellation, so long running frame requests (exactSeek=true) can be interrupted.</remarks>
 		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position, bool exactSeek) { return ExtractVideoFrameAsync(position, exactSeek, 0); };
+		
+		/// <summary>Extracts a video frame at the specififed position.</summary>
+		/// <param name="position">The position of the requested frame.</param>
+		/// <remarks>The IAsyncOperation result supports cancellation, so long running frame requests (exactSeek=true) can be interrupted.</remarks>
 		IAsyncOperation<VideoFrame^>^ ExtractVideoFrameAsync(TimeSpan position) { return ExtractVideoFrameAsync(position, false, 0); };
 
 	};

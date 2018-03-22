@@ -26,6 +26,8 @@
 #include "VideoFrame.h"
 #include "AvEffectDefinition.h"
 #include "StreamInfo.h"
+#include "TimedTextSample.h"
+
 
 using namespace Platform;
 using namespace Windows::Foundation;
@@ -41,6 +43,7 @@ extern "C"
 
 namespace FFmpegInterop
 {
+	
 	public ref class FFmpegInteropMSS sealed
 	{
 	public:
@@ -150,6 +153,7 @@ namespace FFmpegInterop
 		HRESULT InitFFmpegContext();
 		MediaSampleProvider^ CreateAudioStream(AVStream * avStream, int index);
 		MediaSampleProvider^ CreateVideoStream(AVStream * avStream, int index);
+		MediaSampleProvider^ CreateSubtitleSampleProvider(AVStream * avStream, int index, SubtitleStreamInfo^ info);
 		MediaSampleProvider^ CreateAudioSampleProvider(AVStream * avStream, AVCodecContext* avCodecCtx, int index);
 		MediaSampleProvider^ CreateVideoSampleProvider(AVStream * avStream, AVCodecContext* avCodecCtx, int index);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
@@ -206,4 +210,7 @@ namespace FFmpegInterop
 		FFmpegReader^ m_pReader;
 		bool isFirstSeek;
 	};
+
+	public delegate void TimedTextSampleDecoded(FFmpegInteropMSS^ sender, TimedTextSample^ sample);
+
 }

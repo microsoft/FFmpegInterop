@@ -28,6 +28,7 @@
 #include "shcore.h"
 #include <mfapi.h>
 #include <dshow.h>
+#include "SubtitlesProvider.h"
 
 
 extern "C"
@@ -476,7 +477,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 				ConvertString(codecName),
 				isDefault,
 				(avStream->disposition & AV_DISPOSITION_FORCED) == AV_DISPOSITION_FORCED);
-
+			
 			if (isDefault)
 			{
 				subtitleStrInfos->InsertAt(0, info);
@@ -485,6 +486,8 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 			{
 				subtitleStrInfos->Append(info);
 			}
+
+			stream = CreateSubtitleSampleProvider(avStream, index, info);
 		}
 
 		sampleProviders.push_back(stream);
@@ -555,6 +558,59 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 	}
 
 	return hr;
+}
+
+MediaSampleProvider^ FFmpegInteropMSS::CreateSubtitleSampleProvider(AVStream * avStream, int index, SubtitleStreamInfo^ info)
+{
+	HRESULT hr = S_OK;
+	MediaSampleProvider^ avSubsStream = nullptr;
+	auto avSubsCodec = avcodec_find_decoder(avStream->codecpar->codec_id);
+	if (avSubsCodec)
+	{
+		// allocate a new decoding context
+		auto avSubsCodecCtx = avcodec_alloc_context3(avSubsCodec);
+		if (!avSubsCodecCtx)
+		{
+			DebugMessage(L"Could not allocate a decoding context\n");
+			hr = E_OUTOFMEMORY;
+		}
+
+		if (SUCCEEDED(hr))
+		{
+			// initialize the stream parameters with demuxer information
+			if (avcodec_parameters_to_context(avSubsCodecCtx, avStream->codecpar) < 0)
+			{
+				hr = E_FAIL;
+			}
+
+			if (SUCCEEDED(hr))
+			{
+
+
+				if (avcodec_open2(avSubsCodecCtx, avSubsCodec, NULL) < 0)
+				{
+					hr = E_FAIL;
+				}
+				else
+				{
+					// Detect audio format and create audio stream descriptor accordingly
+					avSubsStream = ref new SubtitlesProvider(m_pReader, avFormatCtx, avSubsCodecCtx, config, index, info);
+				}
+			}
+		}
+
+		// free codec context if failed
+		if (!avSubsStream && avSubsCodecCtx)
+		{
+			avcodec_free_context(&avSubsCodecCtx);
+		}
+	}
+	else
+	{
+		DebugMessage(L"Could not find decoder\n");
+	}
+
+	return avSubsStream;
 }
 
 MediaSampleProvider^ FFmpegInteropMSS::CreateAudioStream(AVStream * avStream, int index)

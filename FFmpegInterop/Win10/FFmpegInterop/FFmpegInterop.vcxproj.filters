@@ -54,6 +54,8 @@
     <ClInclude Include="..\..\Source\VideoEffectFactory.h" />
     <ClInclude Include="..\..\Source\StreamInfo.h" />
     <ClInclude Include="..\..\Source\FrameGrabber.h" />
+    <ClInclude Include="..\..\Source\SubtitlesProvider.h" />
+    <ClInclude Include="..\..\Source\TimedTextSample.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\BuildFFmpeg.bat">

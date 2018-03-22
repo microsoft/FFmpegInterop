@@ -28,6 +28,7 @@ namespace FFmpegInterop
 
 		virtual ~VideoFrame()
 		{
+			
 		}
 
 		IAsyncAction^ EncodeAsBmpAsync(IRandomAccessStream^ stream)
@@ -55,7 +56,7 @@ namespace FFmpegInterop
 		}
 
 	private:
-		IBuffer^ pixelData;
+		IBuffer ^ pixelData;
 		unsigned int width;
 		unsigned int height;
 		TimeSpan timestamp;

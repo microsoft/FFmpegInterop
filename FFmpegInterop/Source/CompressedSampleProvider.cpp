@@ -28,6 +28,17 @@ CompressedSampleProvider::CompressedSampleProvider(
 {
 }
 
+
+CompressedSampleProvider::CompressedSampleProvider(
+	FFmpegReader^ reader,
+	AVFormatContext* avFormatCtx,
+	AVCodecContext* avCodecCtx,
+	FFmpegInteropConfig^ config,
+	int streamIndex) :
+	MediaSampleProvider(reader, avFormatCtx, avCodecCtx, config, streamIndex)
+{
+}
+
 CompressedSampleProvider::~CompressedSampleProvider()
 {
 }

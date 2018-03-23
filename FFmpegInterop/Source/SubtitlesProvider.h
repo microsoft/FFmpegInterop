@@ -45,8 +45,8 @@ namespace FFmpegInterop
 				buffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(packet->buf->data, packet->buf->size);
 			}
 
-			sample = ref new TimedTextSample(timedText, buffer, position, duration, streamInfo);
-
+			sample = ref new TimedTextSample(timedText, buffer, position, duration);
+			streamInfo->ParseSubtitleSample(sample);
 			av_packet_free(&packet);
 		}
 

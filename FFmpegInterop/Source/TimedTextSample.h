@@ -14,10 +14,9 @@ namespace FFmpegInterop
 		TimeSpan position;
 		TimeSpan duration;
 		String^ textCue;
-		SubtitleStreamInfo^ streamInfo;
 
 	public:
-		TimedTextSample(String^ textCue, IBuffer^ buf, TimeSpan pos, TimeSpan dur, SubtitleStreamInfo^ streamInfo)
+		TimedTextSample(String^ textCue, IBuffer^ buf, TimeSpan pos, TimeSpan dur)
 		{
 			this->buffer = buf;
 			this->position = pos;
@@ -54,14 +53,6 @@ namespace FFmpegInterop
 			String^ get()
 			{
 				return textCue;
-			}
-		}		
-
-		property SubtitleStreamInfo^ SubtitleStream
-		{
-			SubtitleStreamInfo^ get()
-			{
-				return streamInfo;
 			}
 		}
 	};

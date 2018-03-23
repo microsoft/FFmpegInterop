@@ -23,6 +23,12 @@ namespace FFmpegInterop
 			this->streamInfo = info;
 		}
 
+		Platform::String ^ convertFromString(const std::string & input)
+		{
+			std::wstring w_str = std::wstring(input.begin(), input.end());
+			return ref new Platform::String(w_str.c_str(), (unsigned int)w_str.length());
+		}
+
 		virtual void QueuePacket(AVPacket *packet) override
 		{
 			//MediaSampleProvider::QueuePacket(packet);
@@ -39,6 +45,47 @@ namespace FFmpegInterop
 			if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_SUBRIP)
 			{
 				timedText = ConvertString((char*)packet->buf->data);
+			}
+			else if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_ASS || m_pAvCodecCtx->codec_id == AV_CODEC_ID_SSA)
+			{
+				auto str = std::string((char*)packet->buf->data);
+				
+				// strip effects from string
+				while (true)
+				{
+					auto nextEffect = str.find('{');
+					if (nextEffect >= 0)
+					{
+						auto endEffect = str.find('}', nextEffect);
+						if (endEffect > nextEffect)
+						{
+							if (endEffect < str.length() - 1)
+							{
+								str = str.substr(0, nextEffect).append(str.substr(endEffect + 1));
+							}
+							else
+							{
+								str = str.substr(0, nextEffect);
+							}
+						}
+						else
+						{
+							break;
+						}
+					}
+					else
+					{
+						break;
+					}
+				}
+
+				// now text should be last element of comma separated list
+				auto lastComma = str.find_last_of(',');
+				if (lastComma > 0 && lastComma < str.length() - 1)
+				{
+					str = str.substr(lastComma + 1);
+					timedText = convertFromString(str);
+				}
 			}
 			else
 			{

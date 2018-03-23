@@ -44,7 +44,41 @@ namespace FFmpegInterop
 
 			if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_SUBRIP)
 			{
-				timedText = ConvertString((char*)packet->buf->data);
+				auto str = std::string((char*)packet->buf->data);
+
+				// TODO we could try to forward some font style tags (if whole text is wrapped in <i> or <b>)
+				// TODO we might also have to look for &nbsp; and others?
+
+				// strip html tags from string
+				while (true)
+				{
+					auto nextEffect = str.find('<');
+					if (nextEffect >= 0)
+					{
+						auto endEffect = str.find('>', nextEffect);
+						if (endEffect > nextEffect)
+						{
+							if (endEffect < str.length() - 1)
+							{
+								str = str.substr(0, nextEffect).append(str.substr(endEffect + 1));
+							}
+							else
+							{
+								str = str.substr(0, nextEffect);
+							}
+						}
+						else
+						{
+							break;
+						}
+					}
+					else
+					{
+						break;
+					}
+				}
+
+				timedText = convertFromString(str);
 			}
 			else if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_ASS || m_pAvCodecCtx->codec_id == AV_CODEC_ID_SSA)
 			{

@@ -106,10 +106,31 @@ namespace FFmpegInterop
 			this->isDefault = isDefault;
 			this->isForced = isForced;
 			subtitleTrack = ref new TimedMetadataTrack(name, language, TimedMetadataKind::Subtitle);
+			subtitleTrack->Label = name;
 		}
 
 		void ParseSubtitleSample(TimedTextSample^ sample)
 		{
+			// do not add cues twice (when seeking)
+			if (sample->Position.Duration > maxCuePosition.Duration)
+			{
+				//this is a shortcut so we do not have to seek all cues if playing from start
+				maxCuePosition = sample->Position;
+			}
+			else
+			{
+				for each (auto cue in subtitleTrack->Cues)
+				{
+					if (cue->StartTime.Duration == sample->Position.Duration &&
+						cue->Duration.Duration == sample->Duration.Duration)
+					{
+						return;
+					}
+				}
+			}
+
+			OutputDebugString(sample->Text->Data());
+
 			TimedTextCue^ cue = ref new TimedTextCue();
 
 			cue->Duration = sample->Duration;
@@ -151,10 +172,10 @@ namespace FFmpegInterop
 			CueStyle->FontWeight = TimedTextWeight::Normal;
 			CueStyle->Foreground = Windows::UI::Colors::White;
 			CueStyle->Background = Windows::UI::Colors::Transparent;
-			TimedTextDouble outlineThickness;
+			/*TimedTextDouble outlineThickness;
 			outlineThickness.Unit = TimedTextUnit::Percentage;
 			outlineThickness.Value = 5;
-			CueStyle->OutlineThickness = outlineThickness;
+			CueStyle->OutlineThickness = outlineThickness;*/
 			CueStyle->FlowDirection = TimedTextFlowDirection::LeftToRight;
 			CueStyle->OutlineColor = Windows::UI::Colors::Black;
 
@@ -197,5 +218,6 @@ namespace FFmpegInterop
 		bool isDefault;
 		TimedMetadataTrack^ subtitleTrack;
 		bool isForced;
+		TimeSpan maxCuePosition;
 	};
 }

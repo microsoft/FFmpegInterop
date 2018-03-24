@@ -153,12 +153,17 @@ namespace FFmpegInterop
 			CueRegion->ScrollMode = TimedTextScrollMode::Rollup;
 			CueRegion->TextWrapping = TimedTextWrapping::Wrap;
 			CueRegion->WritingMode = TimedTextWritingMode::LeftRightTopBottom;
-			CueRegion->IsOverflowClipped = true;
+			CueRegion->IsOverflowClipped = false;
 			CueRegion->ZIndex = 0;
 			TimedTextDouble LineHeight;
 			LineHeight.Unit = TimedTextUnit::Percentage;
 			LineHeight.Value = 100;
 			CueRegion->LineHeight = LineHeight;
+			TimedTextPadding padding;
+			padding.Unit = TimedTextUnit::Percentage;
+			padding.Start = 0;
+			CueRegion->Padding = padding;
+			CueRegion->Name = "";
 
 			auto CueStyle = ref new TimedTextStyle();
 
@@ -172,12 +177,14 @@ namespace FFmpegInterop
 			CueStyle->FontWeight = TimedTextWeight::Normal;
 			CueStyle->Foreground = Windows::UI::Colors::White;
 			CueStyle->Background = Windows::UI::Colors::Transparent;
-			/*TimedTextDouble outlineThickness;
+			//OutlineRadius = new TimedTextDouble { Unit = TimedTextUnit.Percentage, Value = 10 },
+			TimedTextDouble outlineThickness;
 			outlineThickness.Unit = TimedTextUnit::Percentage;
-			outlineThickness.Value = 5;
-			CueStyle->OutlineThickness = outlineThickness;*/
+			outlineThickness.Value = 3;
+			CueStyle->OutlineThickness = outlineThickness;
 			CueStyle->FlowDirection = TimedTextFlowDirection::LeftToRight;
 			CueStyle->OutlineColor = Windows::UI::Colors::Black;
+
 
 			cue->CueRegion = CueRegion;
 			cue->CueStyle = CueStyle;

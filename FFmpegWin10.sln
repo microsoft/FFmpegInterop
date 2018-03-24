@@ -8,9 +8,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaPlayerCPP", "Samples\SamplesWin10\MediaPlayerCPP\MediaPlayerCPP.vcxproj", "{9C0EB7EC-6FED-46E7-9CC9-F36132050AA1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPlayerCS", "Samples\SamplesWin10\MediaPlayerCS\MediaPlayerCS.csproj", "{3CFE9DE0-525A-474E-A7F3-876CC2876CFB}"
-	ProjectSection(ProjectDependencies) = postProject
-		{9CFA3B3E-B7AF-4629-84E2-C962C5B046B1} = {9CFA3B3E-B7AF-4629-84E2-C962C5B046B1}
-	EndProjectSection
 EndProject
 Project("{262852C6-CD72-467D-83FE-5EEB1973A190}") = "MediaPlayerJS", "Samples\SamplesWin10\MediaPlayerJS\MediaPlayerJS.jsproj", "{C09EF0AC-5F4D-4207-B4C2-77658A9E5365}"
 EndProject
@@ -114,8 +111,5 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {ED9B6902-DA86-4E18-9949-3E4B5338E7B8}
 	EndGlobalSection
 EndGlobal

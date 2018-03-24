@@ -225,6 +225,66 @@ MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
 	return mss;
 }
 
+MediaSource^ FFmpegInteropMSS::CreateMediaSource()
+{
+	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
+	MediaSource^ source = MediaSource::CreateFromMediaStreamSource(mss);
+	for each (auto stream in SubtitleStreams)
+	{
+		source->ExternalTimedMetadataTracks->Append(stream->SubtitleTrack);
+	}
+	return source;
+}
+
+MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem()
+{
+	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
+	auto playbackItem = ref new MediaPlaybackItem(CreateMediaSource());
+	InitializePlaybackItem(playbackItem);
+	return playbackItem;
+}
+
+MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem(TimeSpan startTime)
+{
+	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
+	auto playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime);
+	InitializePlaybackItem(playbackItem);
+	return playbackItem;
+}
+
+MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem(TimeSpan startTime, TimeSpan durationLimit)
+{
+	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
+	auto playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime, durationLimit);
+	InitializePlaybackItem(playbackItem);
+	return playbackItem;
+}
+
+void FFmpegInteropMSS::InitializePlaybackItem(MediaPlaybackItem^ playbackitem)
+{
+	playbackitem->AudioTracksChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackItem ^, Windows::Foundation::Collections::IVectorChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged);
+}
+
+void FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged(MediaPlaybackItem ^sender, IVectorChangedEventArgs ^args)
+{
+	if (sender->AudioTracks->Size == AudioStreams->Size)
+	{
+		for (size_t i = 0; i < AudioStreams->Size; i++)
+		{
+			auto track = sender->AudioTracks->GetAt(i);
+			auto info = AudioStreams->GetAt(i);
+			if (info->Name != nullptr)
+			{
+				track->Label = info->Name;
+			}
+			else if (info->Language != nullptr)
+			{
+				track->Label = info->Language;
+			}
+		}
+	}
+}
+
 HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri)
 {
 	HRESULT hr = S_OK;
@@ -1141,4 +1201,5 @@ static int lock_manager(void **mtx, enum AVLockOp op)
 	}
 	return 1;
 }
+
 

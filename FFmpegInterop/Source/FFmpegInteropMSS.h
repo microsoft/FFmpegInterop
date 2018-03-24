@@ -33,6 +33,7 @@ using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Media::Core;
+using namespace Windows::Media::Playback;
 
 namespace WFM = Windows::Foundation::Metadata;
 
@@ -72,8 +73,12 @@ namespace FFmpegInterop
 		void DisableVideoEffects();
 		MediaThumbnailData^ ExtractThumbnail();
 
-		// Contructor
 		MediaStreamSource^ GetMediaStreamSource();
+		MediaSource^ CreateMediaSource();
+		MediaPlaybackItem^ CreateMediaPlaybackItem();
+		MediaPlaybackItem^ CreateMediaPlaybackItem(TimeSpan startTime);
+		MediaPlaybackItem^ CreateMediaPlaybackItem(TimeSpan startTime, TimeSpan durationLimit);
+
 		virtual ~FFmpegInteropMSS();
 
 		// Properties
@@ -160,8 +165,8 @@ namespace FFmpegInterop
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
 		void OnSwitchStreamsRequested(MediaStreamSource^ sender, MediaStreamSourceSwitchStreamsRequestedEventArgs^ args);
+		void InitializePlaybackItem(MediaPlaybackItem^ playbackitem);
 
-		
 
 	internal:
 
@@ -209,7 +214,8 @@ namespace FFmpegInterop
 		unsigned char* fileStreamBuffer;
 		FFmpegReader^ m_pReader;
 		bool isFirstSeek;
-	};
+		void OnAudioTracksChanged(Windows::Media::Playback::MediaPlaybackItem ^sender, Windows::Foundation::Collections::IVectorChangedEventArgs ^args);
+};
 
 	public delegate void TimedTextSampleDecoded(FFmpegInteropMSS^ sender, TimedTextSample^ sample);
 

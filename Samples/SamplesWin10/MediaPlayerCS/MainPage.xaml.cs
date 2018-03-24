@@ -26,6 +26,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Media.Core;
+using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
@@ -80,12 +81,11 @@ namespace MediaPlayerCS
                 {
                     // Instantiate FFmpegInteropMSS using the opened local file stream
                     FFmpegMSS = await FFmpegInteropMSS.CreateFromStreamAsync(readStream, Config);
-                    MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-
-                    if (mss != null)
+                    var source = FFmpegMSS.CreateMediaPlaybackItem();
+                    if (source != null)
                     {
                         // Pass MediaStreamSource to Media Element
-                        mediaElement.SetMediaStreamSource(mss);
+                        mediaElement.SetPlaybackSource(source);
 
                         // Close control panel after file open
                         Splitter.IsPaneOpen = false;
@@ -126,12 +126,11 @@ namespace MediaPlayerCS
                     FFmpegMSS = await FFmpegInteropMSS.CreateFromUriAsync(uri, Config);
                     if (FFmpegMSS != null)
                     {
-                        MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-
-                        if (mss != null)
+                        var source = FFmpegMSS.CreateMediaPlaybackItem();
+                        if (source != null)
                         {
                             // Pass MediaStreamSource to Media Element
-                            mediaElement.SetMediaStreamSource(mss);
+                            mediaElement.SetPlaybackSource(source);
 
                             // Close control panel after opening media
                             Splitter.IsPaneOpen = false;

@@ -165,6 +165,8 @@ namespace FFmpegInterop
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
 		void OnSwitchStreamsRequested(MediaStreamSource^ sender, MediaStreamSourceSwitchStreamsRequestedEventArgs^ args);
+		void OnAudioTracksChanged(MediaPlaybackItem ^sender, IVectorChangedEventArgs ^args);
+		void OnPresentationModeChanged(MediaPlaybackTimedMetadataTrackList ^sender, TimedMetadataPresentationModeChangedEventArgs ^args);
 		void InitializePlaybackItem(MediaPlaybackItem^ playbackitem);
 
 
@@ -196,6 +198,7 @@ namespace FFmpegInterop
 		FFmpegInteropConfig ^ config;
 		std::vector<MediaSampleProvider^> sampleProviders;
 		std::vector<MediaSampleProvider^> audioStreams;
+		std::vector<MediaSampleProvider^> subtitleStreams;
 		MediaSampleProvider^ videoStream;
 		MediaSampleProvider^ currentAudioStream;
 		IVectorView<AvEffectDefinition^>^ currentAudioEffects;
@@ -214,7 +217,6 @@ namespace FFmpegInterop
 		unsigned char* fileStreamBuffer;
 		FFmpegReader^ m_pReader;
 		bool isFirstSeek;
-		void OnAudioTracksChanged(Windows::Media::Playback::MediaPlaybackItem ^sender, Windows::Foundation::Collections::IVectorChangedEventArgs ^args);
 };
 
 	public delegate void TimedTextSampleDecoded(FFmpegInteropMSS^ sender, TimedTextSample^ sample);

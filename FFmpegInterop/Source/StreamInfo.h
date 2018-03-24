@@ -111,99 +111,103 @@ namespace FFmpegInterop
 
 		void ParseSubtitleSample(TimedTextSample^ sample)
 		{
-			// do not add cues twice (when seeking)
-			if (sample->Position.Duration > maxCuePosition.Duration)
+			try
 			{
-				//this is a shortcut so we do not have to seek all cues if playing from start
-				maxCuePosition = sample->Position;
-			}
-			else
-			{
-				for each (auto cue in subtitleTrack->Cues)
+				// do not add cues twice (when seeking)
+				if (sample->Position.Duration > maxCuePosition.Duration)
 				{
-					if (cue->StartTime.Duration == sample->Position.Duration &&
-						cue->Duration.Duration == sample->Duration.Duration)
+					//this is a shortcut so we do not have to seek all cues if playing from start
+					maxCuePosition = sample->Position;
+				}
+				else
+				{
+					for each (auto cue in subtitleTrack->Cues)
 					{
-						return;
+						if (cue->StartTime.Duration == sample->Position.Duration &&
+							cue->Duration.Duration == sample->Duration.Duration)
+						{
+							return;
+						}
 					}
 				}
+
+				TimedTextCue^ cue = ref new TimedTextCue();
+
+				cue->Duration = sample->Duration;
+				cue->StartTime = sample->Position;
+
+				auto CueRegion = ref new TimedTextRegion();
+
+				TimedTextSize extent;
+				extent.Unit = TimedTextUnit::Percentage;
+				extent.Width = 100;
+				extent.Height = 88;
+				CueRegion->Extent = extent;
+				TimedTextPoint position;
+				position.Unit = TimedTextUnit::Pixels;
+				position.X = 0;
+				position.Y = 0;
+				CueRegion->Position = position;
+				CueRegion->DisplayAlignment = TimedTextDisplayAlignment::After;
+				CueRegion->Background = Windows::UI::Colors::Transparent;
+				CueRegion->ScrollMode = TimedTextScrollMode::Rollup;
+				CueRegion->TextWrapping = TimedTextWrapping::Wrap;
+				CueRegion->WritingMode = TimedTextWritingMode::LeftRightTopBottom;
+				CueRegion->IsOverflowClipped = false;
+				CueRegion->ZIndex = 0;
+				TimedTextDouble LineHeight;
+				LineHeight.Unit = TimedTextUnit::Percentage;
+				LineHeight.Value = 100;
+				CueRegion->LineHeight = LineHeight;
+				TimedTextPadding padding;
+				padding.Unit = TimedTextUnit::Percentage;
+				padding.Start = 0;
+				CueRegion->Padding = padding;
+				CueRegion->Name = "";
+
+				auto CueStyle = ref new TimedTextStyle();
+
+				CueStyle->FontFamily = "default";
+				TimedTextDouble fontSize;
+				fontSize.Unit = TimedTextUnit::Percentage;
+				fontSize.Value = 100;
+				CueStyle->FontSize = fontSize;
+				CueStyle->LineAlignment = TimedTextLineAlignment::Center;
+				CueStyle->FontStyle = TimedTextFontStyle::Normal;
+				CueStyle->FontWeight = TimedTextWeight::Normal;
+				CueStyle->Foreground = Windows::UI::Colors::White;
+				CueStyle->Background = Windows::UI::Colors::Transparent;
+				//OutlineRadius = new TimedTextDouble { Unit = TimedTextUnit.Percentage, Value = 10 },
+				TimedTextDouble outlineThickness;
+				outlineThickness.Unit = TimedTextUnit::Percentage;
+				outlineThickness.Value = 3;
+				CueStyle->OutlineThickness = outlineThickness;
+				CueStyle->FlowDirection = TimedTextFlowDirection::LeftToRight;
+				CueStyle->OutlineColor = Windows::UI::Colors::Black;
+
+				cue->CueRegion = CueRegion;
+				cue->CueStyle = CueStyle;
+
+				if (sample->Text != nullptr) {
+					TimedTextLine^ textLine = ref new TimedTextLine();
+					textLine->Text = sample->Text;
+					cue->Lines->Append(textLine);
+				}
+				else if (sample->Buffer != nullptr)
+				{
+
+				}
+				else
+				{
+					//???is this possible???
+					return;
+				}
+				SubtitleTrack->AddCue(cue);
 			}
-
-			OutputDebugString(sample->Text->Data());
-
-			TimedTextCue^ cue = ref new TimedTextCue();
-
-			cue->Duration = sample->Duration;
-			cue->StartTime = sample->Position;
-
-			auto CueRegion = ref new TimedTextRegion();
-
-			TimedTextSize extent;
-			extent.Unit = TimedTextUnit::Percentage;
-			extent.Width = 100;
-			extent.Height = 88;
-			CueRegion->Extent = extent;
-			TimedTextPoint position;
-			position.Unit = TimedTextUnit::Pixels;
-			position.X = 0;
-			position.Y = 0;
-			CueRegion->Position = position;
-			CueRegion->DisplayAlignment = TimedTextDisplayAlignment::After;
-			CueRegion->Background = Windows::UI::Colors::Transparent;
-			CueRegion->ScrollMode = TimedTextScrollMode::Rollup;
-			CueRegion->TextWrapping = TimedTextWrapping::Wrap;
-			CueRegion->WritingMode = TimedTextWritingMode::LeftRightTopBottom;
-			CueRegion->IsOverflowClipped = false;
-			CueRegion->ZIndex = 0;
-			TimedTextDouble LineHeight;
-			LineHeight.Unit = TimedTextUnit::Percentage;
-			LineHeight.Value = 100;
-			CueRegion->LineHeight = LineHeight;
-			TimedTextPadding padding;
-			padding.Unit = TimedTextUnit::Percentage;
-			padding.Start = 0;
-			CueRegion->Padding = padding;
-			CueRegion->Name = "";
-
-			auto CueStyle = ref new TimedTextStyle();
-
-			CueStyle->FontFamily = "default";
-			TimedTextDouble fontSize;
-			fontSize.Unit = TimedTextUnit::Percentage;
-			fontSize.Value = 100;
-			CueStyle->FontSize = fontSize;
-			CueStyle->LineAlignment = TimedTextLineAlignment::Center;
-			CueStyle->FontStyle = TimedTextFontStyle::Normal;
-			CueStyle->FontWeight = TimedTextWeight::Normal;
-			CueStyle->Foreground = Windows::UI::Colors::White;
-			CueStyle->Background = Windows::UI::Colors::Transparent;
-			//OutlineRadius = new TimedTextDouble { Unit = TimedTextUnit.Percentage, Value = 10 },
-			TimedTextDouble outlineThickness;
-			outlineThickness.Unit = TimedTextUnit::Percentage;
-			outlineThickness.Value = 3;
-			CueStyle->OutlineThickness = outlineThickness;
-			CueStyle->FlowDirection = TimedTextFlowDirection::LeftToRight;
-			CueStyle->OutlineColor = Windows::UI::Colors::Black;
-
-
-			cue->CueRegion = CueRegion;
-			cue->CueStyle = CueStyle;
-
-			if (sample->Text != nullptr) {
-				TimedTextLine^ textLine = ref new TimedTextLine();
-				textLine->Text = sample->Text;
-				cue->Lines->Append(textLine);
-			}
-			else if (sample->Buffer != nullptr)
+			catch (...)
 			{
-
+				OutputDebugString(L"Failed to add subtitle cue.");
 			}
-			else
-			{
-				//???is this possible???
-				return;
-			}
-			SubtitleTrack->AddCue(cue);
 		}
 
 		virtual property String^ Name { String^ get() { return name; } }

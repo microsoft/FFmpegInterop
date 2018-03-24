@@ -263,6 +263,27 @@ MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem(TimeSpan startTime,
 void FFmpegInteropMSS::InitializePlaybackItem(MediaPlaybackItem^ playbackitem)
 {
 	playbackitem->AudioTracksChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackItem ^, Windows::Foundation::Collections::IVectorChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged);
+	playbackitem->TimedMetadataTracks->PresentationModeChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackTimedMetadataTrackList ^, Windows::Media::Playback::TimedMetadataPresentationModeChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnPresentationModeChanged);
+}
+
+void FFmpegInterop::FFmpegInteropMSS::OnPresentationModeChanged(MediaPlaybackTimedMetadataTrackList ^sender, TimedMetadataPresentationModeChangedEventArgs ^args)
+{
+	int index = 0;
+	for each (auto track in SubtitleStreams)
+	{
+		if (track->SubtitleTrack == args->Track)
+		{
+			if (args->NewPresentationMode == TimedMetadataTrackPresentationMode::Disabled)
+			{
+				subtitleStreams.at(index)->DisableStream();
+			}
+			else
+			{
+				subtitleStreams.at(index)->EnableStream();
+			}
+		}
+		index++;
+	}
 }
 
 void FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged(MediaPlaybackItem ^sender, IVectorChangedEventArgs ^args)
@@ -538,16 +559,18 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 				isDefault,
 				(avStream->disposition & AV_DISPOSITION_FORCED) == AV_DISPOSITION_FORCED);
 			
+			stream = CreateSubtitleSampleProvider(avStream, index, info);
+			
 			if (isDefault)
 			{
 				subtitleStrInfos->InsertAt(0, info);
+				subtitleStreams.insert(subtitleStreams.begin(), stream);
 			}
 			else
 			{
 				subtitleStrInfos->Append(info);
+				subtitleStreams.push_back(stream);
 			}
-
-			stream = CreateSubtitleSampleProvider(avStream, index, info);
 		}
 
 		sampleProviders.push_back(stream);
@@ -1201,5 +1224,4 @@ static int lock_manager(void **mtx, enum AVLockOp op)
 	}
 	return 1;
 }
-
 

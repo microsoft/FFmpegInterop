@@ -31,7 +31,12 @@ namespace FFmpegInterop
 
 		virtual void QueuePacket(AVPacket *packet) override
 		{
-			//MediaSampleProvider::QueuePacket(packet);
+			if (!m_isEnabled)
+			{
+				av_packet_free(&packet);
+				return;
+			}
+
 			TimedTextSample^ sample;
 			IBuffer^ buffer;
 			String^ timedText;

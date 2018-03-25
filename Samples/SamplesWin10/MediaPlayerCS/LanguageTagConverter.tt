@@ -1,0 +1,117 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Net.Http" #>
+<#@ assembly name="System.Runtime.Serialization" #>
+<#@ assembly name="System.Xml" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Runtime.Serialization" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Threading.Tasks" #>
+<#@ import namespace="System.Threading.Tasks" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".h" #>
+#pragma once
+
+#include "pch.h"
+
+using namespace Platform;
+
+ref class LanguageEntry
+{
+public:
+	property String^ TwoLetterCode { String^ get() { return twoLetterCode; } }
+	property String^ EnglishName { String^ get() { return englishName; } }
+
+	LanguageEntry(String^ twoLetterCode, String^ englishName)
+	{
+		this->twoLetterCode = twoLetterCode;
+		this->englishName = englishName;
+	}
+
+private:
+	String^ twoLetterCode;
+	String^ englishName;
+};
+
+ref class LanguageTagConverter
+{
+private:
+	static std::map<String^, LanguageEntry^> map;
+
+public:
+	static LanguageEntry^ TryGetLanguage(String^ languageTag)
+	{
+		auto result = map.find(languageTag);
+		if (result != map.end())
+		{
+			return result->second;
+		}
+
+		return nullptr;
+	}
+
+	static void Initialize()
+	{
+<#
+var languageDict = new Dictionary<string, Tuple<string, string>>();
+var languages = Languages.LoadAsync().Result;
+foreach(var language in languages)
+{
+    var data = new Tuple<string, string>(language._1, language.name);
+    languageDict[language._2] = data;
+    languageDict[language._2B] = data;
+    languageDict[language._2T] = data;
+    languageDict[language._3] = data;
+}
+foreach (var entry in languageDict.OrderBy(x => x.Key))
+{
+#>
+		map["<#=entry.Key#>"] = ref new LanguageEntry("<#=entry.Value.Item1#>", "<#=entry.Value.Item2#>");
+<#
+}
+#>
+	}
+};
+<#+
+
+ public class Languages
+    {
+        public LanguageEntry[] Property1 { get; set; }
+
+        public static async Task<LanguageEntry[]> LoadAsync()
+        {
+            var client = new System.Net.Http.HttpClient();
+            using (var stream = await client.GetStreamAsync(@"https://raw.githubusercontent.com/anurbol/languages-iso-639-1-2-3-json/master/data.js"))
+            {
+                var serializer = new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(LanguageEntry[]));
+                return (LanguageEntry[])serializer.ReadObject(stream);
+            }
+        }
+    }
+
+    [DataContract]
+    public class LanguageEntry
+    {
+        [DataMember]
+        public string name { get; set; }
+
+        [DataMember]
+        public string local { get; set; }
+
+        [DataMember(Name = "1")]
+        public string _1 { get; set; }
+
+        [DataMember(Name = "2")]
+        public string _2 { get; set; }
+
+        [DataMember(Name = "2T")]
+        public string _2T { get; set; }
+
+        [DataMember(Name = "2B")]
+        public string _2B { get; set; }
+
+        [DataMember(Name = "3")]
+        public string _3 { get; set; }
+    }
+
+#>

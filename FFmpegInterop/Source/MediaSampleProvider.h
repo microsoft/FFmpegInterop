@@ -62,6 +62,7 @@ namespace FFmpegInterop
 
 	internal:
 		virtual HRESULT Initialize();
+		void InitializeNameLanguageCodec();
 		virtual void QueuePacket(AVPacket *packet);
 		AVPacket* PopPacket();
 		HRESULT GetNextPacket(AVPacket** avPacket, LONGLONG & packetPts, LONGLONG & packetDuration);

@@ -29,7 +29,7 @@
 #include <mfapi.h>
 #include <dshow.h>
 #include "SubtitlesProvider.h"
-
+#include "LanguageTagConverter.h"
 
 extern "C"
 {
@@ -52,6 +52,8 @@ static int lock_manager(void **mtx, enum AVLockOp op);
 static bool isRegistered = false;
 std::mutex isRegisteredMutex;
 
+std::map<String^, LanguageEntry^> LanguageTagConverter::map;
+
 // Initialize an FFmpegInteropObject
 FFmpegInteropMSS::FFmpegInteropMSS(FFmpegInteropConfig^ interopConfig)
 	: config(interopConfig)
@@ -65,6 +67,7 @@ FFmpegInteropMSS::FFmpegInteropMSS(FFmpegInteropConfig^ interopConfig)
 		{
 			av_register_all();
 			av_lockmgr_register(lock_manager);
+			LanguageTagConverter::Initialize();
 			isRegistered = true;
 		}
 		isRegisteredMutex.unlock();
@@ -229,7 +232,7 @@ MediaSource^ FFmpegInteropMSS::CreateMediaSource()
 {
 	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
 	MediaSource^ source = MediaSource::CreateFromMediaStreamSource(mss);
-	for each (auto stream in SubtitleStreams)
+	for each (auto stream in subtitleStreams)
 	{
 		source->ExternalTimedMetadataTracks->Append(stream->SubtitleTrack);
 	}
@@ -264,22 +267,36 @@ void FFmpegInteropMSS::InitializePlaybackItem(MediaPlaybackItem^ playbackitem)
 {
 	playbackitem->AudioTracksChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackItem ^, Windows::Foundation::Collections::IVectorChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged);
 	playbackitem->TimedMetadataTracks->PresentationModeChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackTimedMetadataTrackList ^, Windows::Media::Playback::TimedMetadataPresentationModeChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnPresentationModeChanged);
+
+	if (config->AutoSelectForcedSubtitles)
+	{
+		int index = 0;
+		for each (auto stream in subtitleStreams)
+		{
+			if (subtitleStreamInfos->GetAt(index)->IsForced)
+			{
+				playbackitem->TimedMetadataTracks->SetPresentationMode(index, TimedMetadataTrackPresentationMode::PlatformPresented);
+				break;
+			}
+			index++;
+		}
+	}
 }
 
 void FFmpegInterop::FFmpegInteropMSS::OnPresentationModeChanged(MediaPlaybackTimedMetadataTrackList ^sender, TimedMetadataPresentationModeChangedEventArgs ^args)
 {
 	int index = 0;
-	for each (auto track in SubtitleStreams)
+	for each (auto stream in subtitleStreams)
 	{
-		if (track->SubtitleTrack == args->Track)
+		if (stream->SubtitleTrack == args->Track)
 		{
 			if (args->NewPresentationMode == TimedMetadataTrackPresentationMode::Disabled)
 			{
-				subtitleStreams.at(index)->DisableStream();
+				stream->DisableStream();
 			}
 			else
 			{
-				subtitleStreams.at(index)->EnableStream();
+				stream->EnableStream();
 			}
 		}
 		index++;
@@ -547,29 +564,23 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 		}
 		else if (avStream->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
 		{
-			auto title = av_dict_get(avStream->metadata, "title", NULL, 0);
-			auto language = av_dict_get(avStream->metadata, "language", NULL, 0);
-			auto codec = avcodec_find_decoder(avStream->codecpar->codec_id);
-			auto codecName = codec ? codec->name : NULL;
-			auto isDefault = index == subtitleStreamIndex;
-			auto info = ref new SubtitleStreamInfo(
-				ConvertString(title ? title->value : NULL),
-				ConvertString(language ? language->value : NULL),
-				ConvertString(codecName),
-				isDefault,
-				(avStream->disposition & AV_DISPOSITION_FORCED) == AV_DISPOSITION_FORCED);
-			
-			stream = CreateSubtitleSampleProvider(avStream, index, info);
-			
-			if (isDefault)
+			stream = CreateSubtitleSampleProvider(avStream, index);
+			if (stream)
 			{
-				subtitleStrInfos->InsertAt(0, info);
-				subtitleStreams.insert(subtitleStreams.begin(), stream);
-			}
-			else
-			{
-				subtitleStrInfos->Append(info);
-				subtitleStreams.push_back(stream);
+				auto isDefault = index == subtitleStreamIndex;
+				auto info = ref new SubtitleStreamInfo(stream->Name, stream->Language, stream->CodecName,
+					isDefault, (avStream->disposition & AV_DISPOSITION_FORCED) == AV_DISPOSITION_FORCED);
+
+				if (isDefault)
+				{
+					subtitleStrInfos->InsertAt(0, info);
+					subtitleStreams.insert(subtitleStreams.begin(), (SubtitlesProvider^)stream);
+				}
+				else
+				{
+					subtitleStrInfos->Append(info);
+					subtitleStreams.push_back((SubtitlesProvider^)stream);
+				}
 			}
 		}
 
@@ -643,10 +654,10 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 	return hr;
 }
 
-MediaSampleProvider^ FFmpegInteropMSS::CreateSubtitleSampleProvider(AVStream * avStream, int index, SubtitleStreamInfo^ info)
+SubtitlesProvider^ FFmpegInteropMSS::CreateSubtitleSampleProvider(AVStream * avStream, int index)
 {
 	HRESULT hr = S_OK;
-	MediaSampleProvider^ avSubsStream = nullptr;
+	SubtitlesProvider^ avSubsStream = nullptr;
 	auto avSubsCodec = avcodec_find_decoder(avStream->codecpar->codec_id);
 	if (avSubsCodec)
 	{
@@ -668,18 +679,28 @@ MediaSampleProvider^ FFmpegInteropMSS::CreateSubtitleSampleProvider(AVStream * a
 
 			if (SUCCEEDED(hr))
 			{
-
-
 				if (avcodec_open2(avSubsCodecCtx, avSubsCodec, NULL) < 0)
 				{
 					hr = E_FAIL;
 				}
 				else
 				{
-					// Detect audio format and create audio stream descriptor accordingly
-					avSubsStream = ref new SubtitlesProvider(m_pReader, avFormatCtx, avSubsCodecCtx, config, index, info);
+					if (avSubsCodecCtx->codec_id == AV_CODEC_ID_SUBRIP || 
+						avSubsCodecCtx->codec_id == AV_CODEC_ID_ASS ||
+						avSubsCodecCtx->codec_id == AV_CODEC_ID_SSA)
+					avSubsStream = ref new SubtitlesProvider(m_pReader, avFormatCtx, avSubsCodecCtx, config, index);
 				}
 			}
+		}
+
+		if (SUCCEEDED(hr))
+		{
+			hr = avSubsStream->Initialize();
+		}
+
+		if (FAILED(hr))
+		{
+			avSubsStream = nullptr;
 		}
 
 		// free codec context if failed

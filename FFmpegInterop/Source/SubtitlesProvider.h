@@ -1,6 +1,5 @@
 #pragma once
 #include "CompressedSampleProvider.h"
-#include "TimedTextSample.h"
 #include "StreamInfo.h"
 #include "NativeBufferFactory.h"
 
@@ -9,24 +8,30 @@ namespace FFmpegInterop
 {
 	ref class SubtitlesProvider : CompressedSampleProvider
 	{
-		SubtitleStreamInfo^ streamInfo;
-
 	internal:
 		SubtitlesProvider(FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx,
 			FFmpegInteropConfig^ config,
-			int index,
-			SubtitleStreamInfo^ info)
+			int index)
 			: CompressedSampleProvider(reader, avFormatCtx, avCodecCtx, config, index)
 		{
-			this->streamInfo = info;
 		}
+
+		property TimedMetadataTrack^ SubtitleTrack;
 
 		Platform::String ^ convertFromString(const std::string & input)
 		{
 			std::wstring w_str = std::wstring(input.begin(), input.end());
 			return ref new Platform::String(w_str.c_str(), (unsigned int)w_str.length());
+		}
+
+		HRESULT Initialize() override
+		{
+			InitializeNameLanguageCodec();
+			SubtitleTrack = ref new TimedMetadataTrack(Name, Language, TimedMetadataKind::Subtitle);
+			SubtitleTrack->Label = Name != nullptr ? Name : Language;
+			return S_OK;
 		}
 
 		virtual void QueuePacket(AVPacket *packet) override
@@ -37,8 +42,6 @@ namespace FFmpegInterop
 				return;
 			}
 
-			TimedTextSample^ sample;
-			IBuffer^ buffer;
 			String^ timedText;
 			TimeSpan position;
 			TimeSpan duration;
@@ -128,20 +131,37 @@ namespace FFmpegInterop
 			}
 			else
 			{
-				buffer = NativeBuffer::NativeBufferFactory::CreateNativeBuffer(packet->buf->data, packet->buf->size);
+				// not supported
 			}
 
-			sample = ref new TimedTextSample(timedText, buffer, position, duration);
-			streamInfo->ParseSubtitleSample(sample);
+			if (timedText)
+			{
+				try
+				{
+					TimedTextCue^ cue = ref new TimedTextCue();
+
+					cue->Duration = duration;
+					cue->StartTime = position;
+					cue->CueRegion = m_config->SubtitleRegion;
+					cue->CueStyle = m_config->SubtitleStyle;
+
+					TimedTextLine^ textLine = ref new TimedTextLine();
+					textLine->Text = timedText;
+					cue->Lines->Append(textLine);
+
+					SubtitleTrack->AddCue(cue);
+				}
+				catch (...)
+				{
+					OutputDebugString(L"Failed to add subtitle cue.");
+				}
+			}
+
 			av_packet_free(&packet);
 		}
-
-
 
 	public:
 		virtual ~SubtitlesProvider() {}
 	};
-
-	delegate void SubtitleSampleProcessed(SubtitlesProvider^ sender, TimedTextSample^ sample);
 
 }

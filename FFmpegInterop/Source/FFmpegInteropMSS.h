@@ -26,7 +26,7 @@
 #include "VideoFrame.h"
 #include "AvEffectDefinition.h"
 #include "StreamInfo.h"
-#include "TimedTextSample.h"
+#include "SubtitlesProvider.h"
 
 
 using namespace Platform;
@@ -158,7 +158,7 @@ namespace FFmpegInterop
 		HRESULT InitFFmpegContext();
 		MediaSampleProvider^ CreateAudioStream(AVStream * avStream, int index);
 		MediaSampleProvider^ CreateVideoStream(AVStream * avStream, int index);
-		MediaSampleProvider^ CreateSubtitleSampleProvider(AVStream * avStream, int index, SubtitleStreamInfo^ info);
+		SubtitlesProvider^ CreateSubtitleSampleProvider(AVStream * avStream, int index);
 		MediaSampleProvider^ CreateAudioSampleProvider(AVStream * avStream, AVCodecContext* avCodecCtx, int index);
 		MediaSampleProvider^ CreateVideoSampleProvider(AVStream * avStream, AVCodecContext* avCodecCtx, int index);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
@@ -198,7 +198,7 @@ namespace FFmpegInterop
 		FFmpegInteropConfig ^ config;
 		std::vector<MediaSampleProvider^> sampleProviders;
 		std::vector<MediaSampleProvider^> audioStreams;
-		std::vector<MediaSampleProvider^> subtitleStreams;
+		std::vector<SubtitlesProvider^> subtitleStreams;
 		MediaSampleProvider^ videoStream;
 		MediaSampleProvider^ currentAudioStream;
 		IVectorView<AvEffectDefinition^>^ currentAudioEffects;
@@ -218,7 +218,5 @@ namespace FFmpegInterop
 		FFmpegReader^ m_pReader;
 		bool isFirstSeek;
 };
-
-	public delegate void TimedTextSampleDecoded(FFmpegInteropMSS^ sender, TimedTextSample^ sample);
 
 }

@@ -262,6 +262,7 @@
     <ClInclude Include="..\..\Source\FrameGrabber.h" />
     <ClInclude Include="..\..\Source\H264AVCSampleProvider.h" />
     <ClInclude Include="..\..\Source\IAvEffect.h" />
+    <ClInclude Include="..\..\Source\LanguageTagConverter.h" />
     <ClInclude Include="..\..\Source\NALPacketSampleProvider.h" />
     <ClInclude Include="..\..\Source\HEVCSampleProvider.h" />
     <ClInclude Include="..\..\Source\ILogProvider.h" />
@@ -271,7 +272,6 @@
     <ClInclude Include="..\..\Source\NativeBufferFactory.h" />
     <ClInclude Include="..\..\Source\StreamInfo.h" />
     <ClInclude Include="..\..\Source\SubtitlesProvider.h" />
-    <ClInclude Include="..\..\Source\TimedTextSample.h" />
     <ClInclude Include="..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedFrameProvider.h" />
     <ClInclude Include="..\..\Source\UncompressedSampleProvider.h" />

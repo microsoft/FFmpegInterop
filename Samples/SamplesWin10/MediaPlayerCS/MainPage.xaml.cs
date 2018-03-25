@@ -61,6 +61,16 @@ namespace MediaPlayerCS
 
         private async void OpenLocalFile(object sender, RoutedEventArgs e)
         {
+            var languageDict = new Dictionary<string, Tuple<string, string>>();
+            var languages = await Languages.LoadAsync();
+            foreach(var language in languages)
+            {
+                var data = new Tuple<string, string>(language._1, language.name);
+                languageDict[language._2] = data;
+                languageDict[language._2B] = data;
+                languageDict[language._2T] = data;
+                languageDict[language._3] = data;
+            }
             FileOpenPicker filePicker = new FileOpenPicker();
             filePicker.ViewMode = PickerViewMode.Thumbnail;
             filePicker.SuggestedStartLocation = PickerLocationId.VideosLibrary;

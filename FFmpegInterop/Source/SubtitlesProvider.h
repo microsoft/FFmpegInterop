@@ -1,4 +1,8 @@
 #pragma once
+
+#include <string>
+#include <codecvt>
+
 #include "CompressedSampleProvider.h"
 #include "StreamInfo.h"
 #include "NativeBufferFactory.h"
@@ -20,10 +24,16 @@ namespace FFmpegInterop
 
 		property TimedMetadataTrack^ SubtitleTrack;
 
-		Platform::String ^ convertFromString(const std::string & input)
+		// convert UTF-8 string to wstring
+		std::wstring utf8_to_wstring(const std::string& str)
 		{
-			std::wstring w_str = std::wstring(input.begin(), input.end());
-			return ref new Platform::String(w_str.c_str(), (unsigned int)w_str.length());
+			std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+			return myconv.from_bytes(str);
+		}
+
+		Platform::String ^ convertFromString(const std::wstring & input)
+		{
+			return ref new Platform::String(input.c_str(), (unsigned int)input.length());
 		}
 
 		HRESULT Initialize() override
@@ -36,11 +46,12 @@ namespace FFmpegInterop
 
 		virtual void QueuePacket(AVPacket *packet) override
 		{
-			if (!m_isEnabled)
+			// always process text subtitles to allow faster subtitle switching
+			/*if (!m_isEnabled)
 			{
 				av_packet_free(&packet);
 				return;
-			}
+			}*/
 
 			String^ timedText;
 			TimeSpan position;
@@ -52,7 +63,7 @@ namespace FFmpegInterop
 
 			if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_SUBRIP)
 			{
-				auto str = std::string((char*)packet->buf->data);
+				auto str = utf8_to_wstring(std::string((char*)packet->buf->data));
 
 				// TODO we could try to forward some font style tags (if whole text is wrapped in <i> or <b>)
 				// TODO we might also have to look for &nbsp; and others?
@@ -90,8 +101,8 @@ namespace FFmpegInterop
 			}
 			else if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_ASS || m_pAvCodecCtx->codec_id == AV_CODEC_ID_SSA)
 			{
-				auto str = std::string((char*)packet->buf->data);
-				
+				auto str = utf8_to_wstring(std::string((char*)packet->buf->data));
+
 				// strip effects from string
 				while (true)
 				{

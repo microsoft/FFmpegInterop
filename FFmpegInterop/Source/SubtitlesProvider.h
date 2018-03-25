@@ -41,17 +41,18 @@ namespace FFmpegInterop
 			InitializeNameLanguageCodec();
 			SubtitleTrack = ref new TimedMetadataTrack(Name, Language, TimedMetadataKind::Subtitle);
 			SubtitleTrack->Label = Name != nullptr ? Name : Language;
+			SubtitleTrack->CueExited += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Core::TimedMetadataTrack ^, Windows::Media::Core::MediaCueEventArgs ^>(this, &FFmpegInterop::SubtitlesProvider::OnCueExited);
 			return S_OK;
 		}
 
 		virtual void QueuePacket(AVPacket *packet) override
 		{
-			// always process text subtitles to allow faster subtitle switching
-			/*if (!m_isEnabled)
+			if (addedCues.find(packet->pos) != addedCues.end())
 			{
 				av_packet_free(&packet);
 				return;
-			}*/
+			}
+			addedCues[packet->pos] = packet->pos;
 
 			String^ timedText;
 			TimeSpan position;
@@ -147,32 +148,89 @@ namespace FFmpegInterop
 
 			if (timedText)
 			{
-				try
-				{
-					TimedTextCue^ cue = ref new TimedTextCue();
+				TimedTextCue^ cue = ref new TimedTextCue();
 
-					cue->Duration = duration;
-					cue->StartTime = position;
-					cue->CueRegion = m_config->SubtitleRegion;
-					cue->CueStyle = m_config->SubtitleStyle;
+				cue->Duration = duration;
+				cue->StartTime = position;
+				cue->CueRegion = m_config->SubtitleRegion;
+				cue->CueStyle = m_config->SubtitleStyle;
 
-					TimedTextLine^ textLine = ref new TimedTextLine();
-					textLine->Text = timedText;
-					cue->Lines->Append(textLine);
+				TimedTextLine^ textLine = ref new TimedTextLine();
+				textLine->Text = timedText;
+				cue->Lines->Append(textLine);
 
-					SubtitleTrack->AddCue(cue);
-				}
-				catch (...)
-				{
-					OutputDebugString(L"Failed to add subtitle cue.");
-				}
+				AddCue(cue);
 			}
 
 			av_packet_free(&packet);
 		}
 
+	private:
+
+		void AddCue(IMediaCue^ cue)
+		{
+			mutex.lock();
+			try
+			{
+				// to avoid flicker, we try to add new cues only after active cues are finished
+				if (SubtitleTrack->ActiveCues->Size > 0)
+				{
+					bool addToPending = true;
+					for each (auto active in SubtitleTrack->ActiveCues)
+					{
+						if (active->StartTime.Duration + active->Duration.Duration > cue->StartTime.Duration)
+						{
+							addToPending = false;
+							break;
+						}
+					}
+					if (addToPending)
+					{
+						pendingCues.push_back(cue);
+					}
+					else
+					{
+						SubtitleTrack->AddCue(cue);
+					}
+				}
+				else
+				{
+					SubtitleTrack->AddCue(cue);
+				}
+			}
+			catch (...)
+			{
+				OutputDebugString(L"Failed to add subtitle cue.");
+			}
+			mutex.unlock();
+		}
+
+		void OnCueExited(TimedMetadataTrack ^sender, MediaCueEventArgs ^args)
+		{
+			mutex.lock();
+			try
+			{
+				for each (auto cue in pendingCues)
+				{
+					SubtitleTrack->AddCue(cue);
+				}
+			}
+			catch (...)
+			{
+				OutputDebugString(L"Failed to add subtitle cue.");
+			}
+			pendingCues.clear();
+			mutex.unlock();
+		}
+
+		std::mutex mutex;
+		std::vector<IMediaCue^> pendingCues;
+		std::map<int64,int64> addedCues;
+
 	public:
 		virtual ~SubtitlesProvider() {}
-	};
+};
 
 }
+
+

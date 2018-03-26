@@ -41,17 +41,22 @@ namespace FFmpegInterop
 			InitializeNameLanguageCodec();
 			SubtitleTrack = ref new TimedMetadataTrack(Name, Language, TimedMetadataKind::Subtitle);
 			SubtitleTrack->Label = Name != nullptr ? Name : Language;
-			SubtitleTrack->CueExited += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Core::TimedMetadataTrack ^, Windows::Media::Core::MediaCueEventArgs ^>(this, &FFmpegInterop::SubtitlesProvider::OnCueExited);
+			cueExitedToken = SubtitleTrack->CueExited += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Core::TimedMetadataTrack ^, Windows::Media::Core::MediaCueEventArgs ^>(this, &FFmpegInterop::SubtitlesProvider::OnCueExited);
 			return S_OK;
 		}
 
 		virtual void QueuePacket(AVPacket *packet) override
 		{
-			if (addedCues.find(packet->pos) != addedCues.end())
+			if (packet->pos > maxCuePosition)
+			{
+				maxCuePosition = packet->pos;
+			}
+			else if (addedCues.find(packet->pos) != addedCues.end())
 			{
 				av_packet_free(&packet);
 				return;
 			}
+
 			addedCues[packet->pos] = packet->pos;
 
 			String^ timedText;
@@ -226,9 +231,18 @@ namespace FFmpegInterop
 		std::mutex mutex;
 		std::vector<IMediaCue^> pendingCues;
 		std::map<int64,int64> addedCues;
+		int64 maxCuePosition;
+		EventRegistrationToken cueExitedToken;
 
 	public:
-		virtual ~SubtitlesProvider() {}
+		virtual ~SubtitlesProvider() 
+		{
+			if (SubtitleTrack)
+			{
+				SubtitleTrack->CueExited -= cueExitedToken;
+				SubtitleTrack = nullptr;
+			}
+		}
 };
 
 }

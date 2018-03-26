@@ -686,6 +686,9 @@ SubtitlesProvider^ FFmpegInteropMSS::CreateSubtitleSampleProvider(AVStream * avS
 				else
 				{
 					if (avSubsCodecCtx->codec_id == AV_CODEC_ID_SUBRIP || 
+						avSubsCodecCtx->codec_id == AV_CODEC_ID_SRT ||
+						avSubsCodecCtx->codec_id == AV_CODEC_ID_TEXT ||
+						avSubsCodecCtx->codec_id == AV_CODEC_ID_WEBVTT ||
 						avSubsCodecCtx->codec_id == AV_CODEC_ID_ASS ||
 						avSubsCodecCtx->codec_id == AV_CODEC_ID_SSA)
 					avSubsStream = ref new SubtitlesProvider(m_pReader, avFormatCtx, avSubsCodecCtx, config, index);

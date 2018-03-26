@@ -67,7 +67,10 @@ namespace FFmpegInterop
 			duration.Duration = LONGLONG(av_q2d(m_pAvStream->time_base) * 10000000 * packet->duration);
 
 
-			if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_SUBRIP)
+			if (m_pAvCodecCtx->codec_id == AV_CODEC_ID_SUBRIP || 
+				m_pAvCodecCtx->codec_id == AV_CODEC_ID_SRT || 
+				m_pAvCodecCtx->codec_id == AV_CODEC_ID_TEXT ||
+				m_pAvCodecCtx->codec_id == AV_CODEC_ID_WEBVTT)
 			{
 				auto str = utf8_to_wstring(std::string((char*)packet->buf->data));
 

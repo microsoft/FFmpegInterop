@@ -241,24 +241,24 @@ MediaSource^ FFmpegInteropMSS::CreateMediaSource()
 
 MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem()
 {
-	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
-	auto playbackItem = ref new MediaPlaybackItem(CreateMediaSource());
+	if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
+	playbackItem = ref new MediaPlaybackItem(CreateMediaSource());
 	InitializePlaybackItem(playbackItem);
 	return playbackItem;
 }
 
 MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem(TimeSpan startTime)
 {
-	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
-	auto playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime);
+	if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
+	playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime);
 	InitializePlaybackItem(playbackItem);
 	return playbackItem;
 }
 
 MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem(TimeSpan startTime, TimeSpan durationLimit)
 {
-	if (this->config->IsFrameGrabber) throw ref new Exception(E_UNEXPECTED);
-	auto playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime, durationLimit);
+	if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
+	playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime, durationLimit);
 	InitializePlaybackItem(playbackItem);
 	return playbackItem;
 }
@@ -564,13 +564,15 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext()
 		}
 		else if (avStream->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
 		{
+
+
 			stream = CreateSubtitleSampleProvider(avStream, index);
 			if (stream)
 			{
+
 				auto isDefault = index == subtitleStreamIndex;
 				auto info = ref new SubtitleStreamInfo(stream->Name, stream->Language, stream->CodecName,
-					isDefault, (avStream->disposition & AV_DISPOSITION_FORCED) == AV_DISPOSITION_FORCED);
-
+					isDefault, (avStream->disposition & AV_DISPOSITION_FORCED) == AV_DISPOSITION_FORCED, ((SubtitlesProvider^)stream)->SubtitleTrack);
 				if (isDefault)
 				{
 					subtitleStrInfos->InsertAt(0, info);
@@ -685,13 +687,13 @@ SubtitlesProvider^ FFmpegInteropMSS::CreateSubtitleSampleProvider(AVStream * avS
 				}
 				else
 				{
-					if (avSubsCodecCtx->codec_id == AV_CODEC_ID_SUBRIP || 
+					if (avSubsCodecCtx->codec_id == AV_CODEC_ID_SUBRIP ||
 						avSubsCodecCtx->codec_id == AV_CODEC_ID_SRT ||
 						avSubsCodecCtx->codec_id == AV_CODEC_ID_TEXT ||
 						avSubsCodecCtx->codec_id == AV_CODEC_ID_WEBVTT ||
 						avSubsCodecCtx->codec_id == AV_CODEC_ID_ASS ||
 						avSubsCodecCtx->codec_id == AV_CODEC_ID_SSA)
-					avSubsStream = ref new SubtitlesProvider(m_pReader, avFormatCtx, avSubsCodecCtx, config, index);
+						avSubsStream = ref new SubtitlesProvider(m_pReader, avFormatCtx, avSubsCodecCtx, config, index);
 				}
 			}
 		}

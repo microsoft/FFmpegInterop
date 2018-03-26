@@ -44,7 +44,7 @@ extern "C"
 
 namespace FFmpegInterop
 {
-	
+
 	public ref class FFmpegInteropMSS sealed
 	{
 	public:
@@ -66,7 +66,7 @@ namespace FFmpegInterop
 		[WFM::Deprecated("Use the CreateFromUriAsync method.", WFM::DeprecationType::Deprecate, 0x0)]
 		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
 
-		
+
 		void SetAudioEffects(IVectorView<AvEffectDefinition^>^ audioEffects);
 		void SetVideoEffects(IVectorView<AvEffectDefinition^>^ videoEffects);
 		void DisableAudioEffects();
@@ -147,7 +147,13 @@ namespace FFmpegInterop
 			};
 		};
 
-
+		property MediaPlaybackItem^ PlaybackItem
+		{
+			MediaPlaybackItem^ get()
+			{
+				return playbackItem;
+			}
+		}
 
 
 	private:
@@ -189,12 +195,13 @@ namespace FFmpegInterop
 		AVFormatContext* avFormatCtx;
 
 	private:
-		
+
 		MediaStreamSource ^ mss;
 		EventRegistrationToken startingRequestedToken;
 		EventRegistrationToken sampleRequestedToken;
 		EventRegistrationToken switchStreamRequestedToken;
-		
+		MediaPlaybackItem^ playbackItem;
+
 		FFmpegInteropConfig ^ config;
 		std::vector<MediaSampleProvider^> sampleProviders;
 		std::vector<MediaSampleProvider^> audioStreams;
@@ -217,6 +224,6 @@ namespace FFmpegInterop
 		unsigned char* fileStreamBuffer;
 		FFmpegReader^ m_pReader;
 		bool isFirstSeek;
-};
+	};
 
 }

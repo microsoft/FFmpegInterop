@@ -22,8 +22,8 @@
 
 using namespace FFmpegInterop;
 
-// Minimum duration for uncompressed audio samples (50 ms)
-const LONGLONG MINAUDIOSAMPLEDURATION = 500000;
+// Minimum duration for uncompressed audio samples (200 ms)
+const LONGLONG MINAUDIOSAMPLEDURATION = 2000000;
 
 UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	FFmpegReader^ reader,

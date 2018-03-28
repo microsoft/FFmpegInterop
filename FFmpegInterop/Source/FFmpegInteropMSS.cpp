@@ -85,6 +85,13 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 		mss = nullptr;
 	}
 
+	if (playbackItem)
+	{
+		playbackItem->AudioTracksChanged -= audioTracksChangedToken;
+		playbackItem->TimedMetadataTracks->PresentationModeChanged -= subtitlePresentationModeChangedToken;
+		playbackItem = nullptr;
+	}
+
 	// Clear our data
 	currentAudioStream = nullptr;
 	videoStream = nullptr;
@@ -241,32 +248,62 @@ MediaSource^ FFmpegInteropMSS::CreateMediaSource()
 
 MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem()
 {
-	if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
-	playbackItem = ref new MediaPlaybackItem(CreateMediaSource());
-	InitializePlaybackItem(playbackItem);
-	return playbackItem;
+	mutexGuard.lock();
+	try
+	{
+		if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
+		playbackItem = ref new MediaPlaybackItem(CreateMediaSource());
+		InitializePlaybackItem(playbackItem);
+		mutexGuard.unlock();
+		return playbackItem;
+	}
+	catch (...)
+	{
+		mutexGuard.unlock();
+		throw;
+	}
 }
 
 MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem(TimeSpan startTime)
 {
-	if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
-	playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime);
-	InitializePlaybackItem(playbackItem);
-	return playbackItem;
+	mutexGuard.lock();
+	try
+	{
+		if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
+		playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime);
+		InitializePlaybackItem(playbackItem);
+		mutexGuard.unlock();
+		return playbackItem;
+	}
+	catch (...)
+	{
+		mutexGuard.unlock();
+		throw;
+	}
 }
 
 MediaPlaybackItem^ FFmpegInteropMSS::CreateMediaPlaybackItem(TimeSpan startTime, TimeSpan durationLimit)
 {
-	if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
-	playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime, durationLimit);
-	InitializePlaybackItem(playbackItem);
-	return playbackItem;
+	mutexGuard.lock();
+	try
+	{
+		if (this->config->IsFrameGrabber || playbackItem != nullptr) throw ref new Exception(E_UNEXPECTED);
+		playbackItem = ref new MediaPlaybackItem(CreateMediaSource(), startTime, durationLimit);
+		InitializePlaybackItem(playbackItem);
+		mutexGuard.unlock();
+		return playbackItem;
+	}
+	catch (...)
+	{
+		mutexGuard.unlock();
+		throw;
+	}
 }
 
 void FFmpegInteropMSS::InitializePlaybackItem(MediaPlaybackItem^ playbackitem)
 {
-	playbackitem->AudioTracksChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackItem ^, Windows::Foundation::Collections::IVectorChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged);
-	playbackitem->TimedMetadataTracks->PresentationModeChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackTimedMetadataTrackList ^, Windows::Media::Playback::TimedMetadataPresentationModeChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnPresentationModeChanged);
+	audioTracksChangedToken = playbackitem->AudioTracksChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackItem ^, Windows::Foundation::Collections::IVectorChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged);
+	subtitlePresentationModeChangedToken = playbackitem->TimedMetadataTracks->PresentationModeChanged += ref new Windows::Foundation::TypedEventHandler<Windows::Media::Playback::MediaPlaybackTimedMetadataTrackList ^, Windows::Media::Playback::TimedMetadataPresentationModeChangedEventArgs ^>(this, &FFmpegInterop::FFmpegInteropMSS::OnPresentationModeChanged);
 
 	if (config->AutoSelectForcedSubtitles)
 	{
@@ -285,6 +322,7 @@ void FFmpegInteropMSS::InitializePlaybackItem(MediaPlaybackItem^ playbackitem)
 
 void FFmpegInterop::FFmpegInteropMSS::OnPresentationModeChanged(MediaPlaybackTimedMetadataTrackList ^sender, TimedMetadataPresentationModeChangedEventArgs ^args)
 {
+	mutexGuard.lock();
 	int index = 0;
 	for each (auto stream in subtitleStreams)
 	{
@@ -301,10 +339,12 @@ void FFmpegInterop::FFmpegInteropMSS::OnPresentationModeChanged(MediaPlaybackTim
 		}
 		index++;
 	}
+	mutexGuard.unlock();
 }
 
 void FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged(MediaPlaybackItem ^sender, IVectorChangedEventArgs ^args)
 {
+	mutexGuard.lock();
 	if (sender->AudioTracks->Size == AudioStreams->Size)
 	{
 		for (size_t i = 0; i < AudioStreams->Size; i++)
@@ -321,6 +361,7 @@ void FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged(MediaPlaybackItem ^se
 			}
 		}
 	}
+	mutexGuard.unlock();
 }
 
 HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri)

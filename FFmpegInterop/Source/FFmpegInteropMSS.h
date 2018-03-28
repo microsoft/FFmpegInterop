@@ -74,7 +74,6 @@ namespace FFmpegInterop
 		MediaThumbnailData^ ExtractThumbnail();
 
 		MediaStreamSource^ GetMediaStreamSource();
-		MediaSource^ CreateMediaSource();
 		MediaPlaybackItem^ CreateMediaPlaybackItem();
 		MediaPlaybackItem^ CreateMediaPlaybackItem(TimeSpan startTime);
 		MediaPlaybackItem^ CreateMediaPlaybackItem(TimeSpan startTime, TimeSpan durationLimit);
@@ -162,6 +161,7 @@ namespace FFmpegInterop
 		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, MediaStreamSource^ mss);
 		HRESULT CreateMediaStreamSource(String^ uri);
 		HRESULT InitFFmpegContext();
+		MediaSource^ CreateMediaSource();
 		MediaSampleProvider^ CreateAudioStream(AVStream * avStream, int index);
 		MediaSampleProvider^ CreateVideoStream(AVStream * avStream, int index);
 		SubtitlesProvider^ CreateSubtitleSampleProvider(AVStream * avStream, int index);
@@ -210,6 +210,9 @@ namespace FFmpegInterop
 		MediaSampleProvider^ currentAudioStream;
 		IVectorView<AvEffectDefinition^>^ currentAudioEffects;
 		int thumbnailStreamIndex;
+
+		EventRegistrationToken audioTracksChangedToken;
+		EventRegistrationToken subtitlePresentationModeChangedToken;
 
 		VideoStreamInfo^ videoStreamInfo;
 		IVectorView<AudioStreamInfo^>^ audioStreamInfos;

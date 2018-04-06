@@ -347,7 +347,7 @@ void FFmpegInterop::FFmpegInteropMSS::OnAudioTracksChanged(MediaPlaybackItem ^se
 	mutexGuard.lock();
 	if (sender->AudioTracks->Size == AudioStreams->Size)
 	{
-		for (size_t i = 0; i < AudioStreams->Size; i++)
+		for (unsigned int i = 0; i < AudioStreams->Size; i++)
 		{
 			auto track = sender->AudioTracks->GetAt(i);
 			auto info = AudioStreams->GetAt(i);

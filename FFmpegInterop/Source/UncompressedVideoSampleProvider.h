@@ -32,6 +32,10 @@ namespace FFmpegInterop
 	{
 	public:
 		virtual ~UncompressedVideoSampleProvider();
+		virtual void Flush() override
+		{
+			hasFirstInterlacedFrame = false;
+		}
 
 	internal:
 		UncompressedVideoSampleProvider(
@@ -63,6 +67,7 @@ namespace FFmpegInterop
 		bool m_top_field_first;
 		AVChromaLocation m_chroma_location;
 		bool m_bUseScaler;
+		bool hasFirstInterlacedFrame;
 	};
 }
 

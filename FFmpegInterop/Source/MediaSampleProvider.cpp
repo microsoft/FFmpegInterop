@@ -250,6 +250,7 @@ void MediaSampleProvider::Flush()
 	}
 	avcodec_flush_buffers(m_pAvCodecCtx);
 	m_isDiscontinuous = true;
+	IsCleanSample = false;
 }
 
 void MediaSampleProvider::EnableStream()

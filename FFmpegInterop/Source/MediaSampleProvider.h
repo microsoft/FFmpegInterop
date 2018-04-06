@@ -56,6 +56,8 @@ namespace FFmpegInterop
 			bool get() { return m_isEnabled; }
 		}
 
+		property bool IsCleanSample;
+
 		property String^ Name;
 		property String^ Language;
 		property String^ CodecName;

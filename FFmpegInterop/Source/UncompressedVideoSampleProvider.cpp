@@ -248,6 +248,26 @@ HRESULT UncompressedVideoSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 		m_interlaced_frame = avFrame->interlaced_frame == 1;
 		m_top_field_first = avFrame->top_field_first == 1;
 		m_chroma_location = avFrame->chroma_location;
+		if (m_config->IsFrameGrabber && !IsCleanSample)
+		{
+			if (m_interlaced_frame)
+			{
+				// for interlaced content we need to decode two frames to get clean image
+				if (!hasFirstInterlacedFrame)
+				{
+					hasFirstInterlacedFrame = true;
+				}
+				else
+				{
+					IsCleanSample = true;
+				}
+			}
+			else
+			{
+				// for progressive video, we need a key frame or b frame
+				IsCleanSample = avFrame->key_frame || avFrame->pict_type == AV_PICTURE_TYPE_B;
+			}
+		}
 	}
 
 	return hr;

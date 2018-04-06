@@ -117,10 +117,14 @@ namespace FFmpegInterop {
 						continue;
 					}
 
+					auto streamDescriptor = static_cast<VideoStreamDescriptor^>(interopMSS->VideoSampleProvider->StreamDescriptor);
+
 					auto result = ref new VideoFrame(sample->Buffer,
 						interopMSS->VideoStream->PixelWidth,
 						interopMSS->VideoStream->PixelHeight,
+						streamDescriptor->EncodingProperties->PixelAspectRatio,
 						sample->Timestamp);
+
 					return result;
 
 				}

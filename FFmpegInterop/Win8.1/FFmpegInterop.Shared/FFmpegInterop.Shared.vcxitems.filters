@@ -15,6 +15,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\H264AVCSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\FFmpegInteropLogging.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\ILogProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\SubtitlesProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\TimedTextSample.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">

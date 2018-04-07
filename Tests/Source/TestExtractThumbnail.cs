@@ -70,7 +70,8 @@ namespace UnitTest.Windows
             Assert.IsNotNull(readStream);
 
             // CreateFromStreamAsync should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            var frame = await FFmpegInteropMSS.ExtractVideoFrameAsync(readStream);
+            var frameGrabber = await FrameGrabber.CreateFromStreamAsync(readStream);
+            var frame = await frameGrabber.ExtractVideoFrameAsync(TimeSpan.Zero);
             Assert.IsNotNull(frame);
 
             using (var stream = new InMemoryRandomAccessStream())

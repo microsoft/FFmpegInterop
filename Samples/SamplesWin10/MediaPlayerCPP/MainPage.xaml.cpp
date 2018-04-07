@@ -79,12 +79,12 @@ void MainPage::OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::Routed
 					create_task(FFmpegInteropMSS::CreateFromStreamAsync(readStream, Config)).then([this](FFmpegInteropMSS^ result)
 					{
 						FFmpegMSS = result;
-						MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
+						auto playbackItem = FFmpegMSS->CreateMediaPlaybackItem();
 
-						if (mss)
+						if (playbackItem)
 						{
-							// Pass MediaStreamSource to Media Element
-							mediaElement->SetMediaStreamSource(mss);
+							// Pass MediaPlaybackItem to Media Element
+							mediaElement->SetPlaybackSource(playbackItem);
 
 							// Close control panel after file open
 							Splitter->IsPaneOpen = false;
@@ -127,12 +127,12 @@ void MainPage::URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::K
 			create_task(FFmpegInteropMSS::CreateFromUriAsync(uri, Config)).then([this](FFmpegInteropMSS^ result)
 			{
 				FFmpegMSS = result;
-				MediaStreamSource^ mss = FFmpegMSS->GetMediaStreamSource();
+				auto playbackItem = FFmpegMSS->CreateMediaPlaybackItem();
 
-				if (mss)
+				if (playbackItem)
 				{
-					// Pass MediaStreamSource to Media Element
-					mediaElement->SetMediaStreamSource(mss);
+					// Pass MediaPlaybackItem to Media Element
+					mediaElement->SetPlaybackSource(playbackItem);
 
 					// Close control panel after opening media
 					Splitter->IsPaneOpen = false;
@@ -165,34 +165,37 @@ void MainPage::ExtractFrame(Platform::Object^ sender, Windows::UI::Xaml::RoutedE
 			{
 				bool exactSeek = grabFrameExactSeek->IsOn;
 				// extract frame using FFmpegInterop and current position
-				create_task(FFmpegInteropMSS::ExtractVideoFrameAsync(stream, mediaElement->Position, exactSeek)).then([this](VideoFrame^ frame)
+				create_task(FrameGrabber::CreateFromStreamAsync(stream)).then([this,exactSeek](FrameGrabber^ frameGrabber)
 				{
-					auto filePicker = ref new FileSavePicker();
-					filePicker->SuggestedStartLocation = PickerLocationId::VideosLibrary;
-					filePicker->DefaultFileExtension = ".jpg";
-					filePicker->FileTypeChoices->Insert("Jpeg file", ref new Platform::Collections::Vector<String^>(1, ".jpg"));
-
-					// Show file picker so user can select a file
-					create_task(filePicker->PickSaveFileAsync()).then([this, frame](StorageFile^ file)
+					create_task(frameGrabber->ExtractVideoFrameAsync(mediaElement->Position, exactSeek)).then([this](VideoFrame^ frame)
 					{
-						if (file != nullptr)
+						auto filePicker = ref new FileSavePicker();
+						filePicker->SuggestedStartLocation = PickerLocationId::VideosLibrary;
+						filePicker->DefaultFileExtension = ".jpg";
+						filePicker->FileTypeChoices->Insert("Jpeg file", ref new Platform::Collections::Vector<String^>(1, ".jpg"));
+
+						// Show file picker so user can select a file
+						create_task(filePicker->PickSaveFileAsync()).then([this, frame](StorageFile^ file)
 						{
-							create_task(file->OpenAsync(FileAccessMode::ReadWrite)).then([this, frame, file](IRandomAccessStream^ stream)
+							if (file != nullptr)
 							{
-								// encode frame as jpeg file
-								create_task(frame->EncodeAsJpegAsync(stream)).then([this, file]
+								create_task(file->OpenAsync(FileAccessMode::ReadWrite)).then([this, frame, file](IRandomAccessStream^ stream)
 								{
-									// launch file after creation
-									create_task(Windows::System::Launcher::LaunchFileAsync(file)).then([this, file](bool launched)
+									// encode frame as jpeg file
+									create_task(frame->EncodeAsJpegAsync(stream)).then([this, file]
 									{
-										if (!launched)
+										// launch file after creation
+										create_task(Windows::System::Launcher::LaunchFileAsync(file)).then([this, file](bool launched)
 										{
-											DisplayErrorMessage("File has been created:\n" + file->Path);
-										}
+											if (!launched)
+											{
+												DisplayErrorMessage("File has been created:\n" + file->Path);
+											}
+										});
 									});
 								});
-							});
-						}
+							}
+						});
 					});
 				});
 			}

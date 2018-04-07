@@ -24,6 +24,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\MediaSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\NativeBuffer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\NativeBufferFactory.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\SubtitlesProvider.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\TimedTextSample.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedAudioSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedSampleProvider.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)..\..\Source\UncompressedVideoSampleProvider.h" />

@@ -43,7 +43,7 @@ namespace FFmpegInterop
 		property int BitsPerSample { int get() { return bitsPerSample; } }
 
 	private:
-		String^ name;
+		String ^ name;
 		String^ language;
 		String^ codecName;
 		int64 bitrate;
@@ -82,7 +82,7 @@ namespace FFmpegInterop
 		property int BitsPerSample { int get() { return bitsPerSample; } }
 
 	private:
-		String^ name;
+		String ^ name;
 		String^ language;
 		String^ codecName;
 		int64 bitrate;
@@ -97,13 +97,14 @@ namespace FFmpegInterop
 	public ref class SubtitleStreamInfo sealed : public IStreamInfo
 	{
 	public:
-		SubtitleStreamInfo(String^ name, String^ language, String^ codecName, bool isDefault, bool isForced)
+		SubtitleStreamInfo(String^ name, String^ language, String^ codecName, bool isDefault, bool isForced, TimedMetadataTrack^ track)
 		{
 			this->name = name;
 			this->language = language;
 			this->codecName = codecName;
 			this->isDefault = isDefault;
 			this->isForced = isForced;
+			this->track = track;
 		}
 
 		virtual property String^ Name { String^ get() { return name; } }
@@ -114,12 +115,25 @@ namespace FFmpegInterop
 
 		property bool IsForced { bool get() { return isForced; } }
 
+		property TimedMetadataTrack^ SubtitleTrack
+		{
+			TimedMetadataTrack^ get()
+			{
+				return track;
+			}
+
+		internal:
+			void set(TimedMetadataTrack^ value)
+			{
+				track = value;
+			}
+		}
 	private:
-		String^ name;
+		String ^ name;
 		String^ language;
 		String^ codecName;
 		bool isDefault;
-
 		bool isForced;
+		TimedMetadataTrack^ track;
 	};
 }

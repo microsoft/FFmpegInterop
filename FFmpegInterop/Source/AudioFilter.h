@@ -242,7 +242,7 @@ namespace FFmpegInterop {
 			int err = 0;
 
 			//link all except last item
-			for (int i = 0; i < AVFilterContexts.size() - 1; i++)
+			for (unsigned int i = 0; i < AVFilterContexts.size() - 1; i++)
 			{
 				if (err >= 0)
 					err = avfilter_link(AVFilterContexts[i], 0, AVFilterContexts[i + 1], 0);

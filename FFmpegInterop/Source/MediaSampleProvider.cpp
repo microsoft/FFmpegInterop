@@ -20,6 +20,7 @@
 #include "MediaSampleProvider.h"
 #include "FFmpegInteropMSS.h"
 #include "FFmpegReader.h"
+#include "LanguageTagConverter.h"
 
 using namespace FFmpegInterop;
 using namespace Windows::Media::MediaProperties;
@@ -70,26 +71,58 @@ HRESULT MediaSampleProvider::Initialize()
 	m_streamDescriptor = CreateStreamDescriptor();
 	if (m_streamDescriptor)
 	{
-		// unfortunately, setting Name or Language on MediaStreamDescriptor does not have any effect, they are not shown in track selection list
-		auto title = av_dict_get(m_pAvStream->metadata, "title", NULL, 0);
-		if (title)
-		{
-			Name = ConvertString(title->value);
-		}
-
-		auto language = av_dict_get(m_pAvStream->metadata, "language", NULL, 0);
-		if (language)
-		{
-			Language = ConvertString(language->value);
-		}
-
-		auto codec = m_pAvCodecCtx->codec_descriptor->name;
-		if (codec)
-		{
-			CodecName = ConvertString(codec);
-		}
+		InitializeNameLanguageCodec();
 	}
 	return m_streamDescriptor ? S_OK : E_FAIL;
+}
+
+void FFmpegInterop::MediaSampleProvider::InitializeNameLanguageCodec()
+{
+	// unfortunately, setting Name or Language on MediaStreamDescriptor does not have any effect, they are not shown in track selection list
+	auto title = av_dict_get(m_pAvStream->metadata, "title", NULL, 0);
+	if (title)
+	{
+		Name = ConvertString(title->value);
+	}
+
+	auto language = av_dict_get(m_pAvStream->metadata, "language", NULL, 0);
+	if (language)
+	{
+		Language = ConvertString(language->value);
+		if (Language->Length() == 3)
+		{
+			auto entry = LanguageTagConverter::TryGetLanguage(Language);
+			if (entry != nullptr)
+			{
+				try
+				{
+					auto winLanguage = ref new Windows::Globalization::Language(entry->TwoLetterCode);
+					Language = winLanguage->DisplayName;
+				}
+				catch (...)
+				{
+					Language = entry->EnglishName;
+				}
+			}
+		}
+		else if (Language->Length() == 2)
+		{
+			try
+			{
+				auto winLanguage = ref new Windows::Globalization::Language(Language);
+				Language = winLanguage->DisplayName;
+			}
+			catch (...)
+			{
+			}
+		}
+	}
+
+	auto codec = m_pAvCodecCtx->codec_descriptor->name;
+	if (codec)
+	{
+		CodecName = ConvertString(codec);
+	}
 }
 
 MediaStreamSample^ MediaSampleProvider::GetNextSample()

@@ -26,6 +26,13 @@ namespace FFmpegInterop
 			this->pixelWidth = width;
 			this->pixelHeight = height;
 			this->pixelAspectRatio = pixelAspectRatio;
+			if (pixelAspectRatio != nullptr &&
+				pixelAspectRatio->Numerator > 0 && 
+				pixelAspectRatio->Denominator > 0 && 
+				pixelAspectRatio->Numerator != pixelAspectRatio->Denominator)
+			{
+				hasNonSquarePixels = true;
+			}
 			this->timestamp = timestamp;
 		}
 
@@ -62,7 +69,7 @@ namespace FFmpegInterop
 		{
 			unsigned int get()
 			{
-				if (pixelAspectRatio != nullptr && pixelAspectRatio->Numerator > 0 && pixelAspectRatio->Denominator > 0)
+				if (hasNonSquarePixels)
 				{
 					if (pixelAspectRatio->Numerator > pixelAspectRatio->Denominator)
 					{
@@ -77,7 +84,7 @@ namespace FFmpegInterop
 		{
 			unsigned int get()
 			{
-				if (pixelAspectRatio != nullptr && pixelAspectRatio->Numerator > 0 && pixelAspectRatio->Denominator > 0)
+				if (hasNonSquarePixels)
 				{
 					if (pixelAspectRatio->Numerator < pixelAspectRatio->Denominator)
 					{
@@ -93,7 +100,7 @@ namespace FFmpegInterop
 			double get()
 			{
 				double result = (double)pixelWidth / pixelHeight;
-				if (pixelAspectRatio != nullptr && pixelAspectRatio->Numerator > 0 && pixelAspectRatio->Denominator > 0)
+				if (hasNonSquarePixels)
 				{
 					return result * pixelAspectRatio->Numerator / pixelAspectRatio->Denominator;
 				}
@@ -107,6 +114,7 @@ namespace FFmpegInterop
 		unsigned int pixelHeight;
 		TimeSpan timestamp;
 		MediaRatio^ pixelAspectRatio;
+		bool hasNonSquarePixels;
 
 		task<void> Encode(IRandomAccessStream^ stream, Guid encoderGuid)
 		{
@@ -123,8 +131,7 @@ namespace FFmpegInterop
 			{
 				auto encoderValue = encoder.get();
 
-				auto ratio = PixelAspectRatio;
-				if (ratio != nullptr && ratio->Numerator > 0 && ratio->Denominator > 0 && ratio->Numerator != ratio->Denominator)
+				if (hasNonSquarePixels)
 				{
 					encoderValue->BitmapTransform->ScaledWidth = DisplayWidth;
 					encoderValue->BitmapTransform->ScaledHeight = DisplayHeight;

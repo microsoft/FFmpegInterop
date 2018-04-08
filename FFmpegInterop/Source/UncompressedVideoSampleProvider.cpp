@@ -138,10 +138,17 @@ IMediaStreamDescriptor^ UncompressedVideoSampleProvider::CreateStreamDescriptor(
 		videoProperties->Properties->Insert(MF_MT_MINIMUM_DISPLAY_APERTURE, ref new Array<uint8_t>((byte*)&area, sizeof(MFVideoArea)));
 	}
 
-	if (m_pAvCodecCtx->sample_aspect_ratio.num > 0 && m_pAvCodecCtx->sample_aspect_ratio.den != 0)
+	if (m_pAvCodecCtx->sample_aspect_ratio.num > 0 && 
+		m_pAvCodecCtx->sample_aspect_ratio.den > 0 && 
+		m_pAvCodecCtx->sample_aspect_ratio.num != m_pAvCodecCtx->sample_aspect_ratio.den)
 	{
 		videoProperties->PixelAspectRatio->Numerator = m_pAvCodecCtx->sample_aspect_ratio.num;
 		videoProperties->PixelAspectRatio->Denominator = m_pAvCodecCtx->sample_aspect_ratio.den;
+	}
+	else
+	{
+		videoProperties->PixelAspectRatio->Numerator = 1;
+		videoProperties->PixelAspectRatio->Denominator = 1;
 	}
 
 	if (m_OutputPixelFormat == AV_PIX_FMT_YUVJ420P)

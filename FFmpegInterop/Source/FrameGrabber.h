@@ -103,15 +103,28 @@ namespace FFmpegInterop {
 
 					// if exact seek, continue decoding until we have the right sample
 					if (exactSeek && seekSucceeded && (position.Duration - sample->Timestamp.Duration > sample->Duration.Duration) &&
-						(maxFrameSkip <= 0 || framesSkipped++ < maxFrameSkip))
+						(maxFrameSkip <= 0 || framesSkipped < maxFrameSkip))
 					{
+						framesSkipped++;
 						continue;
 					}
+
+					//  make sure we have a clean sample (key frame, no half interlaced frame)
+					if (!interopMSS->VideoSampleProvider->IsCleanSample && 
+						(maxFrameSkip <= 0 || framesSkipped < maxFrameSkip))
+					{
+						framesSkipped++;
+						continue;
+					}
+
+					auto streamDescriptor = static_cast<VideoStreamDescriptor^>(interopMSS->VideoSampleProvider->StreamDescriptor);
 
 					auto result = ref new VideoFrame(sample->Buffer,
 						interopMSS->VideoStream->PixelWidth,
 						interopMSS->VideoStream->PixelHeight,
+						streamDescriptor->EncodingProperties->PixelAspectRatio,
 						sample->Timestamp);
+
 					return result;
 
 				}

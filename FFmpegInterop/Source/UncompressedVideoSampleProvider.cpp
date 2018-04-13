@@ -138,10 +138,17 @@ IMediaStreamDescriptor^ UncompressedVideoSampleProvider::CreateStreamDescriptor(
 		videoProperties->Properties->Insert(MF_MT_MINIMUM_DISPLAY_APERTURE, ref new Array<uint8_t>((byte*)&area, sizeof(MFVideoArea)));
 	}
 
-	if (m_pAvCodecCtx->sample_aspect_ratio.num > 0 && m_pAvCodecCtx->sample_aspect_ratio.den != 0)
+	if (m_pAvCodecCtx->sample_aspect_ratio.num > 0 && 
+		m_pAvCodecCtx->sample_aspect_ratio.den > 0 && 
+		m_pAvCodecCtx->sample_aspect_ratio.num != m_pAvCodecCtx->sample_aspect_ratio.den)
 	{
 		videoProperties->PixelAspectRatio->Numerator = m_pAvCodecCtx->sample_aspect_ratio.num;
 		videoProperties->PixelAspectRatio->Denominator = m_pAvCodecCtx->sample_aspect_ratio.den;
+	}
+	else
+	{
+		videoProperties->PixelAspectRatio->Numerator = 1;
+		videoProperties->PixelAspectRatio->Denominator = 1;
 	}
 
 	if (m_OutputPixelFormat == AV_PIX_FMT_YUVJ420P)
@@ -248,6 +255,26 @@ HRESULT UncompressedVideoSampleProvider::CreateBufferFromFrame(IBuffer^* pBuffer
 		m_interlaced_frame = avFrame->interlaced_frame == 1;
 		m_top_field_first = avFrame->top_field_first == 1;
 		m_chroma_location = avFrame->chroma_location;
+		if (m_config->IsFrameGrabber && !IsCleanSample)
+		{
+			if (m_interlaced_frame)
+			{
+				// for interlaced content we need to decode two frames to get clean image
+				if (!hasFirstInterlacedFrame)
+				{
+					hasFirstInterlacedFrame = true;
+				}
+				else
+				{
+					IsCleanSample = true;
+				}
+			}
+			else
+			{
+				// for progressive video, we need a key frame or b frame
+				IsCleanSample = avFrame->key_frame || avFrame->pict_type == AV_PICTURE_TYPE_B;
+			}
+		}
 	}
 
 	return hr;

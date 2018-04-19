@@ -39,7 +39,7 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_streamIndex(streamIndex)
 {
 	DebugMessage(L"MediaSampleProvider\n");
-	if (m_pAvFormatCtx->start_time != 0)
+	if (m_pAvFormatCtx->start_time != AV_NOPTS_VALUE)
 	{
 		auto streamStartTime = (long long)(av_q2d(m_pAvStream->time_base) * m_pAvStream->start_time * 1000000);
 

@@ -55,7 +55,16 @@ MediaSampleProvider::MediaSampleProvider(
 	}
 
 	// init first packet pts time from start_time
-	m_nextPacketPts = m_pAvFormatCtx->streams[m_streamIndex]->start_time;
+	if (m_pAvFormatCtx->streams[m_streamIndex]->start_time == AV_NOPTS_VALUE)
+	{
+		//if start time is AV_NOPTS_VALUE, set it to 0
+		m_nextPacketPts = 0;
+	}
+	else 
+	{
+		//otherwise set the start time of the first packet to the stream start time.
+		m_nextPacketPts = m_pAvFormatCtx->streams[m_streamIndex]->start_time;
+	}
 }
 
 MediaSampleProvider::~MediaSampleProvider()

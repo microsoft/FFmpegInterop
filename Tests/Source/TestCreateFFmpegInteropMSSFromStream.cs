@@ -28,18 +28,20 @@ using Windows.Storage.Streams;
 namespace UnitTest.Windows
 {
     [TestClass]
-    public class CreateFFmpegInteropMSSFromStream
+    public class CreateFromStreamAsync
     {
         [TestMethod]
-        public void CreateFromStream_Null()
+        public async Task CreateFromStream_Null()
         {
-            // CreateFFmpegInteropMSSFromStream should return null if stream is null with default parameter
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(null, false, false);
-            Assert.IsNull(FFmpegMSS);
-
-            // CreateFFmpegInteropMSSFromStream should return null if stream is null with non default parameter
-            FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(null, true, true);
-            Assert.IsNull(FFmpegMSS);
+            // CreateFromStreamAsync should throw if stream is null with default parameter
+            try
+            {
+                await FFmpegInteropMSS.CreateFromStreamAsync(null);
+                Assert.Fail("Expected exception");
+            }
+            catch (Exception)
+            {
+            }
         }
 
         [TestMethod]
@@ -54,9 +56,15 @@ namespace UnitTest.Windows
             IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
             Assert.IsNotNull(readStream);
 
-            // CreateFFmpegInteropMSSFromStream should return null since test.txt is not a valid media file
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, false, false);
-            Assert.IsNull(FFmpegMSS);
+            // CreateFromStreamAsync should throw since test.txt is not a valid media file
+            try
+            {
+                await FFmpegInteropMSS.CreateFromStreamAsync(readStream);
+                Assert.Fail("Expected exception");
+            }
+            catch (Exception)
+            {
+            }
         }
 
 
@@ -72,8 +80,8 @@ namespace UnitTest.Windows
             IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
             Assert.IsNotNull(readStream);
 
-            // CreateFFmpegInteropMSSFromStream should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, false, false);
+            // CreateFromStreamAsync should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
+            FFmpegInteropMSS FFmpegMSS = await FFmpegInteropMSS.CreateFromStreamAsync(readStream);
             Assert.IsNotNull(FFmpegMSS);
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
@@ -81,12 +89,12 @@ namespace UnitTest.Windows
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.AreEqual(0, mss.BufferTime.TotalMilliseconds);
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
         }
 
         [TestMethod]
-        public async Task CreateFromStream_Force_Audio()
+        public async Task CreateFromStream_Passthrough_Audio()
         {
             Uri uri = new Uri(Constants.DownloadUriSource);
             Assert.IsNotNull(uri);
@@ -97,8 +105,8 @@ namespace UnitTest.Windows
             IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
             Assert.IsNotNull(readStream);
 
-            // CreateFFmpegInteropMSSFromStream should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, true, false);
+            // CreateFromStreamAsync should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
+            FFmpegInteropMSS FFmpegMSS = await FFmpegInteropMSS.CreateFromStreamAsync(readStream, new FFmpegInteropConfig { PassthroughAudioAAC = true });
             Assert.IsNotNull(FFmpegMSS);
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
@@ -106,7 +114,7 @@ namespace UnitTest.Windows
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.AreEqual(0, mss.BufferTime.TotalMilliseconds);
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
         }
 
@@ -122,8 +130,8 @@ namespace UnitTest.Windows
             IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
             Assert.IsNotNull(readStream);
 
-            // CreateFFmpegInteropMSSFromStream should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, false, true);
+            // CreateFromStreamAsync should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
+            FFmpegInteropMSS FFmpegMSS = await FFmpegInteropMSS.CreateFromStreamAsync(readStream, new FFmpegInteropConfig { PassthroughVideoH264 = false });
             Assert.IsNotNull(FFmpegMSS);
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
@@ -131,32 +139,7 @@ namespace UnitTest.Windows
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
-        }
-
-        [TestMethod]
-        public async Task CreateFromStream_Force_Audio_Video()
-        {
-            Uri uri = new Uri(Constants.DownloadUriSource);
-            Assert.IsNotNull(uri);
-
-            StorageFile file = await StorageFile.CreateStreamedFileFromUriAsync(Constants.DownloadStreamedFileName, uri, null);
-            Assert.IsNotNull(file);
-
-            IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
-            Assert.IsNotNull(readStream);
-
-            // CreateFFmpegInteropMSSFromStream should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, true, true);
-            Assert.IsNotNull(FFmpegMSS);
-
-            MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-            Assert.IsNotNull(mss);
-
-            // Based on the provided media, check if the following properties are set correctly
-            Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.AreEqual(0, mss.BufferTime.TotalMilliseconds);
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
         }
 
@@ -178,68 +161,21 @@ namespace UnitTest.Windows
             options.Add("stimeout", 100000);
             Assert.IsNotNull(options);
 
-            // CreateFFmpegInteropMSSFromStream should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, false, false, options);
+            // CreateFromStreamAsync should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
+            FFmpegInteropMSS FFmpegMSS = await FFmpegInteropMSS.CreateFromStreamAsync(readStream, new FFmpegInteropConfig { FFmpegOptions = options });
             Assert.IsNotNull(FFmpegMSS);
 
             // Validate the metadata
-            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
-            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
+            Assert.AreEqual(FFmpegMSS.AudioStreams[0].CodecName.ToLowerInvariant(), "aac");
+            Assert.AreEqual(FFmpegMSS.VideoStream.CodecName.ToLowerInvariant(), "h264");
 
             MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
             Assert.IsNotNull(mss);
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.AreEqual(0, mss.BufferTime.TotalMilliseconds);
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
-        }
-
-        [TestMethod]
-        public async Task CreateFromStream_Destructor()
-        {
-            Uri uri = new Uri(Constants.DownloadUriSource);
-            Assert.IsNotNull(uri);
-
-            StorageFile file = await StorageFile.CreateStreamedFileFromUriAsync(Constants.DownloadStreamedFileName, uri, null);
-            Assert.IsNotNull(file);
-
-            IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
-            Assert.IsNotNull(readStream);
-
-            // CreateFFmpegInteropMSSFromStream should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, false, false);
-            Assert.IsNotNull(FFmpegMSS);
-
-            // Validate the metadata
-            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
-            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
-
-            MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-            Assert.IsNotNull(mss);
-
-            // Based on the provided media, check if the following properties are set correctly
-            Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
-
-            // Keep original reference and ensure object are not destroyed until each reference is released by setting it to nullptr
-            FFmpegInteropMSS OriginalFFmpegMSS = FFmpegMSS;
-            MediaStreamSource Originalmss = mss;
-
-            FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(null, false, false);
-            Assert.IsNull(FFmpegMSS);
-            Assert.IsNotNull(OriginalFFmpegMSS);
-            Assert.IsNotNull(Originalmss);
-
-            mss = null;
-            Assert.IsNull(mss);
-            Assert.IsNotNull(Originalmss);
-
-            OriginalFFmpegMSS = null;
-            Originalmss = null;
-            Assert.IsNull(OriginalFFmpegMSS);
-            Assert.IsNull(Originalmss);
         }
     }
 }

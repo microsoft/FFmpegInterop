@@ -109,7 +109,7 @@ HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, 
 	if (hr == S_OK)
 	{
 		// Try to get the best effort timestamp for the frame.
-		framePts = av_frame_get_best_effort_timestamp(m_pAvFrame);
+		framePts = m_pAvFrame->best_effort_timestamp;
 		m_interlaced_frame = m_pAvFrame->interlaced_frame == 1;
 		m_top_field_first = m_pAvFrame->top_field_first == 1;
 	}

@@ -128,7 +128,7 @@ MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
 		LONGLONG pts = 0;
 		LONGLONG dur = 0;
 
-		hr = GetNextPacket(dataWriter, pts, dur, isFirstPacket);
+		hr = GetNextPacket(dataWriter, pts, dur);
 		if (isFirstPacket)
 		{
 			isDiscontinuous = m_isDiscontinuous;

@@ -33,8 +33,6 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_startOffset(AV_NOPTS_VALUE)
 	, m_nextFramePts(0)
-	, m_isEnabled(true)
-	, m_isDiscontinuous(false)
 {
 	DebugMessage(L"MediaSampleProvider\n");
 }
@@ -72,27 +70,17 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 	HRESULT hr = S_OK;
 
 	MediaStreamSample^ sample;
-	if (m_isEnabled)
+	DataWriter^ dataWriter = ref new DataWriter();
+
+	LONGLONG pts = 0;
+	LONGLONG dur = 0;
+
+	hr = GetNextPacket(dataWriter, pts, dur);
+
+	if (hr == S_OK)
 	{
-		DataWriter^ dataWriter = ref new DataWriter();
-
-		LONGLONG pts = 0;
-		LONGLONG dur = 0;
-
-		hr = GetNextPacket(dataWriter, pts, dur, true);
-
-		if (hr == S_OK)
-		{
-			sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
-			sample->Duration = { dur };
-			sample->Discontinuous = m_isDiscontinuous;
-			m_isDiscontinuous = false;
-		}
-		else
-		{
-			DebugMessage(L"Too many broken packets - disable stream\n");
-			DisableStream();
-		}
+		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
+		sample->Duration = { dur };
 	}
 
 	return sample;
@@ -133,14 +121,7 @@ void MediaSampleProvider::QueuePacket(AVPacket packet)
 {
 	DebugMessage(L" - QueuePacket\n");
 
-	if (m_isEnabled)
-	{
-		m_packetQueue.push_back(packet);
-	}
-	else
-	{
-		av_packet_unref(&packet);
-	}
+	m_packetQueue.push_back(packet);
 }
 
 AVPacket MediaSampleProvider::PopPacket()
@@ -161,7 +142,7 @@ AVPacket MediaSampleProvider::PopPacket()
 	return avPacket;
 }
 
-HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, LONGLONG & pts, LONGLONG & dur, bool allowSkip)
+HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, LONGLONG & pts, LONGLONG & dur)
 {
 	HRESULT hr = S_OK;
 
@@ -173,7 +154,6 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 	bool frameComplete = false;
 	bool decodeSuccess = true;
 	int64_t framePts = 0, frameDuration = 0;
-	int errorCount = 0;
 
 	while (SUCCEEDED(hr) && !frameComplete)
 	{
@@ -198,17 +178,6 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 			// Decode the packet if necessary, it will update the presentation time if necessary
 			hr = DecodeAVPacket(writer, &avPacket, framePts, frameDuration);
 			frameComplete = (hr == S_OK);
-
-			if (!frameComplete)
-			{
-				m_isDiscontinuous = true;
-				if (allowSkip && errorCount++ < 10)
-				{
-					// skip a few broken packets (maybe make this configurable later)
-					DebugMessage(L"Skipping broken packet\n");
-					hr = S_OK;
-				}
-			}
 		}
 	}
 
@@ -250,5 +219,4 @@ void MediaSampleProvider::DisableStream()
 {
 	DebugMessage(L"DisableStream\n");
 	Flush();
-	m_isEnabled = false;
 }

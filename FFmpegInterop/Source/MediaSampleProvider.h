@@ -49,6 +49,7 @@ namespace FFmpegInterop
 		std::vector<AVPacket> m_packetQueue;
 		int64 m_startOffset;
 		int64 m_nextFramePts;
+		bool m_isEnabled;
 
 	internal:
 		// The FFmpeg context. Because they are complex types
@@ -68,6 +69,6 @@ namespace FFmpegInterop
 		virtual HRESULT AllocateResources();
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket);
 		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration);
-		virtual HRESULT GetNextPacket(DataWriter^ writer, LONGLONG& pts, LONGLONG& dur);
+		virtual HRESULT GetNextPacket(DataWriter^ writer, LONGLONG& pts, LONGLONG& dur, bool allowSkip);
 	};
 }

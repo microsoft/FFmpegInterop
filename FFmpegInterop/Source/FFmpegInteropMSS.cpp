@@ -784,6 +784,7 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 				// Flush the AudioSampleProvider
 				if (audioSampleProvider != nullptr)
 				{
+					audioSampleProvider->EnableStream();
 					audioSampleProvider->Flush();
 					if (avAudioCodecCtx != nullptr)
 					{
@@ -794,6 +795,7 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 				// Flush the VideoSampleProvider
 				if (videoSampleProvider != nullptr)
 				{
+					videoSampleProvider->EnableStream();
 					videoSampleProvider->Flush();
 					if (avVideoCodecCtx != nullptr)
 					{

@@ -252,3 +252,9 @@ void MediaSampleProvider::DisableStream()
 	Flush();
 	m_isEnabled = false;
 }
+
+void MediaSampleProvider::EnableStream()
+{
+	DebugMessage(L"EnableStream\n");
+	m_isEnabled = true;
+}

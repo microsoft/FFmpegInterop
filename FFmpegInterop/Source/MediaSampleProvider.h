@@ -44,6 +44,7 @@ namespace FFmpegInterop
 		void QueuePacket(AVPacket packet);
 		AVPacket PopPacket();
 		void DisableStream();
+		void EnableStream();
 
 	private:
 		std::vector<AVPacket> m_packetQueue;

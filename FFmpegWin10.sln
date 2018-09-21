@@ -15,12 +15,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest", "Tests\Win10\Uni
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|ARM = Debug|ARM
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
-		Release|ARM = Release|ARM
+		Debug|ARM = Debug|ARM
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		Release|ARM = Release|ARM
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{9CFA3B3E-B7AF-4629-84E2-C962C5B046B1}.Debug|ARM.ActiveCfg = Debug|ARM

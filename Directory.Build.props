@@ -15,8 +15,12 @@
     <BuildRoot>$(SolutionDir)Build</BuildRoot>
     <TargetRoot>$(SolutionDir)Target</TargetRoot>
 
-    <IntDir>$(BuildRoot)\$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>$(TargetRoot)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(BuildRoot)\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>$(TargetRoot)\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+
+    <BaseIntermediateOutputPath>$(BuildRoot)\$(Platform)\$(Configuration)\$(ProjectName)\</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
+    <OutputPath>$(TargetRoot)\$(Platform)\$(Configuration)\$(ProjectName)\</OutputPath>
   </PropertyGroup>
 
 </Project>

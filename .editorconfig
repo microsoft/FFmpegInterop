@@ -10,5 +10,9 @@ insert_final_newline = false
 indent_size = 4
 insert_final_newline = true
 
-[*.{vcxproj,vcxproj.filters,props,targets}]
+[*.{vcxproj,vcxproj.filters,csproj,jsproj,props,targets}]
 end_of_line = crlf
+
+[*.sln]
+indent_style = tab
+indent_size = 4

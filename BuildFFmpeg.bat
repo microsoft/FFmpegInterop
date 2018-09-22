@@ -99,7 +99,7 @@ echo Building FFmpeg for Windows 10 apps x86...
 echo:
 
 setlocal
-call "%VS150COMNTOOLS%..\..\VC\Auxiliary\Build\vcvarsall.bat" x86 store
+call "%VS150COMNTOOLS%\..\..\VC\Auxiliary\Build\vcvarsall.bat" x86 store
 set LIB=%VCToolsInstallDir%\lib\x86\store;%VCToolsInstallDir%VC\atlmfc\lib;%UniversalCRTSdkDir%lib\%UCRTVersion%\ucrt\x86;;%UniversalCRTSdkDir%lib\%UCRTVersion%\um\x86;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\x86;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\x86
 set LIBPATH=%VCToolsInstallDir%\atlmfc\lib;%VCToolsInstallDir%\lib\x86\;
 set INCLUDE=%VCToolsInstallDir%\include;%VCToolsInstallDir%\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
@@ -113,7 +113,7 @@ echo Building FFmpeg for Windows 10 apps x64...
 echo:
 
 setlocal
-call "%VS150COMNTOOLS%..\..\VC\Auxiliary\Build\vcvarsall.bat" x64 store
+call "%VS150COMNTOOLS%\..\..\VC\Auxiliary\Build\vcvarsall.bat" x64 store
 set LIB=%VCToolsInstallDir%\lib\x64\store;%VCToolsInstallDir%VC\atlmfc\lib\amd64;%UniversalCRTSdkDir%lib\%UCRTVersion%\ucrt\x64;;%UniversalCRTSdkDir%lib\%UCRTVersion%\um\x64;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\x64;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\x64
 set LIBPATH=%VCToolsInstallDir%\atlmfc\lib\amd64;%VCToolsInstallDir%\lib\x64\;
 set INCLUDE=%VCToolsInstallDir%\include;%VCToolsInstallDir%\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;
@@ -127,7 +127,7 @@ echo Building FFmpeg for Windows 10 apps ARM...
 echo:
 
 setlocal
-call "%VS150COMNTOOLS%..\..\VC\Auxiliary\Build\vcvarsall.bat" x86_arm store
+call "%VS150COMNTOOLS%\..\..\VC\Auxiliary\Build\vcvarsall.bat" x86_arm store
 set LIB=%VCToolsInstallDir%\lib\arm\store;%VCToolsInstallDir%VC\atlmfc\lib\ARM;%UniversalCRTSdkDir%lib\%UCRTVersion%\ucrt\arm;;%UniversalCRTSdkDir%lib\%UCRTVersion%\um\arm;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\lib\um\arm;;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Lib\um\arm
 set LIBPATH=%VCToolsInstallDir%\atlmfc\lib\ARM;%VCToolsInstallDir%\lib\arm\;
 set INCLUDE=%VCToolsInstallDir%\include;%VCToolsInstallDir%\atlmfc\include;%UniversalCRTSdkDir%Include\%UCRTVersion%\ucrt;%UniversalCRTSdkDir%Include\%UCRTVersion%\um;%UniversalCRTSdkDir%Include\%UCRTVersion%\shared;%UniversalCRTSdkDir%Include\%UCRTVersion%\winrt;C:\Program Files (x86)\Windows Kits\NETFXSDK\4.6\Include\um;

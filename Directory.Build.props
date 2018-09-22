@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildThisFileDirectory)</SolutionDir>
+
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Configuration">
+    <PlatformToolset>v141</PlatformToolset>
+    <ProjectName Condition="'$(ProjectName)'==''">$(MSBuildProjectName)</ProjectName>
+
+    <BuildRoot>$(SolutionDir)Build</BuildRoot>
+    <TargetRoot>$(SolutionDir)Target</TargetRoot>
+
+    <IntDir>$(BuildRoot)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(TargetRoot)\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+
+</Project>

@@ -7,9 +7,9 @@ if [ "$1" == "Win10" ]; then
     if [ "$2" == "x86" ]; then
         echo "Make Win10 x86"
         pushd $DIR/ffmpeg
-        rm -rf Output/Windows10/x86
-        mkdir -p Output/Windows10/x86
-        cd Output/Windows10/x86
+        rm -rf $DIR/Build/x86/Release/ffmpeg/Windows10
+        mkdir -p $DIR/Build/x86/Release/ffmpeg/Windows10
+        cd $DIR/Build/x86/Release/ffmpeg/Windows10
         ../../../configure \
         --toolchain=msvc \
         --disable-programs \
@@ -21,17 +21,17 @@ if [ "$1" == "Win10" ]; then
         --target-os=win32 \
         --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00" \
         --extra-ldflags="-APPCONTAINER WindowsApp.lib" \
-        --prefix=../../../Build/Windows10/x86
+        --prefix=$DIR/Target/x86/Release/ffmpeg/Windows10
         make install
         popd
 
     elif [ "$2" == "x64" ]; then
         echo "Make Win10 x64"
         pushd $DIR/ffmpeg
-        rm -rf Output/Windows10/x64
-        mkdir -p Output/Windows10/x64
-        cd Output/Windows10/x64
-        ../../../configure \
+        rm -rf $DIR/Build/x64/Release/ffmpeg/Windows10
+        mkdir -p $DIR/Build/x64/Release/ffmpeg/Windows10
+        cd $DIR/Build/x64/Release/ffmpeg/Windows10
+        $DIR/ffmpeg/configure \
         --toolchain=msvc \
         --disable-programs \
         --disable-d3d11va \
@@ -42,16 +42,16 @@ if [ "$1" == "Win10" ]; then
         --target-os=win32 \
         --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00" \
         --extra-ldflags="-APPCONTAINER WindowsApp.lib" \
-        --prefix=../../../Build/Windows10/x64
+        --prefix=$DIR/Target/x64/Release/ffmpeg/Windows10
         make install
         popd
 
     elif [ "$2" == "ARM" ]; then
         echo "Make Win10 ARM"
         pushd $DIR/ffmpeg
-        rm -rf Output/Windows10/ARM
-        mkdir -p Output/Windows10/ARM
-        cd Output/Windows10/ARM
+        rm -rf $DIR/Build/ARM/Release/ffmpeg/Windows10
+        mkdir -p $DIR/Build/ARM/Release/ffmpeg/Windows10
+        cd $DIR/Build/ARM/Release/ffmpeg/Windows10
         ../../../configure \
         --toolchain=msvc \
         --disable-programs \
@@ -66,7 +66,7 @@ if [ "$1" == "Win10" ]; then
         --target-os=win32 \
         --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00 -D__ARM_PCS_VFP" \
         --extra-ldflags="-APPCONTAINER WindowsApp.lib" \
-        --prefix=../../../Build/Windows10/ARM
+        --prefix=$DIR/Target/ARM/Release/ffmpeg/Windows10
         make install
         popd
 

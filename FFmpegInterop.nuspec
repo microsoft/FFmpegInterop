@@ -4,11 +4,11 @@
     <id>FFmpegInterop</id>
     <version>$version$</version>
     <description>Windows Universal support for FFmpeg.</description>
-    <authors>Julio C. Rocha</authors>
-    <projectUrl>https://github.com/JunielKatarn/FFmpegInterop</projectUrl>
+    <authors>Microsoft</authors>
+    <projectUrl>https://github.com/Microsoft/FFmpegInterop</projectUrl>
     <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <copyright>Julio C. Rocha</copyright>
+    <copyright>Microsoft</copyright>
   </metadata>
 
   <files>

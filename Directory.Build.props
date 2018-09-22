@@ -12,15 +12,15 @@
     <PlatformToolset>v141</PlatformToolset>
     <ProjectName Condition="'$(ProjectName)'==''">$(MSBuildProjectName)</ProjectName>
 
-    <BuildRoot>$(SolutionDir)Build</BuildRoot>
-    <TargetRoot>$(SolutionDir)Target</TargetRoot>
+    <BaseIntermediateOutputPath>$(SolutionDir)Build\</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(SolutionDir)Target\</BaseOutputPath>
 
-    <IntDir>$(BuildRoot)\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-    <OutDir>$(TargetRoot)\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Platform)\$(Configuration)\$(ProjectName)\</IntermediateOutputPath>
+    <OutputPath>$(BaseOutputPath)$(Platform)\$(Configuration)\$(ProjectName)\</OutputPath>
 
-    <BaseIntermediateOutputPath>$(BuildRoot)\$(Platform)\$(Configuration)\$(ProjectName)\</BaseIntermediateOutputPath>
-    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
-    <OutputPath>$(TargetRoot)\$(Platform)\$(Configuration)\$(ProjectName)\</OutputPath>
+    <IntDir>$(IntermediateOutputPath)</IntDir>
+    <!-- Leave out $(ProjectName) prefix. It will be implicitly added due $(OutputPath)'s setting. -->
+    <OutDir>$(BaseOutputPath)$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
 
 </Project>

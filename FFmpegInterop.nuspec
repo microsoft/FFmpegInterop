@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
-    <id>Hyvart.FFmpegInterop</id>
+    <id>FFmpegInterop</id>
     <version>$version$</version>
     <description>Windows Universal support for FFmpeg.</description>
     <authors>Julio C. Rocha</authors>
@@ -21,6 +21,6 @@
     <file src="ffmpeg\Build\Windows10\x64\bin\swresample-2.dll" target="runtimes\win10-x64\native\swresample-2.dll" />
     <file src="ffmpeg\Build\Windows10\x64\bin\swscale-4.dll" target="runtimes\win10-x64\native\swscale-4.dll" />
 
-    <file src="FFmpegInterop.targets" target="build\native\Hyvart.FFmpegInterop.targets" />
+    <file src="FFmpegInterop.targets" target="build\native\FFmpegInterop.targets" />
   </files>
 </package>

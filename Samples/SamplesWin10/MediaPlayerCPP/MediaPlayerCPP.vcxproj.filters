@@ -49,13 +49,13 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avcodec-57.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avdevice-57.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avfilter-6.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avformat-57.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avutil-55.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-2.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-4.dll" />
+    <None Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avcodec-57.dll" />
+    <None Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avdevice-57.dll" />
+    <None Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avfilter-6.dll" />
+    <None Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avformat-57.dll" />
+    <None Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avutil-55.dll" />
+    <None Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\swresample-2.dll" />
+    <None Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\swscale-4.dll" />
     <None Include="MediaPlayerCPP_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>

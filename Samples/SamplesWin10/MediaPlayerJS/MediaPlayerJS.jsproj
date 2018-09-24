@@ -67,13 +67,13 @@
     <Content Include="WinJS\js\en-US\ui.strings.js" />
     <Content Include="WinJS\js\base.js" />
     <Content Include="WinJS\js\ui.js" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avcodec-57.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avdevice-57.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avfilter-6.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avformat-57.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avutil-55.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-2.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-4.dll" />
+    <Content Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avcodec-57.dll" />
+    <Content Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avdevice-57.dll" />
+    <Content Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avfilter-6.dll" />
+    <Content Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avformat-57.dll" />
+    <Content Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\avutil-55.dll" />
+    <Content Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\swresample-2.dll" />
+    <Content Include="$(BaseOutputPath)$(Platform)\Release\ffmpeg\Windows10\bin\swscale-4.dll" />
     <None Include="$(SolutionDir)FFmpegInterop.pfx" />
   </ItemGroup>
   <ItemGroup>

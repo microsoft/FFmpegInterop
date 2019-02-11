@@ -2,16 +2,16 @@ param (
     [ValidateSet('x64', 'x86', 'ARM')]
     [string] $Platform = 'x64',
 
-    [string] $MSys2Dir = 'C:\mysys64',
+    [string] $MSys2Dir = 'C:\msys64',
 
     [string] $VSInstallDir = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\Enterprise",
-    [string] $VCVersion = '14.15.26726',
+    [string] $VCVersion = '14.16.27023',
     [string] $VCInstallDir = "$VSInstallDir\VC\Tools\MSVC\$VCVersion",
 
     [string] $WindowsKitsDir = "${env:ProgramFiles(x86)}\Windows Kits",
     [string] $UniversalCRTSdkDir = "$WindowsKitsDir\10",
-    [string] $UCRTVersion = '10.0.17134.0',
-    [string] $NetFxVersion = '4.7.1'
+    [string] $UCRTVersion = '10.0.17763.0',
+    [string] $NetFxVersion = '4.7.2'
 )
 
 $env:LIB =  "$VCInstallDir\lib\$Platform\store;" +

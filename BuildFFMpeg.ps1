@@ -20,17 +20,18 @@ $env:LIB =  "$VCInstallDir\lib\$Platform\store;" +
             "$UniversalCRTSdkDir\lib\$UCRTVersion\um\$Platform;" +
             "$WindowsKitsDir\NETFXSDK\$NetFxVersion\Lib\um\$Platform"
 
-$env:LIBPATH =  "$VCInstallDir\atlmfc\lib;" +
-                "$VCInstallDir\lib"
+$env:LIBPATH =  "$VCInstallDir\atlmfc\lib\$Platform;" +
+                "$VCInstallDir\lib\$Platform"
 
-$env:INCLUDE =  "$UniversalCRTSdkDir\Include\$UCRTVersion\ucrt;" +
+$env:INCLUDE =  "$VCInstallDir\include;" +
+                "$UniversalCRTSdkDir\Include\$UCRTVersion\ucrt;" +
                 "$UniversalCRTSdkDir\Include\$UCRTVersion\um;" +
                 "$UniversalCRTSdkDir\Include\$UCRTVersion\shared;" +
                 "$UniversalCRTSdkDir\Include\$UCRTVersion\winrt;" +
                 "$WindowsKitsDir\NETFXSDK\$NetFxVersion\Include\um"
 
 #TODO: Use VCVars instead?
-$vcvarsall = "$VSInstallDir\VC\Auxiliary\Build\vcvarsall.bat" # Not currently used.
+#$vcvarsall = "$VSInstallDir\VC\Auxiliary\Build\vcvarsall.bat" # Not currently used.
 
 $bash = "$MSys2Dir\usr\bin\bash.exe"
 & $bash --login -x $PSScriptRoot\FFmpegConfig.sh Win10 $Platform

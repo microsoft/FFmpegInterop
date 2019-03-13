@@ -62,6 +62,34 @@ static int lock_manager(void **mtx, enum AVLockOp op);
 // Flag for ffmpeg global setup
 static bool isRegistered = false;
 
+void FFmpegInterop::FFmpegInteropMSS::ReleaseObjects()
+{
+	mutexGuard.lock();
+	if (fileStreamData != nullptr)
+	{
+		fileStreamData->Release();
+	}
+	
+	// Clear our data
+	audioSampleProvider = nullptr;
+	videoSampleProvider = nullptr;
+
+	if (m_pReader != nullptr)
+	{
+		m_pReader->SetAudioStream(AVERROR_STREAM_NOT_FOUND, nullptr);
+		m_pReader->SetVideoStream(AVERROR_STREAM_NOT_FOUND, nullptr);
+		m_pReader = nullptr;
+	}
+	
+	avcodec_close(avVideoCodecCtx);
+	avcodec_close(avAudioCodecCtx);
+	avformat_close_input(&avFormatCtx);
+	av_free(avIOCtx);
+	av_dict_free(&avDict);
+
+	mutexGuard.unlock();
+}
+
 // Initialize an FFmpegInteropObject
 FFmpegInteropMSS::FFmpegInteropMSS()
 	: avDict(nullptr)
@@ -84,11 +112,9 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 FFmpegInteropMSS::~FFmpegInteropMSS()
 {
 	mutexGuard.lock();
-	if (mss)
+	if (fileStreamData != nullptr)
 	{
-		mss->Starting -= startingRequestedToken;
-		mss->SampleRequested -= sampleRequestedToken;
-		mss = nullptr;
+		fileStreamData->Release();
 	}
 
 	// Clear our data
@@ -107,11 +133,14 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
 	av_dict_free(&avDict);
-	
-	if (fileStreamData != nullptr)
+
+	if (mss)
 	{
-		fileStreamData->Release();
+		mss->Starting -= startingRequestedToken;
+		mss->SampleRequested -= sampleRequestedToken;
+		mss = nullptr;
 	}
+
 	mutexGuard.unlock();
 }
 

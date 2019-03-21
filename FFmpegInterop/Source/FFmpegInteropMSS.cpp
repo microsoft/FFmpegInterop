@@ -119,6 +119,7 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
 	av_dict_free(&avDict);
+
 	if (fileStreamData != nullptr)
 	{
 		fileStreamData->Release();

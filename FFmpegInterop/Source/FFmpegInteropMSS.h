@@ -86,6 +86,8 @@ namespace FFmpegInterop
 			};
 		};
 
+		void ReleaseFileStream();
+
 	internal:
 		int ReadPacket();
 

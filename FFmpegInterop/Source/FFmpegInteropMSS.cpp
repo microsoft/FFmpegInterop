@@ -62,6 +62,18 @@ static int lock_manager(void **mtx, enum AVLockOp op);
 // Flag for ffmpeg global setup
 static bool isRegistered = false;
 
+void FFmpegInterop::FFmpegInteropMSS::ReleaseFileStream()
+{
+	mutexGuard.lock();
+	if (fileStreamData != nullptr)
+	{
+		fileStreamData->Release();
+		fileStreamData = nullptr;
+	}
+
+	mutexGuard.unlock();
+}
+
 // Initialize an FFmpegInteropObject
 FFmpegInteropMSS::FFmpegInteropMSS()
 	: avDict(nullptr)
@@ -107,10 +119,11 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
 	av_dict_free(&avDict);
-	
+
 	if (fileStreamData != nullptr)
 	{
 		fileStreamData->Release();
+		fileStreamData = nullptr;
 	}
 	mutexGuard.unlock();
 }

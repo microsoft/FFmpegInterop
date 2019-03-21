@@ -96,10 +96,11 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 FFmpegInteropMSS::~FFmpegInteropMSS()
 {
 	mutexGuard.lock();
-	if (fileStreamData != nullptr)
+	if (mss)
 	{
-		fileStreamData->Release();
-		fileStreamData = nullptr;
+		mss->Starting -= startingRequestedToken;
+		mss->SampleRequested -= sampleRequestedToken;
+		mss = nullptr;
 	}
 
 	// Clear our data
@@ -118,14 +119,11 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
 	av_dict_free(&avDict);
-
-	if (mss)
+	if (fileStreamData != nullptr)
 	{
-		mss->Starting -= startingRequestedToken;
-		mss->SampleRequested -= sampleRequestedToken;
-		mss = nullptr;
+		fileStreamData->Release();
+		fileStreamData = nullptr;
 	}
-
 	mutexGuard.unlock();
 }
 

@@ -98,8 +98,9 @@ namespace FFmpegInterop
 		HRESULT CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
 		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
 		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
-		HRESULT CreateAudioStreamDescriptorFromParameters(AVCodecParameters* avCodecParams);
+		HRESULT CreateAudioStreamDescriptorFromParameters(const AVCodecParameters* avCodecParams);
 		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode);
+		HRESULT CreateTimedMetadataStreamDescriptor(const AVStream* avStream);
 		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
@@ -119,8 +120,10 @@ namespace FFmpegInterop
 	private:
 		AudioStreamDescriptor^ audioStreamDescriptor;
 		VideoStreamDescriptor^ videoStreamDescriptor;
+		TimedMetadataStreamDescriptor^ timedMetadataStreamDescriptor;
 		int audioStreamIndex;
 		int videoStreamIndex;
+		int timedMetadataStreamIndex;
 		int thumbnailStreamIndex;
 		
 		bool rotateVideo;
@@ -129,9 +132,11 @@ namespace FFmpegInterop
 		
 		MediaSampleProvider^ audioSampleProvider;
 		MediaSampleProvider^ videoSampleProvider;
+		MediaSampleProvider^ timedMetadataSampleProvider;
 
 		String^ videoCodecName;
 		String^ audioCodecName;
+		String^ timedMetadataCodecName;
 		TimeSpan mediaDuration;
 		IStream* fileStreamData;
 		unsigned char* fileStreamBuffer;

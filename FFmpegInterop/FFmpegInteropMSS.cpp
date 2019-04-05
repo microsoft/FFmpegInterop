@@ -27,6 +27,9 @@
 #include "shcore.h"
 #include <mfapi.h>
 #include "collection.h"
+#include <string>
+#include <locale>
+#include <codecvt>
 
 extern "C"
 {
@@ -38,6 +41,7 @@ using namespace FFmpegInterop;
 using namespace Platform;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
+using namespace std;
 
 // Size of the buffer when reading a stream
 const int FILESTREAMBUFFERSZ = 16384;
@@ -49,6 +53,13 @@ IMapView<int, String^>^ create_map()
 
 	// Audio codecs
 	m->Insert(AV_CODEC_ID_OPUS, "OPUS");
+
+	// Subtitle codecs
+	m->Insert(AV_CODEC_ID_ASS, Guid(MFSubtitleFormat_SSA).ToString());
+	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, "6B8E40F4-8D2C-4CED-AD91-5960E45B4433"); // TODO: Publish MFSubtitleFormat_VOBSUB
+	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, "71F40E4A-1278-4442-B30D-39DD1D7722BC"); // TODO: Publish MFSubtitleFormat_PGS
+	m->Insert(AV_CODEC_ID_SSA, Guid(MFSubtitleFormat_SSA).ToString());
+	m->Insert(AV_CODEC_ID_SUBRIP, Guid(MFMediaType_Subtitle).ToString()); // TODO: Needs subtype GUID?
 
 	return m->GetView();
 }
@@ -83,6 +94,7 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 	, avVideoCodecCtx(nullptr)
 	, audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
+	, timedMetadataStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, thumbnailStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, fileStreamData(nullptr)
 	, fileStreamBuffer(nullptr)
@@ -205,7 +217,8 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 		// Open media in the given URI using the specified options
 		if (avformat_open_input(&avFormatCtx, charStr, NULL, &avDict) < 0)
 		{
-			hr = E_FAIL; // Error opening file
+			DebugMessage(L"Error openeing file");
+			hr = E_FAIL;
 		}
 
 		// avDict is not NULL only when there is an issue with the given ffmpegOptions such as invalid key, value type etc. Iterate through it to see which one is causing the issue.
@@ -284,7 +297,8 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 		// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
 		if (avformat_open_input(&avFormatCtx, "", NULL, &avDict) < 0)
 		{
-			hr = E_FAIL; // Error opening file
+			DebugMessage(L"Error openeing file");
+			hr = E_FAIL;
 		}
 
 		// avDict is not NULL only when there is an issue with the given ffmpegOptions such as invalid key, value type etc. Iterate through it to see which one is causing the issue.
@@ -388,23 +402,8 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			
 			if (audioStreamIndex != AVERROR_STREAM_NOT_FOUND)
 			{
-				// allocate decoding parameters
-				AVCodecParameters* avAudioCodecParams = avcodec_parameters_alloc();
-				if (!avAudioCodecParams)
-				{
-					hr = E_OUTOFMEMORY;
-					DebugMessage(L"Could not allocate decoding parameters\n");
-					avformat_close_input(&avFormatCtx);
-				}
-
-				if (avcodec_parameters_copy(avAudioCodecParams, avFormatCtx->streams[audioStreamIndex]->codecpar) < 0)
-				{
-					hr = E_FAIL;
-					avformat_close_input(&avFormatCtx);
-				}
-
 				// Create audio stream descriptor from parameters
-				hr = CreateAudioStreamDescriptorFromParameters(avAudioCodecParams);
+				hr = CreateAudioStreamDescriptorFromParameters(avFormatCtx->streams[audioStreamIndex]->codecpar);
 				if (SUCCEEDED(hr))
 				{
 					hr = audioSampleProvider->AllocateResources();
@@ -413,8 +412,6 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 						m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
 					}
 				}
-
-				avcodec_parameters_free(&avAudioCodecParams);
 			}
 		}
 	}
@@ -508,66 +505,83 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 	if (SUCCEEDED(hr))
 	{
-		// Convert media duration from AV_TIME_BASE to TimeSpan unit
-		mediaDuration = { LONGLONG(avFormatCtx->duration * 10000000 / double(AV_TIME_BASE)) };
+		// Get subtitle streams
+		for (unsigned int i = 0; i < avFormatCtx->nb_streams; i++)
+		{
+			if (avFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
+			{
+				if (FAILED(CreateTimedMetadataStreamDescriptor(avFormatCtx->streams[i])))
+				{
+					continue;
+				}
+
+				timedMetadataStreamIndex = i;
+
+				hr = timedMetadataSampleProvider->AllocateResources();
+				if (SUCCEEDED(hr))
+				{
+					m_pReader->SetTimedMetadataStream(timedMetadataStreamIndex, timedMetadataSampleProvider);
+				}
+
+				if (SUCCEEDED(hr))
+				{
+					hr = ConvertCodecName(avcodec_get_name(avFormatCtx->streams[i]->codecpar->codec_id), &timedMetadataCodecName);
+				}
+
+				// TODO: Allow multiple subtitle streams
+				break;
+			}
+		}
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		// Create the MSS if one was not provided
+		if (mss == nullptr)
+		{
+			mss = ref new MediaStreamSource(nullptr);
+			if (mss == nullptr)
+			{
+				hr = E_OUTOFMEMORY;
+			}
+		}
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		// Add streams to the MSS
+		if (videoStreamDescriptor)
+		{
+			mss->AddStreamDescriptor(videoStreamDescriptor);
+		}
 
 		if (audioStreamDescriptor)
 		{
-			if (videoStreamDescriptor)
-			{
-				if (mss)
-				{
-					mss->AddStreamDescriptor(videoStreamDescriptor);
-					mss->AddStreamDescriptor(audioStreamDescriptor);
-				}
-				else
-				{
-					mss = ref new MediaStreamSource(videoStreamDescriptor, audioStreamDescriptor);
-				}
-			}
-			else
-			{
-				if (mss)
-				{
-					mss->AddStreamDescriptor(audioStreamDescriptor);
-				}
-				else
-				{
-					mss = ref new MediaStreamSource(audioStreamDescriptor);
-				}
-			}
+			mss->AddStreamDescriptor(audioStreamDescriptor);
 		}
-		else if (videoStreamDescriptor)
-		{
-			if (mss)
-			{
-				mss->AddStreamDescriptor(videoStreamDescriptor);
-			}
-			else
-			{
-				mss = ref new MediaStreamSource(videoStreamDescriptor);
-			}
-		}
-		if (mss)
-		{
-			if (mediaDuration.Duration > 0)
-			{
-				mss->Duration = mediaDuration;
-				mss->CanSeek = true;
-			}
-			else
-			{
-				// Set buffer time to 0 for realtime streaming to reduce latency
-				mss->BufferTime = { 0 };
-			}
 
-			startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);
-			sampleRequestedToken = mss->SampleRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSampleRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSampleRequested);
+		if (timedMetadataStreamDescriptor)
+		{
+			mss->AddStreamDescriptor(timedMetadataStreamDescriptor);
+		}
+
+		// Set the duration
+		mediaDuration = { LONGLONG(avFormatCtx->duration * 10000000 / double(AV_TIME_BASE)) }; // Convert media duration from AV_TIME_BASE to TimeSpan unit
+
+		if (mediaDuration.Duration > 0)
+		{
+			mss->Duration = mediaDuration;
+			mss->CanSeek = true;
 		}
 		else
 		{
-			hr = E_OUTOFMEMORY;
+			// Set buffer time to 0 for realtime streaming to reduce latency
+			mss->BufferTime = { 0 };
 		}
+
+		// Register event handlers
+		startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);
+		sampleRequestedToken = mss->SampleRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSampleRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSampleRequested);
 	}
 
 	return hr;
@@ -659,7 +673,7 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
 	return (audioStreamDescriptor != nullptr && audioSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
 }
 
-HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptorFromParameters(AVCodecParameters* avCodecParams)
+HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptorFromParameters(const AVCodecParameters* avCodecParams)
 {
 	if (!AvCodecMap->HasKey(avCodecParams->codec_id))
 	{
@@ -669,7 +683,7 @@ HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptorFromParameters(AVCodecParam
 	AudioEncodingProperties^ audioProperties = ref new AudioEncodingProperties();
 	audioProperties->SampleRate = avCodecParams->sample_rate;
 	audioProperties->ChannelCount = avCodecParams->channels;
-	audioProperties->Bitrate = avCodecParams->bit_rate;
+	audioProperties->Bitrate = static_cast<unsigned int>(avCodecParams->bit_rate);
 	audioProperties->Subtype = AvCodecMap->Lookup(avCodecParams->codec_id);
 
 	audioStreamDescriptor = ref new AudioStreamDescriptor(audioProperties);
@@ -712,11 +726,13 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 
 		videoProperties->Properties->Insert(MF_MT_INTERLACE_MODE, (uint32)_MFVideoInterlaceMode::MFVideoInterlace_MixedInterlaceOrProgressive);
 	}
+
 	if (rotateVideo)
 	{
 		Platform::Guid MF_MT_VIDEO_ROTATION(0xC380465D, 0x2271, 0x428C, 0x9B, 0x83, 0xEC, 0xEA, 0x3B, 0x4A, 0x85, 0xC1);
 		videoProperties->Properties->Insert(MF_MT_VIDEO_ROTATION, (uint32)rotationAngle);
 	}
+
 	// Detect the correct framerate
 	if (avVideoCodecCtx->framerate.num != 0 || avVideoCodecCtx->framerate.den != 1)
 	{
@@ -733,6 +749,63 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 
 	return (videoStreamDescriptor != nullptr && videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
+}
+
+HRESULT FFmpegInteropMSS::CreateTimedMetadataStreamDescriptor(const AVStream* avStream)
+{
+	_ASSERT(avStream->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE);
+
+	// Check if we recognize the codec
+	if (!AvCodecMap->HasKey(avStream->codecpar->codec_id))
+	{
+		return E_FAIL;
+	}
+
+	// Create encoding properties and set subtype
+	TimedMetadataEncodingProperties^ timedMetadataEncProp = ref new TimedMetadataEncodingProperties();
+	if (timedMetadataEncProp == nullptr)
+	{
+		return E_OUTOFMEMORY;
+	}
+
+	timedMetadataEncProp->Subtype = AvCodecMap->Lookup(avStream->codecpar->codec_id);
+
+	if (avStream->codecpar->extradata != nullptr && avStream->codecpar->extradata_size > 0)
+	{
+		timedMetadataEncProp->SetFormatUserData(%Array<BYTE>(avStream->codecpar->extradata, avStream->codecpar->extradata_size));
+	}
+
+	// Create stream descriptor
+	timedMetadataStreamDescriptor = ref new TimedMetadataStreamDescriptor(timedMetadataEncProp);
+	if (timedMetadataStreamDescriptor == nullptr)
+	{
+		return E_OUTOFMEMORY;
+	}
+
+	const AVDictionaryEntry* avDictEntry = nullptr;
+	wstring_convert<codecvt_utf8<wchar_t>> conv;
+
+	avDictEntry = av_dict_get(avStream->metadata, "title", nullptr, 0);
+	if (avDictEntry != nullptr)
+	{
+		timedMetadataStreamDescriptor->Name = ref new String(conv.from_bytes(avDictEntry->value).c_str());
+		// TODO: Set timedMetadataStreamDescriptor->Label here too?
+	}
+
+	avDictEntry = av_dict_get(avStream->metadata, "language", nullptr, 0);
+	if (avDictEntry != nullptr)
+	{
+		timedMetadataStreamDescriptor->Language = ref new String(conv.from_bytes(avDictEntry->value).c_str());
+	}
+
+	// Create sample provider for this straem
+	timedMetadataSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, nullptr);
+	if (timedMetadataSampleProvider == nullptr)
+	{
+		return E_OUTOFMEMORY;
+	}
+
+	return S_OK;
 }
 
 HRESULT FFmpegInteropMSS::ParseOptions(PropertySet^ ffmpegOptions)
@@ -835,6 +908,10 @@ void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource
 		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoSampleProvider != nullptr)
 		{
 			args->Request->Sample = videoSampleProvider->GetNextSample();
+		}
+		else if (args->Request->StreamDescriptor == timedMetadataStreamDescriptor && timedMetadataSampleProvider != nullptr)
+		{
+			args->Request->Sample = timedMetadataSampleProvider->GetNextSample();
 		}
 		else
 		{

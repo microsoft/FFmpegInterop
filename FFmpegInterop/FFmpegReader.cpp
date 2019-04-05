@@ -86,3 +86,12 @@ void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider^ vid
 	}
 }
 
+void FFmpegReader::SetTimedMetadataStream(int timedMetadataStreamIndex, MediaSampleProvider^ timedMetadataSampleProvider)
+{
+	m_timedMetadataStreamIndex = timedMetadataStreamIndex;
+	m_timedMetadataSampleProvider = timedMetadataSampleProvider;
+	if (timedMetadataSampleProvider != nullptr)
+	{
+		timedMetadataSampleProvider->SetCurrentStreamIndex(m_timedMetadataStreamIndex);
+	}
+}

@@ -52,14 +52,15 @@ IMapView<int, String^>^ create_map()
 	Platform::Collections::Map<int, String^>^ m = ref new Platform::Collections::Map<int, String^>();
 
 	// Audio codecs
-	m->Insert(AV_CODEC_ID_OPUS, "OPUS");
+	m->Insert(AV_CODEC_ID_OPUS, L"OPUS");
 
 	// Subtitle codecs
 	m->Insert(AV_CODEC_ID_ASS, Guid(MFSubtitleFormat_SSA).ToString());
-	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, "6B8E40F4-8D2C-4CED-AD91-5960E45B4433"); // TODO: Publish MFSubtitleFormat_VOBSUB
-	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, "71F40E4A-1278-4442-B30D-39DD1D7722BC"); // TODO: Publish MFSubtitleFormat_PGS
+	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, L"{6B8E40F4-8D2C-4CED-AD91-5960E45B4433}"); // TODO: Publish MFSubtitleFormat_VOBSUB
+	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, L"{71F40E4A-1278-4442-B30D-39DD1D7722BC}"); // TODO: Publish MFSubtitleFormat_PGS
 	m->Insert(AV_CODEC_ID_SSA, Guid(MFSubtitleFormat_SSA).ToString());
-	m->Insert(AV_CODEC_ID_SUBRIP, Guid(MFMediaType_Subtitle).ToString()); // TODO: Needs subtype GUID?
+	m->Insert(AV_CODEC_ID_SUBRIP, L"{868B3C2D-D01A-4282-97CB-CB9052594734}"); // TODO: Publish MFSubtitleFormat_UTF8
+	m->Insert(AV_CODEC_ID_TEXT, L"{6A8BFD18-B445-4CBA-B10D-25C6DE6F6EF2}"); // TODO: Publish MFSubtitleFormat_ASCII
 
 	return m->GetView();
 }
@@ -94,7 +95,7 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 	, avVideoCodecCtx(nullptr)
 	, audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, timedMetadataStreamIndex(AVERROR_STREAM_NOT_FOUND)
+	, subtitleStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, thumbnailStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, fileStreamData(nullptr)
 	, fileStreamBuffer(nullptr)
@@ -510,22 +511,22 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		{
 			if (avFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
 			{
-				if (FAILED(CreateTimedMetadataStreamDescriptor(avFormatCtx->streams[i])))
+				if (FAILED(CreateSubtitleStreamDescriptor(avFormatCtx->streams[i])))
 				{
 					continue;
 				}
 
-				timedMetadataStreamIndex = i;
+				subtitleStreamIndex = i;
 
-				hr = timedMetadataSampleProvider->AllocateResources();
+				hr = subtitleSampleProvider->AllocateResources();
 				if (SUCCEEDED(hr))
 				{
-					m_pReader->SetTimedMetadataStream(timedMetadataStreamIndex, timedMetadataSampleProvider);
+					m_pReader->SetSubtitleStream(subtitleStreamIndex, subtitleSampleProvider);
 				}
 
 				if (SUCCEEDED(hr))
 				{
-					hr = ConvertCodecName(avcodec_get_name(avFormatCtx->streams[i]->codecpar->codec_id), &timedMetadataCodecName);
+					hr = ConvertCodecName(avcodec_get_name(avFormatCtx->streams[i]->codecpar->codec_id), &subtitleCodecName);
 				}
 
 				// TODO: Allow multiple subtitle streams
@@ -560,9 +561,9 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 			mss->AddStreamDescriptor(audioStreamDescriptor);
 		}
 
-		if (timedMetadataStreamDescriptor)
+		if (subtitleStreamDescriptor)
 		{
-			mss->AddStreamDescriptor(timedMetadataStreamDescriptor);
+			mss->AddStreamDescriptor(subtitleStreamDescriptor);
 		}
 
 		// Set the duration
@@ -751,7 +752,7 @@ HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
 	return (videoStreamDescriptor != nullptr && videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
 }
 
-HRESULT FFmpegInteropMSS::CreateTimedMetadataStreamDescriptor(const AVStream* avStream)
+HRESULT FFmpegInteropMSS::CreateSubtitleStreamDescriptor(const AVStream* avStream)
 {
 	_ASSERT(avStream->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE);
 
@@ -762,22 +763,22 @@ HRESULT FFmpegInteropMSS::CreateTimedMetadataStreamDescriptor(const AVStream* av
 	}
 
 	// Create encoding properties and set subtype
-	TimedMetadataEncodingProperties^ timedMetadataEncProp = ref new TimedMetadataEncodingProperties();
-	if (timedMetadataEncProp == nullptr)
+	TimedMetadataEncodingProperties^ subtitleEncProp = ref new TimedMetadataEncodingProperties();
+	if (subtitleEncProp == nullptr)
 	{
 		return E_OUTOFMEMORY;
 	}
 
-	timedMetadataEncProp->Subtype = AvCodecMap->Lookup(avStream->codecpar->codec_id);
+	subtitleEncProp->Subtype = AvCodecMap->Lookup(avStream->codecpar->codec_id);
 
 	if (avStream->codecpar->extradata != nullptr && avStream->codecpar->extradata_size > 0)
 	{
-		timedMetadataEncProp->SetFormatUserData(%Array<BYTE>(avStream->codecpar->extradata, avStream->codecpar->extradata_size));
+		subtitleEncProp->SetFormatUserData(%Array<BYTE>(avStream->codecpar->extradata, avStream->codecpar->extradata_size));
 	}
 
 	// Create stream descriptor
-	timedMetadataStreamDescriptor = ref new TimedMetadataStreamDescriptor(timedMetadataEncProp);
-	if (timedMetadataStreamDescriptor == nullptr)
+	subtitleStreamDescriptor = ref new TimedMetadataStreamDescriptor(subtitleEncProp);
+	if (subtitleStreamDescriptor == nullptr)
 	{
 		return E_OUTOFMEMORY;
 	}
@@ -788,19 +789,18 @@ HRESULT FFmpegInteropMSS::CreateTimedMetadataStreamDescriptor(const AVStream* av
 	avDictEntry = av_dict_get(avStream->metadata, "title", nullptr, 0);
 	if (avDictEntry != nullptr)
 	{
-		timedMetadataStreamDescriptor->Name = ref new String(conv.from_bytes(avDictEntry->value).c_str());
-		// TODO: Set timedMetadataStreamDescriptor->Label here too?
+		subtitleStreamDescriptor->Name = ref new String(conv.from_bytes(avDictEntry->value).c_str());
 	}
 
 	avDictEntry = av_dict_get(avStream->metadata, "language", nullptr, 0);
 	if (avDictEntry != nullptr)
 	{
-		timedMetadataStreamDescriptor->Language = ref new String(conv.from_bytes(avDictEntry->value).c_str());
+		subtitleStreamDescriptor->Language = ref new String(conv.from_bytes(avDictEntry->value).c_str());
 	}
 
 	// Create sample provider for this straem
-	timedMetadataSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, nullptr);
-	if (timedMetadataSampleProvider == nullptr)
+	subtitleSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, nullptr);
+	if (subtitleSampleProvider == nullptr)
 	{
 		return E_OUTOFMEMORY;
 	}
@@ -889,6 +889,13 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 						avcodec_flush_buffers(avVideoCodecCtx);
 					}
 				}
+
+				// Flush the subtitleSampleProvider
+				if (subtitleSampleProvider != nullptr)
+				{
+					subtitleSampleProvider->EnableStream();
+					subtitleSampleProvider->Flush();
+				}
 			}
 		}
 
@@ -909,9 +916,9 @@ void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource
 		{
 			args->Request->Sample = videoSampleProvider->GetNextSample();
 		}
-		else if (args->Request->StreamDescriptor == timedMetadataStreamDescriptor && timedMetadataSampleProvider != nullptr)
+		else if (args->Request->StreamDescriptor == subtitleStreamDescriptor && subtitleSampleProvider != nullptr)
 		{
-			args->Request->Sample = timedMetadataSampleProvider->GetNextSample();
+			args->Request->Sample = subtitleSampleProvider->GetNextSample();
 		}
 		else
 		{

@@ -86,12 +86,12 @@ void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider^ vid
 	}
 }
 
-void FFmpegReader::SetTimedMetadataStream(int timedMetadataStreamIndex, MediaSampleProvider^ timedMetadataSampleProvider)
+void FFmpegReader::SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider^ subtitleSampleProvider)
 {
-	m_timedMetadataStreamIndex = timedMetadataStreamIndex;
-	m_timedMetadataSampleProvider = timedMetadataSampleProvider;
-	if (timedMetadataSampleProvider != nullptr)
+	m_subtitleStreamIndex = subtitleStreamIndex;
+	m_subtitleSampleProvider = subtitleSampleProvider;
+	if (subtitleSampleProvider != nullptr)
 	{
-		timedMetadataSampleProvider->SetCurrentStreamIndex(m_timedMetadataStreamIndex);
+		subtitleSampleProvider->SetCurrentStreamIndex(m_subtitleStreamIndex);
 	}
 }

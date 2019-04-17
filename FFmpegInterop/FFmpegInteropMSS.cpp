@@ -124,6 +124,7 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	{
 		m_pReader->SetAudioStream(AVERROR_STREAM_NOT_FOUND, nullptr);
 		m_pReader->SetVideoStream(AVERROR_STREAM_NOT_FOUND, nullptr);
+		m_pReader->SetSubtitleStream(AVERROR_STREAM_NOT_FOUND, nullptr);
 		m_pReader = nullptr;
 	}
 

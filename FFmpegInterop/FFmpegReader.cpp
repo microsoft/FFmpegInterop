@@ -57,6 +57,10 @@ int FFmpegReader::ReadPacket()
 	{
 		m_videoSampleProvider->QueuePacket(avPacket);
 	}
+	else if (avPacket.stream_index == m_subtitleStreamIndex && m_subtitleSampleProvider != nullptr)
+	{
+		m_subtitleSampleProvider->QueuePacket(avPacket);
+	}
 	else
 	{
 		DebugMessage(L"Ignoring unused stream\n");

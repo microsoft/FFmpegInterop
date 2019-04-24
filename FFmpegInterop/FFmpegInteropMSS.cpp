@@ -60,11 +60,11 @@ IMapView<int, String^>^ create_map()
 
 	// Subtitle codecs
 	m->Insert(AV_CODEC_ID_ASS, Guid(MFSubtitleFormat_SSA).ToString());
-	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, L"{6B8E40F4-8D2C-4CED-AD91-5960E45B4433}"); // TODO: Publish MFSubtitleFormat_VOBSUB
-	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, L"{71F40E4A-1278-4442-B30D-39DD1D7722BC}"); // TODO: Publish MFSubtitleFormat_PGS
+	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, L"{6B8E40F4-8D2C-4CED-AD91-5960E45B4433}"); // MFSubtitleFormat_VOBSUB
+	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, L"{71F40E4A-1278-4442-B30D-39DD1D7722BC}"); // MFSubtitleFormat_PGS
 	m->Insert(AV_CODEC_ID_SSA, Guid(MFSubtitleFormat_SSA).ToString());
-	m->Insert(AV_CODEC_ID_SUBRIP, Guid(MFSubtitleFormat_SRT).ToString());
-	m->Insert(AV_CODEC_ID_TEXT, Guid(MFSubtitleFormat_SRT).ToString());
+	m->Insert(AV_CODEC_ID_SUBRIP, L"{868B3C2D-D01A-4282-97CB-CB9052594734}"); // MFSubtitleFormat_UTF8
+	m->Insert(AV_CODEC_ID_TEXT, L"{868B3C2D-D01A-4282-97CB-CB9052594734}"); // MFSubtitleFormat_UTF8
 
 	return m->GetView();
 }

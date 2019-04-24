@@ -43,6 +43,10 @@ using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
 using namespace std;
 
+// TODO:
+// - Handle switch streams event
+// - Init cue for SSA/Vobsub
+
 // Size of the buffer when reading a stream
 const int FILESTREAMBUFFERSZ = 16384;
 

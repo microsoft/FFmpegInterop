@@ -220,7 +220,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 		// Open media in the given URI using the specified options
 		if (avformat_open_input(&avFormatCtx, charStr, NULL, &avDict) < 0)
 		{
-			DebugMessage(L"Error openeing file");
+			DebugMessage(L"Error opening file");
 			hr = E_FAIL;
 		}
 
@@ -300,7 +300,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 		// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
 		if (avformat_open_input(&avFormatCtx, "", NULL, &avDict) < 0)
 		{
-			DebugMessage(L"Error openeing file");
+			DebugMessage(L"Error opening file");
 			hr = E_FAIL;
 		}
 

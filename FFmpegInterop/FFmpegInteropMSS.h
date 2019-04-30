@@ -64,6 +64,13 @@ namespace FFmpegInterop
 				return videoStreamDescriptor;
 			};
 		};
+		property VideoStreamDescriptor^ SubtitleDescriptor
+		{
+			VideoStreamDescriptor^ get()
+			{
+				return subtitleStreamDescriptor;
+			};
+		};
 		property TimeSpan Duration
 		{
 			TimeSpan get()
@@ -83,6 +90,13 @@ namespace FFmpegInterop
 			String^ get()
 			{
 				return audioCodecName;
+			};
+		};
+		property String^ SubtitleCodecName
+		{
+			String^ get()
+			{
+				return subtitleCodecName;
 			};
 		};
 

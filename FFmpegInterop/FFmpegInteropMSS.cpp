@@ -43,10 +43,6 @@ using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
 using namespace std;
 
-// TODO:
-// - Handle switch streams event
-// - Init cue for SSA/Vobsub
-
 // Size of the buffer when reading a stream
 const int FILESTREAMBUFFERSZ = 16384;
 
@@ -515,7 +511,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 	if (SUCCEEDED(hr))
 	{
-		// Get subtitle streams
+		// Get the subtitle stream
 		for (unsigned int i = 0; i < avFormatCtx->nb_streams; i++)
 		{
 			if (avFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
@@ -538,7 +534,6 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					hr = ConvertCodecName(avcodec_get_name(avFormatCtx->streams[i]->codecpar->codec_id), &subtitleCodecName);
 				}
 
-				// TODO: Allow multiple subtitle streams
 				break;
 			}
 		}

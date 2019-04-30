@@ -117,6 +117,7 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	{
 		mss->Starting -= startingRequestedToken;
 		mss->SampleRequested -= sampleRequestedToken;
+		mss->SwitchStreamsRequested -= switchStreamsRequestedToken;
 		mss = nullptr;
 	}
 
@@ -388,6 +389,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 							hr = audioSampleProvider->AllocateResources();
 							if (SUCCEEDED(hr))
 							{
+								audioSampleProvider->EnableStream();
 								m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
 							}
 						}
@@ -415,6 +417,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					hr = audioSampleProvider->AllocateResources();
 					if (SUCCEEDED(hr))
 					{
+						audioSampleProvider->EnableStream();
 						m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
 					}
 				}
@@ -494,6 +497,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 							hr = videoSampleProvider->AllocateResources();
 							if (SUCCEEDED(hr))
 							{
+								videoSampleProvider->EnableStream();
 								m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
 							}
 						}
@@ -588,6 +592,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		// Register event handlers
 		startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);
 		sampleRequestedToken = mss->SampleRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSampleRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSampleRequested);
+		switchStreamsRequestedToken = mss->SwitchStreamsRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSwitchStreamsRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSwitchStreamsRequested);
 	}
 
 	return hr;
@@ -876,7 +881,6 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 				// Flush the AudioSampleProvider
 				if (audioSampleProvider != nullptr)
 				{
-					audioSampleProvider->EnableStream();
 					audioSampleProvider->Flush();
 					if (avAudioCodecCtx != nullptr)
 					{
@@ -887,7 +891,6 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 				// Flush the VideoSampleProvider
 				if (videoSampleProvider != nullptr)
 				{
-					videoSampleProvider->EnableStream();
 					videoSampleProvider->Flush();
 					if (avVideoCodecCtx != nullptr)
 					{
@@ -898,7 +901,6 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 				// Flush the subtitleSampleProvider
 				if (subtitleSampleProvider != nullptr)
 				{
-					subtitleSampleProvider->EnableStream();
 					subtitleSampleProvider->Flush();
 				}
 			}
@@ -908,26 +910,78 @@ void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceSt
 	}
 }
 
-void FFmpegInteropMSS::OnSampleRequested(Windows::Media::Core::MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)
+void FFmpegInteropMSS::OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)
 {
 	mutexGuard.lock();
 	if (mss != nullptr)
 	{
-		if (args->Request->StreamDescriptor == audioStreamDescriptor && audioSampleProvider != nullptr)
+		if (args->Request->StreamDescriptor == nullptr)
+		{
+			args->Request->Sample = nullptr;
+		}
+		if (args->Request->StreamDescriptor == audioStreamDescriptor)
 		{
 			args->Request->Sample = audioSampleProvider->GetNextSample();
 		}
-		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoSampleProvider != nullptr)
+		else if (args->Request->StreamDescriptor == videoStreamDescriptor)
 		{
 			args->Request->Sample = videoSampleProvider->GetNextSample();
 		}
-		else if (args->Request->StreamDescriptor == subtitleStreamDescriptor && subtitleSampleProvider != nullptr)
+		else if (args->Request->StreamDescriptor == subtitleStreamDescriptor)
 		{
 			args->Request->Sample = subtitleSampleProvider->GetNextSample();
 		}
 		else
 		{
 			args->Request->Sample = nullptr;
+		}
+	}
+	mutexGuard.unlock();
+}
+
+void FFmpegInteropMSS::OnSwitchStreamsRequested(MediaStreamSource ^sender, MediaStreamSourceSwitchStreamsRequestedEventArgs ^args)
+{
+	mutexGuard.lock();
+	if (mss != nullptr)
+	{
+		if (args->Request->OldStreamDescriptor != nullptr)
+		{
+			if (args->Request->OldStreamDescriptor == audioStreamDescriptor)
+			{
+				audioSampleProvider->DisableStream();
+				if (avAudioCodecCtx != nullptr)
+				{
+					avcodec_flush_buffers(avAudioCodecCtx);
+				}
+			}
+			else if (args->Request->OldStreamDescriptor == videoStreamDescriptor)
+			{
+				videoSampleProvider->DisableStream();
+				if (avVideoCodecCtx != nullptr)
+				{
+					avcodec_flush_buffers(avVideoCodecCtx);
+				}
+			}
+			else if (args->Request->OldStreamDescriptor == subtitleStreamDescriptor)
+			{
+				subtitleSampleProvider->DisableStream();
+			}
+		}
+
+		if (args->Request->NewStreamDescriptor != nullptr)
+		{
+			if (args->Request->NewStreamDescriptor == audioStreamDescriptor)
+			{
+				audioSampleProvider->EnableStream();
+			}
+			else if (args->Request->NewStreamDescriptor == videoStreamDescriptor)
+			{
+				videoSampleProvider->EnableStream();
+			}
+			else if (args->Request->NewStreamDescriptor == subtitleStreamDescriptor)
+			{
+				subtitleSampleProvider->EnableStream();
+			}
 		}
 	}
 	mutexGuard.unlock();

@@ -32,8 +32,8 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_nextFramePts(AV_NOPTS_VALUE)
-	, m_isEnabled(true)
-	, m_isDiscontinuous(false)
+	, m_isEnabled(false)
+	, m_isDiscontinuous(true)
 {
 	DebugMessage(L"MediaSampleProvider\n");
 	

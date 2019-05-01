@@ -20,6 +20,7 @@
 #include "MediaSampleProvider.h"
 #include "FFmpegInteropMSS.h"
 #include "FFmpegReader.h"
+#include <mferror.h>
 
 using namespace FFmpegInterop;
 
@@ -87,7 +88,7 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 			sample->Discontinuous = m_isDiscontinuous;
 			m_isDiscontinuous = false;
 		}
-		else
+		else if (hr != MF_E_END_OF_STREAM)
 		{
 			DebugMessage(L"Too many broken packets - disable stream\n");
 			DisableStream();
@@ -184,9 +185,15 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 		// Continue reading until there is an appropriate packet in the stream
 		while (m_packetQueue.empty())
 		{
-			if (m_pReader->ReadPacket() < 0)
+			int readResult = m_pReader->ReadPacket();
+			if (readResult == AVERROR_EOF)
 			{
 				DebugMessage(L"GetNextSample reaching EOF\n");
+				hr = MF_E_END_OF_STREAM;
+				break;
+			}
+			else if (readResult < 0)
+			{
 				hr = E_FAIL;
 				break;
 			}

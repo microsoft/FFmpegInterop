@@ -64,9 +64,9 @@ namespace FFmpegInterop
 				return videoStreamDescriptor;
 			};
 		};
-		property VideoStreamDescriptor^ SubtitleDescriptor
+		property TimedMetadataStreamDescriptor^ SubtitleDescriptor
 		{
-			VideoStreamDescriptor^ get()
+			TimedMetadataStreamDescriptor^ get()
 			{
 				return subtitleStreamDescriptor;
 			};
@@ -141,6 +141,9 @@ namespace FFmpegInterop
 		int videoStreamIndex;
 		int subtitleStreamIndex;
 		int thumbnailStreamIndex;
+		bool audioStreamSelected;
+		bool videoStreamSelected;
+		bool subtitleStreamSelected;
 		
 		bool rotateVideo;
 		int rotationAngle;

@@ -26,14 +26,14 @@
 
   <Identity
     Name="c08bc68a-b511-4abc-8b98-067f25611588"
-    Publisher="CN=timargo"
+    Publisher="CN=FFmpegInterop"
     Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="c08bc68a-b511-4abc-8b98-067f25611588" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>MediaPlayerCPP</DisplayName>
-    <PublisherDisplayName>timargo</PublisherDisplayName>
+    <PublisherDisplayName>FFmpegInterop</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 

@@ -17,7 +17,7 @@
 //*****************************************************************************
 
 using FFmpegInterop;
-using Microsoft.VisualStudio.TestPlatform.UnitTestFramework;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Windows.Foundation.Collections;
 using Windows.Media.Core;
 

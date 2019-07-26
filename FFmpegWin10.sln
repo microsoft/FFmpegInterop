@@ -9,7 +9,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaPlayerCPP", "Samples\S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaPlayerCS", "Samples\SamplesWin10\MediaPlayerCS\MediaPlayerCS.csproj", "{3CFE9DE0-525A-474E-A7F3-876CC2876CFB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest", "Tests\Win10\UnitTest\UnitTest.csproj", "{F1ECBD62-71FE-47FB-B588-1E331A375B59}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTest", "Tests\UnitTest.csproj", "{F1ECBD62-71FE-47FB-B588-1E331A375B59}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

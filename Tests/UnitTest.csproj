@@ -124,13 +124,7 @@
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avcodec-58.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avdevice-58.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avfilter-7.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avformat-58.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avutil-56.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\swresample-3.dll" />
-    <Content Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\swscale-5.dll" />
+    <Content Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\*.dll" />
     <Content Include="TestFiles\test.txt" />
     <Content Include="TestFiles\silence with album art.mp3" />
   </ItemGroup>

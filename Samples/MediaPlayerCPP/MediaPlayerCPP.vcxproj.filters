@@ -49,13 +49,13 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avcodec-58.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avdevice-58.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avfilter-7.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avformat-58.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\avutil-56.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swresample-3.dll" />
-    <None Include="$(SolutionDir)ffmpeg\Build\Windows10\$(PlatformTarget)\bin\swscale-5.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avcodec-58.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avdevice-58.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avfilter-7.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avformat-58.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\avutil-56.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\swresample-3.dll" />
+    <None Include="$(SolutionDir)ffmpeg\Build\$(PlatformTarget)\bin\swscale-5.dll" />
     <None Include="$(SolutionDir)FFmpegInterop.pfx" />
   </ItemGroup>
   <ItemGroup>

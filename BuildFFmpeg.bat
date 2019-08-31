@@ -15,13 +15,13 @@ for %%a in (%*) do (
             goto Usage
         )
     ) else if /I "%%a"=="x86" (
-        set build.architectures=!build.architectures!;%%a
+        set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="x64" (
-        set build.architectures=!build.architectures!;%%a
+        set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="arm" (
-        set build.architectures=!build.architectures!;%%a
+        set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="arm64" (
-        set build.architectures=!build.architectures!;%%a
+        set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="--settings" (
         set settings_found=1
     ) else if /I "%%a"=="--help" (
@@ -90,7 +90,7 @@ echo %MSYS2_BIN%
 set MSYS2_PATH_TYPE=inherit
 
 :: Build ffmpeg for the specified architectures
-for %%a in (%build.architectures%) do (
+for %%a in (%build.archs%) do (
     call :build_ffmpeg %%a %build.settings%
 )
 
@@ -107,26 +107,26 @@ echo Building FFmpeg for %1...
 :: Determine the correct architecture to pass to vcvarsall.bat
 if /I %PROCESSOR_ARCHITECTURE% == x86 (
     if /I %1==x86 (
-        set vcvarsall_architecture=x86
+        set vcvarsall_arch=x86
     ) else if /I %1==x64 (
-        set vcvarsall_architecture=x86_x64
+        set vcvarsall_arch=x86_x64
     ) else if /I %1==arm (
-        set vcvarsall_architecture=x86_arm
+        set vcvarsall_arch=x86_arm
     ) else if /I %1==arm64 (
-        set vcvarsall_architecture=x86_arm64
+        set vcvarsall_arch=x86_arm64
     ) else (
         echo ERROR: %1 is not a valid architecture! 1>&2
         exit /B 1
     )
 ) else (
     if /I %1==x86 (
-        set vcvarsall_architecture=x64_x86
+        set vcvarsall_arch=x64_x86
     ) else if /I %1==x64 (
-        set vcvarsall_architecture=x64
+        set vcvarsall_arch=x64
     ) else if /I %1==arm (
-        set vcvarsall_architecture=x64_arm
+        set vcvarsall_arch=x64_arm
     ) else if /I %1==arm64 (
-        set vcvarsall_architecture=x64_arm64
+        set vcvarsall_arch=x64_arm64
     ) else (
         echo ERROR: %1 is not a valid architecture! 1>&2
         exit /B 1
@@ -134,7 +134,7 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
 )
 
 :: Call vcvarsall.bat to set up the build environment
-call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_architecture% uwp
+call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% uwp
 
 :: Build FFmpeg
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh %*

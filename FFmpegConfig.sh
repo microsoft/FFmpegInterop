@@ -15,46 +15,46 @@ common_settings=" \
     "
 
 # Architecture specific configure settings
-architecture="${1,,}"
+arch="${1,,}"
 
-if [ -z $architecture ]; then
+if [ -z $arch ]; then
 	echo "ERROR: No architecture set!" 1>&2
     exit 1
 
-elif [ $architecture == "x86" ]; then
+elif [ $arch == "x86" ]; then
 	architecture_settings="
 		--arch=x86 \
-        --prefix=../../Build/$architecture \
+        --prefix=../../Build/$arch \
 	"
 
-elif [ $architecture == "x64" ]; then
+elif [ $arch == "x64" ]; then
 	architecture_settings="
 		--arch=x86_64 \
-        --prefix=../../Build/$architecture \
+        --prefix=../../Build/$arch \
 	"
 
-elif [ $architecture == "arm" ]; then
+elif [ $arch == "arm" ]; then
     architecture_settings="
 		--arch=arm \
         --as=armasm \
         --cpu=armv7 \
         --enable-thumb \
         --extra-cflags=\"-D__ARM_PCS_VFP\" \
-        --prefix=../../Build/$architecture \
+        --prefix=../../Build/$arch \
 	"
 
-elif [ $architecture == "arm64" ]; then
+elif [ $arch == "arm64" ]; then
     architecture_settings="
 		--arch=arm64 \
         --as=armasm \
         --cpu=armv7 \
         --enable-thumb \
         --extra-cflags=\"-D__ARM_PCS_VFP\" \
-        --prefix=../../Build/$architecture \
+        --prefix=../../Build/$arch \
 	"
 
 else
-    echo "ERROR: $architecture is not a valid architecture!" 1>&2
+    echo "ERROR: $arch is not a valid architecture!" 1>&2
     exit 1
 
 fi
@@ -65,11 +65,11 @@ extra_settings="${2:-""}"
 # Build FFmpeg
 pushd $dir/ffmpeg > /dev/null
 
-rm -rf Output/$architecture
-mkdir -p Output/$architecture
-cd Output/$architecture
+rm -rf Output/$arch
+mkdir -p Output/$arch
+cd Output/$arch
 
-eval ../../configure $common_settings $architecture_settings $extra_settings
+eval ../../configure $common_settings $arch_settings $extra_settings
 
 make -j`nproc`
 make install

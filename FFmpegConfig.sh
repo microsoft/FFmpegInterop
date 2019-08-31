@@ -20,19 +20,16 @@ arch="${1,,}"
 if [ -z $arch ]; then
 	echo "ERROR: No architecture set!" 1>&2
     exit 1
-
 elif [ $arch == "x86" ]; then
 	architecture_settings="
 		--arch=x86 \
         --prefix=../../Build/$arch \
 	"
-
 elif [ $arch == "x64" ]; then
 	architecture_settings="
 		--arch=x86_64 \
         --prefix=../../Build/$arch \
 	"
-
 elif [ $arch == "arm" ]; then
     architecture_settings="
 		--arch=arm \
@@ -42,7 +39,6 @@ elif [ $arch == "arm" ]; then
         --extra-cflags=\"-D__ARM_PCS_VFP\" \
         --prefix=../../Build/$arch \
 	"
-
 elif [ $arch == "arm64" ]; then
     architecture_settings="
 		--arch=arm64 \
@@ -52,11 +48,9 @@ elif [ $arch == "arm64" ]; then
         --extra-cflags=\"-D__ARM_PCS_VFP\" \
         --prefix=../../Build/$arch \
 	"
-
 else
     echo "ERROR: $arch is not a valid architecture!" 1>&2
     exit 1
-
 fi
 
 # Extra configure settings supplied by user

@@ -21,17 +21,17 @@ if [ -z $arch ]; then
     echo "ERROR: No architecture set!" 1>&2
     exit 1
 elif [ $arch == "x86" ]; then
-    architecture_settings="
+    arch_settings="
         --arch=x86 \
         --prefix=../../Build/$arch \
         "
 elif [ $arch == "x64" ]; then
-    architecture_settings="
+    arch_settings="
         --arch=x86_64 \
         --prefix=../../Build/$arch \
         "
 elif [ $arch == "arm" ]; then
-    architecture_settings="
+    arch_settings="
         --arch=arm \
         --as=armasm \
         --cpu=armv7 \
@@ -40,7 +40,7 @@ elif [ $arch == "arm" ]; then
         --prefix=../../Build/$arch \
         "
 elif [ $arch == "arm64" ]; then
-    architecture_settings="
+    arch_settings="
         --arch=arm64 \
         --as=armasm \
         --cpu=armv7 \

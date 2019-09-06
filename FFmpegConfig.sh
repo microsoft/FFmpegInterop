@@ -63,11 +63,16 @@ rm -rf Output/$arch
 mkdir -p Output/$arch
 cd Output/$arch
 
-eval ../../configure $common_settings $arch_settings $extra_settings
-
-make -j`nproc`
+eval ../../configure $common_settings $arch_settings $extra_settings &&
+make -j`nproc` &&
 make install
+
+result=$?
 
 popd > /dev/null
 
-exit 0
+if [ $result -ne 0 ]; then
+    echo "ERROR: FFmpeg build failed with exit code $result!" 1>&2
+fi
+
+exit $result

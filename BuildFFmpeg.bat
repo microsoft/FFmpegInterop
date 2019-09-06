@@ -92,6 +92,10 @@ set MSYS2_PATH_TYPE=inherit
 :: Build ffmpeg for the specified architectures
 for %%a in (%build.archs%) do (
     call :build_ffmpeg %%a %build.settings%
+    if !ERRORLEVEL! neq 0 (
+        echo ERROR: FFmpeg build for %%a failed! 1>&2
+        exit /B !ERRORLEVEL!
+    )
 )
 
 exit /B 0
@@ -140,7 +144,7 @@ call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% uwp
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh %*
 
 endlocal
-exit /B 0
+exit /B %ERRORLEVEL%
 
 
 :: ------------------------------------------------------------------------

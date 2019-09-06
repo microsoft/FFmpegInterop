@@ -18,7 +18,7 @@ common_settings=" \
 arch="${1,,}"
 
 if [ -z $arch ]; then
-    echo "ERROR: No architecture set!" 1>&2
+    echo "ERROR: No architecture set" 1>&2
     exit 1
 elif [ $arch == "x86" ]; then
     arch_settings="
@@ -49,7 +49,7 @@ elif [ $arch == "arm64" ]; then
         --prefix=../../Build/$arch \
         "
 else
-    echo "ERROR: $arch is not a valid architecture!" 1>&2
+    echo "ERROR: $arch is not a valid architecture" 1>&2
     exit 1
 fi
 
@@ -72,7 +72,7 @@ result=$?
 popd > /dev/null
 
 if [ $result -ne 0 ]; then
-    echo "ERROR: FFmpeg build failed with exit code $result!" 1>&2
+    echo "ERROR: FFmpeg build for $arch failed with exit code $result" 1>&2
 fi
 
 exit $result

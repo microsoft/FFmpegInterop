@@ -11,7 +11,7 @@ for %%a in (%*) do (
             set build.settings=%%a
             set settings_found=0
         ) else (
-            echo ERROR: --settings was set more than once! 1>&2
+            echo ERROR: --settings was set more than once 1>&2
             goto Usage
         )
     ) else if /I "%%a"=="x86" (
@@ -27,7 +27,7 @@ for %%a in (%*) do (
     ) else if /I "%%a"=="--help" (
         goto Usage
     ) else (
-        echo ERROR: %%a is an invalid argument! 1>&2
+        echo ERROR: %%a is an invalid argument 1>&2
         goto Usage
     )
 )
@@ -37,7 +37,7 @@ echo Verifying ffmpeg snapshot...
 
 set ffmpeg_configure=%~dp0ffmpeg\configure
 if not exist %ffmpeg_configure% (
-    echo ERROR: %ffmpeg_configure% does not exist! Ensure an ffmpeg snapshot is populated. 1>&2
+    echo ERROR: %ffmpeg_configure% does not exist. Ensure an ffmpeg snapshot is populated. 1>&2
     exit /B 1
 )
 
@@ -54,7 +54,7 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
 )
 
 if not exist %vswhere% (
-    echo ERROR: %vswhere% does not exist! Ensure Visual Studio is installed. 1>&2
+    echo ERROR: %vswhere% does not exist. Ensure Visual Studio is installed. 1>&2
     exit /B 1
 )
 
@@ -64,7 +64,7 @@ for /f "usebackq tokens=*" %%i in (`%vswhere% -prerelease -latest -products * -r
 )
 
 if not defined VisualStudioDir (
-    echo ERROR: Could not find a valid Visual Studio installation! Ensure Visual Studio and VC++ x64/x86 build tools are installed. 1>&2
+    echo ERROR: Could not find a valid Visual Studio installation. Ensure Visual Studio and VC++ x64/x86 build tools are installed. 1>&2
     exit /B 1
 )
 
@@ -75,12 +75,12 @@ echo:
 echo Verifying MSYS2 installation...
 
 if not defined MSYS2_BIN (
-    echo ERROR: MSYS2_BIN environment variable not set! Ensure MSYS2 is installed and set the MSYS2_BIN environment variable to the executeable path. 1>&2
+    echo ERROR: MSYS2_BIN environment variable not set. Ensure MSYS2 is installed and set the MSYS2_BIN environment variable to the bash.exe path. 1>&2
     exit /B 1
 )
 
 if not exist %MSYS2_BIN% (
-    echo ERROR: MSYS2_BIN environment variable is not valid - %MSYS2_BIN% does not exist! Ensure MSYS2 is installed. 1>&2
+    echo ERROR: MSYS2_BIN environment variable is not valid - %MSYS2_BIN% does not exist. Ensure MSYS2 is installed. 1>&2
     exit /B 1
 )
 
@@ -93,7 +93,7 @@ set MSYS2_PATH_TYPE=inherit
 for %%a in (%build.archs%) do (
     call :build_ffmpeg %%a %build.settings%
     if !ERRORLEVEL! neq 0 (
-        echo ERROR: FFmpeg build for %%a failed! 1>&2
+        echo ERROR: FFmpeg build for %%a failed 1>&2
         exit /B !ERRORLEVEL!
     )
 )
@@ -119,7 +119,7 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
     ) else if /I %1==arm64 (
         set vcvarsall_arch=x86_arm64
     ) else (
-        echo ERROR: %1 is not a valid architecture! 1>&2
+        echo ERROR: %1 is not a valid architecture 1>&2
         exit /B 1
     )
 ) else (
@@ -132,7 +132,7 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
     ) else if /I %1==arm64 (
         set vcvarsall_arch=x64_arm64
     ) else (
-        echo ERROR: %1 is not a valid architecture! 1>&2
+        echo ERROR: %1 is not a valid architecture 1>&2
         exit /B 1
     )
 )

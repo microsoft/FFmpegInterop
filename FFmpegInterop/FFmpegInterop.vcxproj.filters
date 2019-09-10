@@ -33,4 +33,7 @@
     <ClInclude Include="MediaThumbnailData.h" />
     <ClInclude Include="CritSec.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
 </Project>

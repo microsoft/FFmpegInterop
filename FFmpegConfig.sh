@@ -1,244 +1,78 @@
 #!/bin/bash
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-if [ "$1" == "Win10" ]; then
-    echo "Make Win10"
+# Common configure settings for all architectures
+common_settings=" \
+    --toolchain=msvc \
+    --target-os=win32 \
+    --disable-programs \
+    --disable-d3d11va \
+    --disable-dxva2 \
+    --enable-shared \
+    --enable-cross-compile \
+    --extra-cflags=\"-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00\" \
+    --extra-ldflags=\"-APPCONTAINER WindowsApp.lib\" \
+    "
 
-    if [ "$2" == "x86" ]; then
-        echo "Make Win10 x86"
-        pushd $DIR/ffmpeg
-        rm -rf Output/Windows10/x86
-        mkdir -p Output/Windows10/x86
-        cd Output/Windows10/x86
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
+# Architecture specific configure settings
+arch="${1,,}"
+
+if [ -z $arch ]; then
+    echo "ERROR: No architecture set" 1>&2
+    exit 1
+elif [ $arch == "x86" ]; then
+    arch_settings="
         --arch=x86 \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00" \
-        --extra-ldflags="-APPCONTAINER WindowsApp.lib" \
-        --prefix=../../../Build/Windows10/x86
-        make install
-        popd
-
-    elif [ "$2" == "x64" ]; then
-        echo "Make Win10 x64"
-        pushd $DIR/ffmpeg
-        rm -rf Output/Windows10/x64
-        mkdir -p Output/Windows10/x64
-        cd Output/Windows10/x64
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
+        --prefix=../../Build/$arch \
+        "
+elif [ $arch == "x64" ]; then
+    arch_settings="
         --arch=x86_64 \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00" \
-        --extra-ldflags="-APPCONTAINER WindowsApp.lib" \
-        --prefix=../../../Build/Windows10/x64
-        make install
-        popd
-
-    elif [ "$2" == "ARM" ]; then
-        echo "Make Win10 ARM"
-        pushd $DIR/ffmpeg
-        rm -rf Output/Windows10/ARM
-        mkdir -p Output/Windows10/ARM
-        cd Output/Windows10/ARM
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
+        --prefix=../../Build/$arch \
+        "
+elif [ $arch == "arm" ]; then
+    arch_settings="
         --arch=arm \
         --as=armasm \
         --cpu=armv7 \
         --enable-thumb \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00 -D__ARM_PCS_VFP" \
-        --extra-ldflags="-APPCONTAINER WindowsApp.lib" \
-        --prefix=../../../Build/Windows10/ARM
-        make install
-        popd
-
-    fi
-
-elif [ "$1" == "Win8.1" ]; then
-    echo "Make Win8.1"
-
-    if [ "$2" == "x86" ]; then
-        echo "Make Win8.1 x86"
-        pushd $DIR/ffmpeg
-        rm -rf Output/Windows8.1/x86
-        mkdir -p Output/Windows8.1/x86
-        cd Output/Windows8.1/x86
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
-        --arch=x86 \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_PC_APP -D_WIN32_WINNT=0x0603" \
-        --extra-ldflags="-APPCONTAINER" \
-        --prefix=../../../Build/Windows8.1/x86
-        make install
-        popd
-
-    elif [ "$2" == "x64" ]; then
-        echo "Make Win8.1 x64"
-        pushd $DIR/ffmpeg
-        rm -rf Output/Windows8.1/x64
-        mkdir -p Output/Windows8.1/x64
-        cd Output/Windows8.1/x64
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
-        --arch=x86_64 \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_PC_APP -D_WIN32_WINNT=0x0603" \
-        --extra-ldflags="-APPCONTAINER" \
-        --prefix=../../../Build/Windows8.1/x64
-        make install
-        popd
-
-    elif [ "$2" == "ARM" ]; then
-        echo "Make Win8.1 ARM"
-        pushd $DIR/ffmpeg
-        rm -rf Output/Windows8.1/ARM
-        mkdir -p Output/Windows8.1/ARM
-        cd Output/Windows8.1/ARM
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
-        --arch=arm \
+        --extra-cflags=\"-D__ARM_PCS_VFP\" \
+        --prefix=../../Build/$arch \
+        "
+elif [ $arch == "arm64" ]; then
+    arch_settings="
+        --arch=arm64 \
         --as=armasm \
         --cpu=armv7 \
         --enable-thumb \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_PC_APP -D_WIN32_WINNT=0x0603 -D__ARM_PCS_VFP" \
-        --extra-ldflags="-APPCONTAINER -MACHINE:ARM" \
-        --prefix=../../../Build/Windows8.1/ARM
-        make install
-        popd
-
-    fi
-
-elif [ "$1" == "Phone8.1" ]; then
-    echo "Make Phone8.1"
-
-    if [ "$2" == "ARM" ]; then
-        echo "Make Phone8.1 ARM"
-        pushd $DIR/ffmpeg
-        rm -rf Output/WindowsPhone8.1/ARM
-        mkdir -p Output/WindowsPhone8.1/ARM
-        cd Output/WindowsPhone8.1/ARM
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
-        --arch=arm \
-        --as=armasm \
-        --cpu=armv7 \
-        --enable-thumb \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_PHONE_APP -D_WIN32_WINNT=0x0603 -D__ARM_PCS_VFP" \
-        --extra-ldflags="-APPCONTAINER -MACHINE:ARM -subsystem:console -opt:ref WindowsPhoneCore.lib RuntimeObject.lib PhoneAppModelHost.lib -NODEFAULTLIB:kernel32.lib -NODEFAULTLIB:ole32.lib" \
-        --prefix=../../../Build/WindowsPhone8.1/ARM
-        make install
-        popd
-
-    elif [ "$2" == "x86" ]; then
-        echo "Make Phone8.1 x86"
-        pushd $DIR/ffmpeg
-        rm -rf Output/WindowsPhone8.1/x86
-        mkdir -p Output/WindowsPhone8.1/x86
-        cd Output/WindowsPhone8.1/x86
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
-        --arch=x86 \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -DWINAPI_FAMILY=WINAPI_FAMILY_PHONE_APP -D_WIN32_WINNT=0x0603" \
-        --extra-ldflags="-APPCONTAINER -subsystem:console -opt:ref WindowsPhoneCore.lib RuntimeObject.lib PhoneAppModelHost.lib -NODEFAULTLIB:kernel32.lib -NODEFAULTLIB:ole32.lib" \
-        --prefix=../../../Build/WindowsPhone8.1/x86
-        make install
-        popd
-
-    fi
-
-elif [ "$1" == "Win7" ]; then
-    echo "Make Win7"
-
-    if [ "$2" == "x86" ]; then
-        echo "Make Win7 x86"
-        pushd $DIR/ffmpeg
-        rm -rf Output/Windows7/x86
-        mkdir -p Output/Windows7/x86
-        cd Output/Windows7/x86
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
-        --arch=x86 \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -D_WINDLL" \
-        --extra-ldflags="-APPCONTAINER:NO -MACHINE:x86" \
-        --prefix=../../../Build/Windows7/x86
-        make install
-        popd
-
-    elif [ "$2" == "x64" ]; then
-        echo "Make Win7 x64"
-        pushd $DIR/ffmpeg
-        rm -rf Output/Windows7/x64
-        mkdir -p Output/Windows7/x64
-        cd Output/Windows7/x64
-        ../../../configure \
-        --toolchain=msvc \
-        --disable-programs \
-        --disable-d3d11va \
-        --disable-dxva2 \
-        --arch=amd64 \
-        --enable-shared \
-        --enable-cross-compile \
-        --target-os=win32 \
-        --extra-cflags="-MD -D_WINDLL" \
-        --extra-ldflags="-APPCONTAINER:NO -MACHINE:x64" \
-        --prefix=../../../Build/Windows7/x64
-        make install
-        popd
-
-    fi
+        --extra-cflags=\"-D__ARM_PCS_VFP\" \
+        --prefix=../../Build/$arch \
+        "
+else
+    echo "ERROR: $arch is not a valid architecture" 1>&2
+    exit 1
 fi
 
-exit 0
+# Extra configure settings supplied by user
+extra_settings="${2:-""}"
+
+# Build FFmpeg
+pushd $dir/ffmpeg > /dev/null
+
+rm -rf Output/$arch
+mkdir -p Output/$arch
+cd Output/$arch
+
+eval ../../configure $common_settings $arch_settings $extra_settings &&
+make -j`nproc` &&
+make install
+
+result=$?
+
+popd > /dev/null
+
+if [ $result -ne 0 ]; then
+    echo "ERROR: FFmpeg build for $arch failed with exit code $result" 1>&2
+fi
+
+exit $result

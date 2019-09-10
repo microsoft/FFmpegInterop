@@ -26,26 +26,23 @@ Your `FFmpegInterop` folder should look as follows
 	FFmpegInterop\
 	    ffmpeg\              - ffmpeg source code from the latest release in git://github.com/FFmpeg/FFmpeg.git
 	    FFmpegInterop\       - FFmpegInterop WinRT component
-	    Samples\             - Sample Media Player applications in C++, C#, and JavaScript
+	    Samples\             - Sample Media Player applications in C++ and C#
 	    Tests\               - Unit tests for FFmpegInterop
 	    BuildFFmpeg.bat      - Helper script to build FFmpeg libraries as described in https://trac.ffmpeg.org/wiki/CompilationGuide/WinRT
 	    FFmpegConfig.sh      - Internal script that contains FFmpeg configure options
-	    FFmpegWin8.1.sln     - Microsoft Visual Studio 2013 solution file for Windows 8.1 and Windows Phone 8.1 apps development
-	    FFmpegWin10.sln      - Microsoft Visual Studio 2015 solution file for Windows 10 apps development
+	    FFmpegInterop.sln    - Microsoft Visual Studio 2019 solution file for Windows 10 apps development
 	    LICENSE
 	    README.md
 
 Now that you have the FFmpeg source code, you can follow the instructions on how to [build FFmpeg for WinRT](https://trac.ffmpeg.org/wiki/CompilationGuide/WinRT) apps. Follow the setup instruction carefuly to avoid build issues. After completing the setup as instructed, you can invoke `BuildFFmpeg.bat` script to build or do it manually using the instructions in the compilation guide.
 
-	BuildFFmpeg.bat win10                     - Build for Windows 10 ARM, x64, and x86
-	BuildFFmpeg.bat phone8.1 ARM              - Build for Windows Phone 8.1 ARM only
-	BuildFFmpeg.bat win8.1 x86 x64            - Build for Windows 8.1 x86 and x64 only
-	BuildFFmpeg.bat phone8.1 win10 ARM        - Build for Windows 10 and Windows Phone 8.1 ARM only
-	BuildFFmpeg.bat win8.1 phone8.1 win10     - Build all architecture for all target platform
+	BuildFFmpeg.bat                    - Build all architectures
+	BuildFFmpeg.bat x64                - Build x64 only
+	BuildFFmpeg.bat x86 x64            - Build x64 and x86 only
 
 If you use the build script or follow the Wiki instructions as is you should find the appropriate builds of FFmpeg libraries in the `ffmpeg/Build/<platform\>/<architecture\>` folders.
 
-Simply open one of the Microsoft Visual Studio solution file (e.g. FFmpegWin10.sln), set one of the MediaPlayer as StartUp project, and run. FFmpegInterop should build cleanly giving you the interop object as well as the selected sample MediaPlayer (C++, C# or JS) that show how to connect the MediaStreamSource to a MediaElement or Video tag for playback.
+Simply open FFmpegInterop.sln, set one of the MediaPlayer as StartUp project, and run. FFmpegInterop should build cleanly giving you the interop object as well as the selected sample MediaPlayer (C++ or C#) that show how to connect the MediaStreamSource to a MediaElement or Video tag for playback.
 
 ### Using the FFmpegInterop object
 

@@ -28,12 +28,14 @@
     <ClInclude Include="UncompressedAudioSampleProvider.h" />
     <ClInclude Include="UncompressedSampleProvider.h" />
     <ClInclude Include="UncompressedVideoSampleProvider.h" />
-    <ClInclude Include="ILogProvider.h" />
     <ClInclude Include="FFmpegInteropLogging.h" />
     <ClInclude Include="MediaThumbnailData.h" />
     <ClInclude Include="CritSec.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="FFmpegInteropLogging.idl" />
   </ItemGroup>
 </Project>

@@ -17,21 +17,19 @@
 //*****************************************************************************
 
 #pragma once
-#include "ILogProvider.h"
 
-namespace FFmpegInterop
+#include "FFmpegInteropLogging.g.h"
+
+namespace winrt::FFmpegInterop::implementation
 {
-	public ref class FFmpegInteropLogging sealed
+	struct FFmpegInteropLogging
 	{
-	public:
-		static void SetLogLevel(LogLevel level);
-		static void SetLogProvider(ILogProvider^ logProvider);
+		static void SetLogLevel(FFmpegInterop::LogLevel const& level);
+		static void SetLogProvider(FFmpegInterop::ILogProvider const& logProvider);
 		static void SetDefaultLogProvider();
 
 	private:
-		FFmpegInteropLogging();
-
-		static ILogProvider^ s_pLogProvider;
+		FFmpegInteropLogging() = delete;
+		static ILogProvider s_LogProvider;
 	};
 }
-

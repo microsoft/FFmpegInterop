@@ -235,7 +235,6 @@
     <ClInclude Include="FFmpegReader.h" />
     <ClInclude Include="H264AVCSampleProvider.h" />
     <ClInclude Include="H264SampleProvider.h" />
-    <ClInclude Include="ILogProvider.h" />
     <ClInclude Include="MediaSampleProvider.h" />
     <ClInclude Include="MediaThumbnailData.h" />
     <ClInclude Include="UncompressedAudioSampleProvider.h" />
@@ -264,6 +263,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="FFmpegInteropLogging.idl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

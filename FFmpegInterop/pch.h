@@ -19,8 +19,7 @@
 #pragma once
 
 #include <winrt/base.h>
-#include <collection.h>
-#include <ppltasks.h>
+#include <Windows.h>
 #include <mferror.h>
 
 // Disable debug string output on non-debug build

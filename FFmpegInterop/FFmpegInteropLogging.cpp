@@ -20,49 +20,48 @@
 #include "pch.h"
 #include "FFmpegInteropLogging.h"
 
-using namespace FFmpegInterop;
-
 extern "C"
 {
 #include <libavutil/log.h>
 }
 
-ILogProvider^ FFmpegInteropLogging::s_pLogProvider = nullptr;
+using namespace winrt;
+using namespace winrt::FFmpegInterop;
 
-FFmpegInteropLogging::FFmpegInteropLogging()
+namespace winrt::FFmpegInterop::implementation
 {
-}
+	ILogProvider FFmpegInteropLogging::s_LogProvider{ nullptr };
 
-void FFmpegInteropLogging::SetLogLevel(LogLevel level)
-{
-	av_log_set_level((int)level);
-}
-
-void FFmpegInteropLogging::SetLogProvider(ILogProvider^ logProvider)
-{
-	s_pLogProvider = logProvider;
-	av_log_set_callback([](void*avcl, int level, const char *fmt, va_list vl)->void
+	void FFmpegInteropLogging::SetLogLevel(const LogLevel& level)
 	{
-		if (level <= av_log_get_level())
-		{
-			if (s_pLogProvider != nullptr)
-			{
-				char pLine[1000];
-				int printPrefix = 1;
-				av_log_format_line(avcl, level, fmt, vl, pLine, sizeof(pLine), &printPrefix);
+		av_log_set_level((int)level);
+	}
 
-				wchar_t wLine[sizeof(pLine)];
-				if (MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine)) != 0)
+	void FFmpegInteropLogging::SetLogProvider(const ILogProvider& logProvider)
+	{
+		s_LogProvider = logProvider;
+		av_log_set_callback([](void* avcl, int level, const char* fmt, va_list vl)->void
+		{
+			if (level <= av_log_get_level())
+			{
+				if (s_LogProvider != nullptr)
 				{
-					s_pLogProvider->Log((LogLevel)level, ref new String(wLine));
+					char pLine[1000];
+					int printPrefix = 1;
+					av_log_format_line(avcl, level, fmt, vl, pLine, sizeof(pLine), &printPrefix);
+
+					wchar_t wLine[sizeof(pLine)];
+					if (MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine)) != 0)
+					{
+						s_LogProvider.Log((LogLevel)level, hstring(wLine));
+					}
 				}
 			}
-		}
-	});
-}
+		});
+	}
 
-void FFmpegInteropLogging::SetDefaultLogProvider()
-{
-	av_log_set_callback(av_log_default_callback);
+	void FFmpegInteropLogging::SetDefaultLogProvider()
+	{
+		av_log_set_callback(av_log_default_callback);
+	}
 }
-

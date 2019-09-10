@@ -30,7 +30,7 @@ Your `FFmpegInterop` folder should look as follows
 	    Tests\               - Unit tests for FFmpegInterop
 	    BuildFFmpeg.bat      - Helper script to build FFmpeg libraries as described in https://trac.ffmpeg.org/wiki/CompilationGuide/WinRT
 	    FFmpegConfig.sh      - Internal script that contains FFmpeg configure options
-	    FFmpegInterop.sln    - Microsoft Visual Studio 2015 solution file for Windows 10 apps development
+	    FFmpegInterop.sln    - Microsoft Visual Studio 2019 solution file for Windows 10 apps development
 	    LICENSE
 	    README.md
 

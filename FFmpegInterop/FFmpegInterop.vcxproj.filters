@@ -37,5 +37,6 @@
   </ItemGroup>
   <ItemGroup>
     <Midl Include="FFmpegInteropLogging.idl" />
+    <Midl Include="MediaThumbnailData.idl" />
   </ItemGroup>
 </Project>

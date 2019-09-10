@@ -17,42 +17,21 @@
 //*****************************************************************************
 
 #pragma once
-using namespace Platform;
-using namespace Windows::Storage::Streams;
 
-namespace FFmpegInterop
+#include "MediaThumbnailData.g.h"
+
+namespace winrt::FFmpegInterop::implementation
 {
-	public ref class MediaThumbnailData sealed
+	class MediaThumbnailData : MediaThumbnailDataT<MediaThumbnailData>
 	{
-		IBuffer^ _buffer;
-		String^ _extension;
-
 	public:
+		MediaThumbnailData(Windows::Storage::Streams::IBuffer const& buffer, hstring const& extension);
 
-		property IBuffer^ Buffer
-		{
-			IBuffer^ get()
-			{
-				return _buffer;
-			}
-		}
-		property String^ Extension
-		{
-			String^ get()
-			{
-				return _extension;
-			}
-		}
+		Windows::Storage::Streams::IBuffer Buffer() const { return m_buffer; }
+		hstring Extension() const { return m_extension; }
 
-		MediaThumbnailData(IBuffer^ buffer, String^ extension)
-		{
-			this->_buffer = buffer;
-			this->_extension = extension;
-		}
-	private: ~MediaThumbnailData()
-		{
-			delete _buffer;
-			delete _extension;
-		}
+	private:
+		Windows::Storage::Streams::IBuffer m_buffer;
+		hstring m_extension;
 	};
 }

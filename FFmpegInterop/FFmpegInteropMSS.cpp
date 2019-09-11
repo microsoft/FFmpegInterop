@@ -56,7 +56,7 @@ IMapView<int, String^>^ create_map()
 
 	// Subtitle codecs
 	m->Insert(AV_CODEC_ID_ASS, Guid(MFSubtitleFormat_SSA).ToString());
-	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, L"{6B8E40F4-8D2C-4CED-AD91-5960E45B4433}"); // MFSubtitleFormat_VOBSUB
+	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, L"{6B8E40F4-8D2C-4CED-AD91-5960E45B4433}"); // MFSubtitleFormat_VobSub
 	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, L"{71F40E4A-1278-4442-B30D-39DD1D7722BC}"); // MFSubtitleFormat_PGS
 	m->Insert(AV_CODEC_ID_SSA, Guid(MFSubtitleFormat_SSA).ToString());
 	m->Insert(AV_CODEC_ID_SUBRIP, Guid(MFSubtitleFormat_SRT).ToString());
@@ -223,8 +223,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDe
 		// Open media in the given URI using the specified options
 		if (avformat_open_input(&avFormatCtx, charStr, NULL, &avDict) < 0)
 		{
-			DebugMessage(L"Error opening file");
-			hr = E_FAIL;
+			hr = E_FAIL; // Error opening file
 		}
 
 		// avDict is not NULL only when there is an issue with the given ffmpegOptions such as invalid key, value type etc. Iterate through it to see which one is causing the issue.
@@ -303,8 +302,7 @@ HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, b
 		// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
 		if (avformat_open_input(&avFormatCtx, "", NULL, &avDict) < 0)
 		{
-			DebugMessage(L"Error opening file");
-			hr = E_FAIL;
+			hr = E_FAIL; // Error opening file
 		}
 
 		// avDict is not NULL only when there is an issue with the given ffmpegOptions such as invalid key, value type etc. Iterate through it to see which one is causing the issue.
@@ -808,7 +806,7 @@ HRESULT FFmpegInteropMSS::CreateSubtitleStreamDescriptor(const AVStream* avStrea
 		subtitleStreamDescriptor->Language = ref new String(conv.from_bytes(avDictEntry->value).c_str());
 	}
 
-	// Create sample provider for this straem
+	// Create sample provider for this stream
 	subtitleSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, nullptr);
 	if (subtitleSampleProvider == nullptr)
 	{
@@ -918,19 +916,15 @@ void FFmpegInteropMSS::OnSampleRequested(MediaStreamSource ^sender, MediaStreamS
 	mutexGuard.lock();
 	if (mss != nullptr)
 	{
-		if (args->Request->StreamDescriptor == nullptr)
-		{
-			args->Request->Sample = nullptr;
-		}
-		if (args->Request->StreamDescriptor == audioStreamDescriptor)
+		if (args->Request->StreamDescriptor == audioStreamDescriptor && audioStreamDescriptor != nullptr)
 		{
 			args->Request->Sample = audioSampleProvider->GetNextSample();
 		}
-		else if (args->Request->StreamDescriptor == videoStreamDescriptor)
+		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoStreamDescriptor != nullptr)
 		{
 			args->Request->Sample = videoSampleProvider->GetNextSample();
 		}
-		else if (args->Request->StreamDescriptor == subtitleStreamDescriptor)
+		else if (args->Request->StreamDescriptor == subtitleStreamDescriptor && subtitleStreamDescriptor != nullptr)
 		{
 			args->Request->Sample = subtitleSampleProvider->GetNextSample();
 		}

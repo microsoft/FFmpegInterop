@@ -781,7 +781,7 @@ HRESULT FFmpegInteropMSS::CreateSubtitleStreamDescriptor(const AVStream* avStrea
 
 	if (avStream->codecpar->extradata != nullptr && avStream->codecpar->extradata_size > 0)
 	{
-		subtitleEncProp->SetFormatUserData(%Array<BYTE>(avStream->codecpar->extradata, avStream->codecpar->extradata_size));
+		subtitleEncProp->SetFormatUserData(ArrayReference<BYTE>(avStream->codecpar->extradata, avStream->codecpar->extradata_size));
 	}
 
 	// Create stream descriptor
@@ -797,13 +797,13 @@ HRESULT FFmpegInteropMSS::CreateSubtitleStreamDescriptor(const AVStream* avStrea
 	avDictEntry = av_dict_get(avStream->metadata, "title", nullptr, 0);
 	if (avDictEntry != nullptr)
 	{
-		subtitleStreamDescriptor->Name = ref new String(conv.from_bytes(avDictEntry->value).c_str());
+		subtitleStreamDescriptor->Name = StringReference(conv.from_bytes(avDictEntry->value).c_str());
 	}
 
 	avDictEntry = av_dict_get(avStream->metadata, "language", nullptr, 0);
 	if (avDictEntry != nullptr)
 	{
-		subtitleStreamDescriptor->Language = ref new String(conv.from_bytes(avDictEntry->value).c_str());
+		subtitleStreamDescriptor->Language = StringReference(conv.from_bytes(avDictEntry->value).c_str());
 	}
 
 	// Create sample provider for this stream

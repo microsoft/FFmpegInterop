@@ -916,15 +916,15 @@ void FFmpegInteropMSS::OnSampleRequested(MediaStreamSource ^sender, MediaStreamS
 	mutexGuard.lock();
 	if (mss != nullptr)
 	{
-		if (args->Request->StreamDescriptor == audioStreamDescriptor && audioStreamDescriptor != nullptr)
+		if (args->Request->StreamDescriptor == audioStreamDescriptor && audioSampleProvider != nullptr)
 		{
 			args->Request->Sample = audioSampleProvider->GetNextSample();
 		}
-		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoStreamDescriptor != nullptr)
+		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoSampleProvider != nullptr)
 		{
 			args->Request->Sample = videoSampleProvider->GetNextSample();
 		}
-		else if (args->Request->StreamDescriptor == subtitleStreamDescriptor && subtitleStreamDescriptor != nullptr)
+		else if (args->Request->StreamDescriptor == subtitleStreamDescriptor && subtitleSampleProvider != nullptr)
 		{
 			args->Request->Sample = subtitleSampleProvider->GetNextSample();
 		}

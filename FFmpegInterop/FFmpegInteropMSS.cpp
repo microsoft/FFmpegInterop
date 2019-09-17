@@ -338,10 +338,6 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 	if (SUCCEEDED(hr))
 	{
 		m_pReader = ref new FFmpegReader(avFormatCtx);
-		if (m_pReader == nullptr)
-		{
-			hr = E_OUTOFMEMORY;
-		}
 	}
 
 	if (SUCCEEDED(hr))
@@ -548,15 +544,8 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		if (mss == nullptr)
 		{
 			mss = ref new MediaStreamSource(nullptr);
-			if (mss == nullptr)
-			{
-				hr = E_OUTOFMEMORY;
-			}
 		}
-	}
 
-	if (SUCCEEDED(hr))
-	{
 		// Add streams to the MSS
 		if (videoStreamDescriptor)
 		{
@@ -767,15 +756,11 @@ HRESULT FFmpegInteropMSS::CreateSubtitleStreamDescriptor(const AVStream* avStrea
 	// Check if we recognize the codec
 	if (!AvCodecMap->HasKey(avStream->codecpar->codec_id))
 	{
-		return E_FAIL;
+		return MF_E_INVALIDMEDIATYPE;
 	}
 
 	// Create encoding properties and set subtype
 	TimedMetadataEncodingProperties^ subtitleEncProp = ref new TimedMetadataEncodingProperties();
-	if (subtitleEncProp == nullptr)
-	{
-		return E_OUTOFMEMORY;
-	}
 
 	subtitleEncProp->Subtype = AvCodecMap->Lookup(avStream->codecpar->codec_id);
 
@@ -786,10 +771,6 @@ HRESULT FFmpegInteropMSS::CreateSubtitleStreamDescriptor(const AVStream* avStrea
 
 	// Create stream descriptor
 	subtitleStreamDescriptor = ref new TimedMetadataStreamDescriptor(subtitleEncProp);
-	if (subtitleStreamDescriptor == nullptr)
-	{
-		return E_OUTOFMEMORY;
-	}
 
 	const AVDictionaryEntry* avDictEntry = nullptr;
 	wstring_convert<codecvt_utf8<wchar_t>> conv;
@@ -808,10 +789,6 @@ HRESULT FFmpegInteropMSS::CreateSubtitleStreamDescriptor(const AVStream* avStrea
 
 	// Create sample provider for this stream
 	subtitleSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, nullptr);
-	if (subtitleSampleProvider == nullptr)
-	{
-		return E_OUTOFMEMORY;
-	}
 
 	return S_OK;
 }

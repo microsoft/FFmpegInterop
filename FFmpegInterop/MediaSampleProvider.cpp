@@ -20,7 +20,6 @@
 #include "MediaSampleProvider.h"
 #include "FFmpegInteropMSS.h"
 #include "FFmpegReader.h"
-#include <mferror.h>
 
 using namespace FFmpegInterop;
 

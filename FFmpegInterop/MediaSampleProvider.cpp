@@ -31,19 +31,18 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvFormatCtx(avFormatCtx)
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
-	, m_startOffset(AV_NOPTS_VALUE)
-	, m_nextFramePts(0)
+	, m_nextFramePts(AV_NOPTS_VALUE)
 	, m_isEnabled(true)
 	, m_isDiscontinuous(false)
 {
 	DebugMessage(L"MediaSampleProvider\n");
+	
+	m_startOffset = (m_pAvFormatCtx->start_time != AV_NOPTS_VALUE) ? static_cast<int64_t>(m_pAvFormatCtx->start_time * 10000000 / double(AV_TIME_BASE)) : 0;
 }
 
 HRESULT MediaSampleProvider::AllocateResources()
 {
 	DebugMessage(L"AllocateResources\n");
-	m_startOffset = AV_NOPTS_VALUE;
-	m_nextFramePts = 0;
 	return S_OK;
 }
 
@@ -121,6 +120,11 @@ HRESULT MediaSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket *av
 		}
 		else
 		{
+			if (m_nextFramePts == AV_NOPTS_VALUE)
+			{
+				m_nextFramePts = (m_pAvFormatCtx->streams[m_streamIndex]->start_time != AV_NOPTS_VALUE) ? m_pAvFormatCtx->streams[m_streamIndex]->start_time : 0;
+			}
+
 			framePts = m_nextFramePts;
 			// Set the PTS for the next sample if it doesn't one.
 			m_nextFramePts += frameDuration;
@@ -217,17 +221,7 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 		// Write the packet out
 		hr = WriteAVPacketToStream(writer, &avPacket);
 
-		if (m_startOffset == AV_NOPTS_VALUE)
-		{
-			//if we havent set m_startOffset already
-			DebugMessage(L"Saving m_startOffset\n");
-
-			//in some real-time streams framePts is less than 0 so we need to make sure m_startOffset is never negative
-			m_startOffset = framePts < 0 ? 0 : framePts;
-		}
-
-		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * (framePts - m_startOffset));
-
+		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) - m_startOffset;
 		dur = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration);
 	}
 

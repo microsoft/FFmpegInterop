@@ -55,12 +55,12 @@ IMapView<int, String^>^ create_map()
 	m->Insert(AV_CODEC_ID_OPUS, L"OPUS");
 
 	// Subtitle codecs
-	m->Insert(AV_CODEC_ID_ASS, Guid(MFSubtitleFormat_SSA).ToString());
-	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, L"{6B8E40F4-8D2C-4CED-AD91-5960E45B4433}"); // MFSubtitleFormat_VobSub
-	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, L"{71F40E4A-1278-4442-B30D-39DD1D7722BC}"); // MFSubtitleFormat_PGS
-	m->Insert(AV_CODEC_ID_SSA, Guid(MFSubtitleFormat_SSA).ToString());
-	m->Insert(AV_CODEC_ID_SUBRIP, Guid(MFSubtitleFormat_SRT).ToString());
-	m->Insert(AV_CODEC_ID_TEXT, Guid(MFSubtitleFormat_SRT).ToString());
+	m->Insert(AV_CODEC_ID_ASS, L"SSA");
+	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, L"VobSub");
+	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, L"PGS");
+	m->Insert(AV_CODEC_ID_SSA, L"SSA");
+	m->Insert(AV_CODEC_ID_SUBRIP, L"SRT");
+	m->Insert(AV_CODEC_ID_TEXT, L"SRT");
 
 	return m->GetView();
 }

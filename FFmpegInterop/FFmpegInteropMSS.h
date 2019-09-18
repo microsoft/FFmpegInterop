@@ -64,6 +64,13 @@ namespace FFmpegInterop
 				return videoStreamDescriptor;
 			};
 		};
+		property TimedMetadataStreamDescriptor^ SubtitleDescriptor
+		{
+			TimedMetadataStreamDescriptor^ get()
+			{
+				return subtitleStreamDescriptor;
+			};
+		};
 		property TimeSpan Duration
 		{
 			TimeSpan get()
@@ -85,6 +92,13 @@ namespace FFmpegInterop
 				return audioCodecName;
 			};
 		};
+		property String^ SubtitleCodecName
+		{
+			String^ get()
+			{
+				return subtitleCodecName;
+			};
+		};
 
 		void ReleaseFileStream();
 
@@ -98,16 +112,19 @@ namespace FFmpegInterop
 		HRESULT CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
 		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
 		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
-		HRESULT CreateAudioStreamDescriptorFromParameters(AVCodecParameters* avCodecParams);
+		HRESULT CreateAudioStreamDescriptorFromParameters(const AVCodecParameters* avCodecParams);
 		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode);
+		HRESULT CreateSubtitleStreamDescriptor(const AVStream* avStream);
 		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
 		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
+		void OnSwitchStreamsRequested(MediaStreamSource ^sender, MediaStreamSourceSwitchStreamsRequestedEventArgs ^args);
 
 		MediaStreamSource^ mss;
 		EventRegistrationToken startingRequestedToken;
 		EventRegistrationToken sampleRequestedToken;
+		EventRegistrationToken switchStreamsRequestedToken;
 
 	internal:
 		AVDictionary* avDict;
@@ -119,9 +136,14 @@ namespace FFmpegInterop
 	private:
 		AudioStreamDescriptor^ audioStreamDescriptor;
 		VideoStreamDescriptor^ videoStreamDescriptor;
+		TimedMetadataStreamDescriptor^ subtitleStreamDescriptor;
 		int audioStreamIndex;
 		int videoStreamIndex;
+		int subtitleStreamIndex;
 		int thumbnailStreamIndex;
+		bool audioStreamSelected;
+		bool videoStreamSelected;
+		bool subtitleStreamSelected;
 		
 		bool rotateVideo;
 		int rotationAngle;
@@ -129,9 +151,11 @@ namespace FFmpegInterop
 		
 		MediaSampleProvider^ audioSampleProvider;
 		MediaSampleProvider^ videoSampleProvider;
+		MediaSampleProvider^ subtitleSampleProvider;
 
 		String^ videoCodecName;
 		String^ audioCodecName;
+		String^ subtitleCodecName;
 		TimeSpan mediaDuration;
 		IStream* fileStreamData;
 		unsigned char* fileStreamBuffer;

@@ -25,6 +25,7 @@ FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx)
 	: m_pAvFormatCtx(avFormatCtx)
 	, m_audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
+	, m_subtitleStreamIndex(AVERROR_STREAM_NOT_FOUND)
 {
 }
 
@@ -57,6 +58,10 @@ int FFmpegReader::ReadPacket()
 	{
 		m_videoSampleProvider->QueuePacket(avPacket);
 	}
+	else if (avPacket.stream_index == m_subtitleStreamIndex && m_subtitleSampleProvider != nullptr)
+	{
+		m_subtitleSampleProvider->QueuePacket(avPacket);
+	}
 	else
 	{
 		DebugMessage(L"Ignoring unused stream\n");
@@ -86,3 +91,12 @@ void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider^ vid
 	}
 }
 
+void FFmpegReader::SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider^ subtitleSampleProvider)
+{
+	m_subtitleStreamIndex = subtitleStreamIndex;
+	m_subtitleSampleProvider = subtitleSampleProvider;
+	if (subtitleSampleProvider != nullptr)
+	{
+		subtitleSampleProvider->SetCurrentStreamIndex(m_subtitleStreamIndex);
+	}
+}

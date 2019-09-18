@@ -32,8 +32,8 @@ MediaSampleProvider::MediaSampleProvider(
 	, m_pAvCodecCtx(avCodecCtx)
 	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_nextFramePts(AV_NOPTS_VALUE)
-	, m_isEnabled(true)
-	, m_isDiscontinuous(false)
+	, m_isEnabled(false)
+	, m_isDiscontinuous(true)
 {
 	DebugMessage(L"MediaSampleProvider\n");
 	
@@ -87,7 +87,7 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 			sample->Discontinuous = m_isDiscontinuous;
 			m_isDiscontinuous = false;
 		}
-		else
+		else if (hr != MF_E_END_OF_STREAM)
 		{
 			DebugMessage(L"Too many broken packets - disable stream\n");
 			DisableStream();
@@ -184,9 +184,15 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 		// Continue reading until there is an appropriate packet in the stream
 		while (m_packetQueue.empty())
 		{
-			if (m_pReader->ReadPacket() < 0)
+			int readResult = m_pReader->ReadPacket();
+			if (readResult == AVERROR_EOF)
 			{
 				DebugMessage(L"GetNextSample reaching EOF\n");
+				hr = MF_E_END_OF_STREAM;
+				break;
+			}
+			else if (readResult < 0)
+			{
 				hr = E_FAIL;
 				break;
 			}

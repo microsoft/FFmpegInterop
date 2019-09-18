@@ -20,6 +20,7 @@
 
 #include <collection.h>
 #include <ppltasks.h>
+#include <mferror.h>
 
 // Disable debug string output on non-debug build
 #if !_DEBUG

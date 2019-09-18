@@ -30,6 +30,7 @@ namespace FFmpegInterop
 		int ReadPacket();
 		void SetAudioStream(int audioStreamIndex, MediaSampleProvider^ audioSampleProvider);
 		void SetVideoStream(int videoStreamIndex, MediaSampleProvider^ videoSampleProvider);
+		void SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider^ subtitleSampleProvider);
 
 	internal:
 		FFmpegReader(AVFormatContext* avFormatCtx);
@@ -40,5 +41,7 @@ namespace FFmpegInterop
 		int m_audioStreamIndex;
 		MediaSampleProvider^ m_videoSampleProvider;
 		int m_videoStreamIndex;
+		MediaSampleProvider^ m_subtitleSampleProvider;
+		int m_subtitleStreamIndex;
 	};
 }

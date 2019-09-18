@@ -25,6 +25,7 @@ FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx)
 	: m_pAvFormatCtx(avFormatCtx)
 	, m_audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
+	, m_subtitleStreamIndex(AVERROR_STREAM_NOT_FOUND)
 {
 }
 

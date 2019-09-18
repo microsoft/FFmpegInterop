@@ -411,6 +411,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 					hr = audioSampleProvider->AllocateResources();
 					if (SUCCEEDED(hr))
 					{
+						audioStreamSelected = true;
 						audioSampleProvider->EnableStream();
 						m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
 					}

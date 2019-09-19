@@ -18,60 +18,64 @@
 
 #include "pch.h"
 #include "FFmpegReader.h"
+#include "MediaSampleProvider.h"
+
+extern "C"
+{
+#include <libavformat/avformat.h>
+}
 
 using namespace FFmpegInterop;
 
-FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx)
-	: m_pAvFormatCtx(avFormatCtx)
-	, m_audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, m_videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, m_subtitleStreamIndex(AVERROR_STREAM_NOT_FOUND)
+FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx) :
+	m_pAvFormatCtx(avFormatCtx),
+	m_audioSampleProvider(nullptr),
+	m_audioStreamIndex(AVERROR_STREAM_NOT_FOUND),
+	m_videoSampleProvider(nullptr),
+	m_videoStreamIndex(AVERROR_STREAM_NOT_FOUND),
+	m_subtitleSampleProvider(nullptr),
+	m_subtitleStreamIndex(AVERROR_STREAM_NOT_FOUND)
 {
 }
 
-FFmpegReader::~FFmpegReader()
-{
-}
-
-// Read the next packet from the stream and push it into the appropriate
-// sample provider
+// Read the next packet from the stream and push it into the appropriate sample provider
 int FFmpegReader::ReadPacket()
 {
-	int ret;
-	AVPacket avPacket;
-	av_init_packet(&avPacket);
-	avPacket.data = NULL;
-	avPacket.size = 0;
+	AVPacket* packet = av_packet_alloc();
+	if (packet == nullptr)
+	{
+		return AVERROR(ENOMEM);
+	}
 
-	ret = av_read_frame(m_pAvFormatCtx, &avPacket);
+	int ret = av_read_frame(m_pAvFormatCtx, packet);
 	if (ret < 0)
 	{
 		return ret;
 	}
 
 	// Push the packet to the appropriate
-	if (avPacket.stream_index == m_audioStreamIndex && m_audioSampleProvider != nullptr)
+	if (packet->stream_index == m_audioStreamIndex && m_audioSampleProvider != nullptr)
 	{
-		m_audioSampleProvider->QueuePacket(avPacket);
+		m_audioSampleProvider->QueuePacket(packet);
 	}
-	else if (avPacket.stream_index == m_videoStreamIndex && m_videoSampleProvider != nullptr)
+	else if (packet->stream_index == m_videoStreamIndex && m_videoSampleProvider != nullptr)
 	{
-		m_videoSampleProvider->QueuePacket(avPacket);
+		m_videoSampleProvider->QueuePacket(packet);
 	}
-	else if (avPacket.stream_index == m_subtitleStreamIndex && m_subtitleSampleProvider != nullptr)
+	else if (packet->stream_index == m_subtitleStreamIndex && m_subtitleSampleProvider != nullptr)
 	{
-		m_subtitleSampleProvider->QueuePacket(avPacket);
+		m_subtitleSampleProvider->QueuePacket(packet);
 	}
 	else
 	{
 		DebugMessage(L"Ignoring unused stream\n");
-		av_packet_unref(&avPacket);
+		av_packet_free(&packet);
 	}
 
 	return ret;
 }
 
-void FFmpegReader::SetAudioStream(int audioStreamIndex, MediaSampleProvider^ audioSampleProvider)
+void FFmpegReader::SetAudioStream(int audioStreamIndex, MediaSampleProvider* audioSampleProvider)
 {
 	m_audioStreamIndex = audioStreamIndex;
 	m_audioSampleProvider = audioSampleProvider;
@@ -81,7 +85,7 @@ void FFmpegReader::SetAudioStream(int audioStreamIndex, MediaSampleProvider^ aud
 	}
 }
 
-void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider^ videoSampleProvider)
+void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider* videoSampleProvider)
 {
 	m_videoStreamIndex = videoStreamIndex;
 	m_videoSampleProvider = videoSampleProvider;
@@ -91,7 +95,7 @@ void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider^ vid
 	}
 }
 
-void FFmpegReader::SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider^ subtitleSampleProvider)
+void FFmpegReader::SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider* subtitleSampleProvider)
 {
 	m_subtitleStreamIndex = subtitleStreamIndex;
 	m_subtitleSampleProvider = subtitleSampleProvider;

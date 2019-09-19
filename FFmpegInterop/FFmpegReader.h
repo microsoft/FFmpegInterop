@@ -18,30 +18,29 @@
 
 #pragma once
 
-#include "MediaSampleProvider.h"
+struct AVFormatContext;
 
 namespace FFmpegInterop
 {
+	class MediaSampleProvider;
 
-	ref class FFmpegReader
+	class FFmpegReader
 	{
 	public:
-		virtual ~FFmpegReader();
-		int ReadPacket();
-		void SetAudioStream(int audioStreamIndex, MediaSampleProvider^ audioSampleProvider);
-		void SetVideoStream(int videoStreamIndex, MediaSampleProvider^ videoSampleProvider);
-		void SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider^ subtitleSampleProvider);
-
-	internal:
 		FFmpegReader(AVFormatContext* avFormatCtx);
+
+		int ReadPacket();
+		void SetAudioStream(int audioStreamIndex, MediaSampleProvider* audioSampleProvider);
+		void SetVideoStream(int videoStreamIndex, MediaSampleProvider* videoSampleProvider);
+		void SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider* subtitleSampleProvider);
 
 	private:
 		AVFormatContext* m_pAvFormatCtx;
-		MediaSampleProvider^ m_audioSampleProvider;
+		MediaSampleProvider* m_audioSampleProvider;
 		int m_audioStreamIndex;
-		MediaSampleProvider^ m_videoSampleProvider;
+		MediaSampleProvider* m_videoSampleProvider;
 		int m_videoStreamIndex;
-		MediaSampleProvider^ m_subtitleSampleProvider;
+		MediaSampleProvider* m_subtitleSampleProvider;
 		int m_subtitleStreamIndex;
 	};
 }

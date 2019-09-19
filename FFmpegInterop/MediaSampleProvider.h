@@ -17,59 +17,45 @@
 //*****************************************************************************
 
 #pragma once
-#include <queue>
 
-extern "C"
-{
-#include <libavformat/avformat.h>
-}
+#include <winrt/Windows.Media.Core.h>
+#include <winrt/Windows.Storage.Streams.h>
 
-using namespace Windows::Storage::Streams;
-using namespace Windows::Media::Core;
+struct AVFormatContext;
+struct AVCodecContext;
+struct AVPacket;
 
 namespace FFmpegInterop
 {
-	ref class FFmpegInteropMSS;
-	ref class FFmpegReader;
+	class FFmpegReader;
 
-	ref class MediaSampleProvider
+	class MediaSampleProvider
 	{
 	public:
+		MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx);
 		virtual ~MediaSampleProvider();
-		virtual MediaStreamSample^ GetNextSample();
-		virtual void Flush();
-		virtual void SetCurrentStreamIndex(int streamIndex);
-
-	internal:
-		void QueuePacket(AVPacket packet);
-		AVPacket PopPacket();
+		
+		void SetCurrentStreamIndex(int streamIndex);
 		void DisableStream();
 		void EnableStream();
+		void QueuePacket(AVPacket* packet);
+		void Flush();
+
+		virtual winrt::Windows::Media::Core::MediaStreamSample GetNextSample();
+		virtual HRESULT AllocateResources();
+		virtual HRESULT WriteAVPacketToStream(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, AVPacket* packet);
+		virtual HRESULT DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, AVPacket* packet, int64_t& framePts, int64_t& frameDuration);
+		virtual HRESULT GetNextPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, LONGLONG& pts, LONGLONG& dur, bool allowSkip);
 
 	private:
-		std::vector<AVPacket> m_packetQueue;
-		int64 m_startOffset;
-		int64 m_nextFramePts;
-		bool m_isEnabled;
-
-	internal:
-		// The FFmpeg context. Because they are complex types
-		// we declare them as internal so they don't get exposed
-		// externally
-		FFmpegReader^ m_pReader;
-		AVFormatContext* m_pAvFormatCtx;
-		AVCodecContext* m_pAvCodecCtx;
-		bool m_isDiscontinuous;
+		FFmpegReader& m_reader;
+		const AVFormatContext* m_pAvFormatCtx;
+		const AVCodecContext* m_pAvCodecCtx;
 		int m_streamIndex;
-
-	internal:
-		MediaSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT AllocateResources();
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket);
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration);
-		virtual HRESULT GetNextPacket(DataWriter^ writer, LONGLONG& pts, LONGLONG& dur, bool allowSkip);
+		bool m_isDiscontinuous;
+		bool m_isEnabled;
+		std::deque<AVPacket*> m_packetQueue;
+		int64_t m_startOffset;
+		int64_t m_nextFramePts;
 	};
 }

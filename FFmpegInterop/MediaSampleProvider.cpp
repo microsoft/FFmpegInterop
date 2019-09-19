@@ -21,19 +21,25 @@
 #include "FFmpegInteropMSS.h"
 #include "FFmpegReader.h"
 
-using namespace FFmpegInterop;
+extern "C"
+{
+#include <libavformat/avformat.h>
+}
 
-MediaSampleProvider::MediaSampleProvider(
-	FFmpegReader^ reader,
-	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: m_pReader(reader)
-	, m_pAvFormatCtx(avFormatCtx)
-	, m_pAvCodecCtx(avCodecCtx)
-	, m_streamIndex(AVERROR_STREAM_NOT_FOUND)
-	, m_nextFramePts(AV_NOPTS_VALUE)
-	, m_isEnabled(false)
-	, m_isDiscontinuous(true)
+using namespace FFmpegInterop;
+using namespace winrt;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media::Core;
+using namespace winrt::Windows::Storage::Streams;
+
+MediaSampleProvider::MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx) :
+	m_reader(reader),
+	m_pAvFormatCtx(avFormatCtx),
+	m_pAvCodecCtx(avCodecCtx),
+	m_streamIndex(AVERROR_STREAM_NOT_FOUND),
+	m_isEnabled(false),
+	m_isDiscontinuous(true),
+	m_nextFramePts(AV_NOPTS_VALUE)
 {
 	DebugMessage(L"MediaSampleProvider\n");
 	
@@ -54,6 +60,7 @@ MediaSampleProvider::~MediaSampleProvider()
 void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 {
 	DebugMessage(L"SetCurrentStreamIndex\n");
+
 	if (m_pAvFormatCtx->nb_streams > (unsigned int)streamIndex)
 	{
 		m_streamIndex = streamIndex;
@@ -64,27 +71,25 @@ void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 	}
 }
 
-MediaStreamSample^ MediaSampleProvider::GetNextSample()
+MediaStreamSample MediaSampleProvider::GetNextSample()
 {
 	DebugMessage(L"GetNextSample\n");
 
-	HRESULT hr = S_OK;
+	MediaStreamSample sample{ nullptr };
 
-	MediaStreamSample^ sample;
 	if (m_isEnabled)
 	{
-		DataWriter^ dataWriter = ref new DataWriter();
-
+		DataWriter dataWriter;
 		LONGLONG pts = 0;
 		LONGLONG dur = 0;
 
-		hr = GetNextPacket(dataWriter, pts, dur, true);
+		HRESULT hr = GetNextPacket(dataWriter, pts, dur, true);
 
 		if (hr == S_OK)
 		{
-			sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { pts });
-			sample->Duration = { dur };
-			sample->Discontinuous = m_isDiscontinuous;
+			sample = MediaStreamSample::CreateFromBuffer(dataWriter.DetachBuffer(), TimeSpan{ pts });
+			sample.Duration(TimeSpan{ dur });
+			sample.Discontinuous(m_isDiscontinuous);
 			m_isDiscontinuous = false;
 		}
 		else if (hr != MF_E_END_OF_STREAM)
@@ -97,43 +102,41 @@ MediaStreamSample^ MediaSampleProvider::GetNextSample()
 	return sample;
 }
 
-HRESULT MediaSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT MediaSampleProvider::WriteAVPacketToStream(const DataWriter& dataWriter, AVPacket* packet)
 {
 	// This is the simplest form of transfer. Copy the packet directly to the stream
 	// This works for most compressed formats
-	auto aBuffer = ref new Platform::Array<uint8_t>(avPacket->data, avPacket->size);
-	dataWriter->WriteBytes(aBuffer);
+	dataWriter.WriteBytes(array_view<const byte>(packet->data, packet->data + packet->size));
+
 	return S_OK;
 }
 
-HRESULT MediaSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket *avPacket, int64_t &framePts, int64_t &frameDuration)
+HRESULT MediaSampleProvider::DecodeAVPacket(const DataWriter& dataWriter, AVPacket* packet, int64_t& framePts, int64_t& frameDuration)
 {
 	// For the simple case of compressed samples, each packet is a sample
-	if (avPacket != nullptr)
+	frameDuration = packet->duration;
+	if (packet->pts != AV_NOPTS_VALUE)
 	{
-		frameDuration = avPacket->duration;
-		if (avPacket->pts != AV_NOPTS_VALUE)
-		{
-			framePts = avPacket->pts;
-			// Set the PTS for the next sample if it doesn't one.
-			m_nextFramePts = framePts + frameDuration;
-		}
-		else
-		{
-			if (m_nextFramePts == AV_NOPTS_VALUE)
-			{
-				m_nextFramePts = (m_pAvFormatCtx->streams[m_streamIndex]->start_time != AV_NOPTS_VALUE) ? m_pAvFormatCtx->streams[m_streamIndex]->start_time : 0;
-			}
-
-			framePts = m_nextFramePts;
-			// Set the PTS for the next sample if it doesn't one.
-			m_nextFramePts += frameDuration;
-		}
+		framePts = packet->pts;
+		// Set the PTS for the next sample if it doesn't one.
+		m_nextFramePts = framePts + frameDuration;
 	}
+	else
+	{
+		if (m_nextFramePts == AV_NOPTS_VALUE)
+		{
+			m_nextFramePts = (m_pAvFormatCtx->streams[m_streamIndex]->start_time != AV_NOPTS_VALUE) ? m_pAvFormatCtx->streams[m_streamIndex]->start_time : 0;
+		}
+
+		framePts = m_nextFramePts;
+		// Set the PTS for the next sample if it doesn't one.
+		m_nextFramePts += frameDuration;
+	}
+
 	return S_OK;
 }
 
-void MediaSampleProvider::QueuePacket(AVPacket packet)
+void MediaSampleProvider::QueuePacket(AVPacket* packet)
 {
 	DebugMessage(L" - QueuePacket\n");
 
@@ -143,40 +146,19 @@ void MediaSampleProvider::QueuePacket(AVPacket packet)
 	}
 	else
 	{
-		av_packet_unref(&packet);
+		av_packet_free(&packet);
 	}
 }
 
-AVPacket MediaSampleProvider::PopPacket()
-{
-	DebugMessage(L" - PopPacket\n");
-
-	AVPacket avPacket;
-	av_init_packet(&avPacket);
-	avPacket.data = NULL;
-	avPacket.size = 0;
-
-	if (!m_packetQueue.empty())
-	{
-		avPacket = m_packetQueue.front();
-		m_packetQueue.erase(m_packetQueue.begin());
-	}
-
-	return avPacket;
-}
-
-HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, LONGLONG & pts, LONGLONG & dur, bool allowSkip)
+HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(const DataWriter& dataWriter, LONGLONG& pts, LONGLONG& dur, bool allowSkip)
 {
 	HRESULT hr = S_OK;
 
-	AVPacket avPacket;
-	av_init_packet(&avPacket);
-	avPacket.data = NULL;
-	avPacket.size = 0;
-
+	AVPacket* packet = nullptr;
 	bool frameComplete = false;
 	bool decodeSuccess = true;
-	int64_t framePts = 0, frameDuration = 0;
+	int64_t framePts = 0;
+	int64_t frameDuration = 0;
 	int errorCount = 0;
 
 	while (SUCCEEDED(hr) && !frameComplete)
@@ -184,7 +166,7 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 		// Continue reading until there is an appropriate packet in the stream
 		while (m_packetQueue.empty())
 		{
-			int readResult = m_pReader->ReadPacket();
+			int readResult = m_reader.ReadPacket();
 			if (readResult == AVERROR_EOF)
 			{
 				DebugMessage(L"GetNextSample reaching EOF\n");
@@ -201,17 +183,18 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 		if (!m_packetQueue.empty())
 		{
 			// Pick the packets from the queue one at a time
-			avPacket = PopPacket();
-			framePts = avPacket.pts;
-			frameDuration = avPacket.duration;
+			packet = m_packetQueue.front();
+			m_packetQueue.pop_front();
 
 			// Decode the packet if necessary, it will update the presentation time if necessary
-			hr = DecodeAVPacket(writer, &avPacket, framePts, frameDuration);
+			hr = DecodeAVPacket(dataWriter, packet, framePts, frameDuration);
 			frameComplete = (hr == S_OK);
 
 			if (!frameComplete)
 			{
+				av_packet_free(&packet);
 				m_isDiscontinuous = true;
+
 				if (allowSkip && errorCount++ < 10)
 				{
 					// skip a few broken packets (maybe make this configurable later)
@@ -225,13 +208,12 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 	if (SUCCEEDED(hr))
 	{
 		// Write the packet out
-		hr = WriteAVPacketToStream(writer, &avPacket);
+		hr = WriteAVPacketToStream(dataWriter, packet);
+		av_packet_free(&packet);
 
 		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) - m_startOffset;
 		dur = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration);
 	}
-
-	av_packet_unref(&avPacket);
 
 	return hr;
 }
@@ -239,10 +221,13 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(DataWriter ^ writer, L
 void MediaSampleProvider::Flush()
 {
 	DebugMessage(L"Flush\n");
-	while (!m_packetQueue.empty())
+
+	for (AVPacket* packet : m_packetQueue)
 	{
-		av_packet_unref(&PopPacket());
+		av_packet_free(&packet);
 	}
+	m_packetQueue.clear();
+
 	m_isDiscontinuous = true;
 }
 
@@ -258,3 +243,4 @@ void MediaSampleProvider::EnableStream()
 	DebugMessage(L"EnableStream\n");
 	m_isEnabled = true;
 }
+

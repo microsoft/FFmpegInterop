@@ -19,25 +19,26 @@
 #include "pch.h"
 #include "H264AVCSampleProvider.h"
 
+extern "C"
+{
+#include <libavformat/avformat.h>
+}
+
 using namespace FFmpegInterop;
+using namespace winrt;
+using namespace winrt::Windows::Storage::Streams;
 
-H264AVCSampleProvider::H264AVCSampleProvider(
-	FFmpegReader^ reader,
-	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
+H264AVCSampleProvider::H264AVCSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx) :
+	MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
 {
 }
 
-H264AVCSampleProvider::~H264AVCSampleProvider()
-{
-}
-
-HRESULT H264AVCSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT H264AVCSampleProvider::WriteAVPacketToStream(const DataWriter& dataWriter, const AVPacket_ptr& packet)
 {
 	HRESULT hr = S_OK;
+
 	// On a KeyFrame, write the SPS and PPS
-	if (avPacket->flags & AV_PKT_FLAG_KEY)
+	if (packet->flags & AV_PKT_FLAG_KEY)
 	{
 		hr = GetSPSAndPPSBuffer(dataWriter);
 	}
@@ -45,14 +46,14 @@ HRESULT H264AVCSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVP
 	if (SUCCEEDED(hr))
 	{
 		// Convert the packet to NAL format
-		hr = WriteNALPacket(dataWriter, avPacket);
+		hr = WriteNALPacket(dataWriter, packet);
 	}
 
 	// We have a complete frame
 	return hr;
 }
 
-HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
+HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(const DataWriter& dataWriter)
 {
 	HRESULT hr = S_OK;
 	int spsLength = 0;
@@ -69,6 +70,7 @@ HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 		// The data isn't present
 		hr = E_FAIL;
 	}
+
 	if (SUCCEEDED(hr))
 	{
 		byte* spsPos = m_pAvCodecCtx->extradata + 8;
@@ -81,16 +83,14 @@ HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 		}
 		else
 		{
-			auto vSPS = ref new Platform::Array<uint8_t>(spsPos, spsLength);
-
 			// Write the NAL unit for the SPS
-			dataWriter->WriteByte(0);
-			dataWriter->WriteByte(0);
-			dataWriter->WriteByte(0);
-			dataWriter->WriteByte(1);
+			dataWriter.WriteByte(0);
+			dataWriter.WriteByte(0);
+			dataWriter.WriteByte(0);
+			dataWriter.WriteByte(1);
 
 			// Write the SPS
-			dataWriter->WriteBytes(vSPS);
+			dataWriter.WriteBytes(array_view<const byte>(spsPos, spsPos + spsLength));
 		}
 	}
 
@@ -112,16 +112,14 @@ HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 			}
 			else
 			{
-				auto vPPS = ref new Platform::Array<uint8_t>(ppsPos, ppsLength);
-
 				// Write the NAL unit for the PPS
-				dataWriter->WriteByte(0);
-				dataWriter->WriteByte(0);
-				dataWriter->WriteByte(0);
-				dataWriter->WriteByte(1);
+				dataWriter.WriteByte(0);
+				dataWriter.WriteByte(0);
+				dataWriter.WriteByte(0);
+				dataWriter.WriteByte(1);
 
 				// Write the PPS
-				dataWriter->WriteBytes(vPPS);
+				dataWriter.WriteBytes(array_view<const byte>(ppsPos, ppsPos + ppsLength));
 			}
 		}
 	}
@@ -130,12 +128,11 @@ HRESULT H264AVCSampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 }
 
 // Write out an H.264 packet converting stream offsets to start-codes
-HRESULT H264AVCSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT H264AVCSampleProvider::WriteNALPacket(const DataWriter& dataWriter, const AVPacket_ptr& packet)
 {
 	HRESULT hr = S_OK;
-	uint32 index = 0;
-	uint32 size = 0;
-	uint32 packetSize = (uint32)avPacket->size;
+	uint32_t index = 0;
+	const uint32_t packetSize = (uint32_t) packet->size;
 
 	do
 	{
@@ -147,13 +144,7 @@ HRESULT H264AVCSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* 
 		}
 
 		// Grab the size of the blob
-		size = (avPacket->data[index] << 24) + (avPacket->data[index + 1] << 16) + (avPacket->data[index + 2] << 8) + avPacket->data[index + 3];
-
-		// Write the NAL unit to the stream
-		dataWriter->WriteByte(0);
-		dataWriter->WriteByte(0);
-		dataWriter->WriteByte(0);
-		dataWriter->WriteByte(1);
+		const uint32_t size = (packet->data[index] << 24) + (packet->data[index + 1] << 16) + (packet->data[index + 2] << 8) + packet->data[index + 3];
 		index += 4;
 
 		// Stop if index and size goes beyond packet size or overflow
@@ -163,12 +154,16 @@ HRESULT H264AVCSampleProvider::WriteNALPacket(DataWriter^ dataWriter, AVPacket* 
 			break;
 		}
 
+		// Write the NAL unit to the stream
+		dataWriter.WriteByte(0);
+		dataWriter.WriteByte(0);
+		dataWriter.WriteByte(0);
+		dataWriter.WriteByte(1);
+
 		// Write the rest of the packet to the stream
-		auto vBuffer = ref new Platform::Array<uint8_t>(&(avPacket->data[index]), size);
-		dataWriter->WriteBytes(vBuffer);
+		dataWriter.WriteBytes(array_view<const byte>(&packet->data[index], &packet->data[index + size]));
 		index += size;
 	} while (index < packetSize);
 
 	return hr;
 }
-

@@ -32,6 +32,11 @@ using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Storage::Streams;
 
+void AVPacketDeleter::operator()(AVPacket* packet)
+{
+	av_packet_free(&packet);
+}
+
 MediaSampleProvider::MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx) :
 	m_reader(reader),
 	m_pAvFormatCtx(avFormatCtx),
@@ -102,7 +107,7 @@ MediaStreamSample MediaSampleProvider::GetNextSample()
 	return sample;
 }
 
-HRESULT MediaSampleProvider::WriteAVPacketToStream(const DataWriter& dataWriter, AVPacket* packet)
+HRESULT MediaSampleProvider::WriteAVPacketToStream(const DataWriter& dataWriter, const AVPacket_ptr& packet)
 {
 	// This is the simplest form of transfer. Copy the packet directly to the stream
 	// This works for most compressed formats
@@ -111,7 +116,7 @@ HRESULT MediaSampleProvider::WriteAVPacketToStream(const DataWriter& dataWriter,
 	return S_OK;
 }
 
-HRESULT MediaSampleProvider::DecodeAVPacket(const DataWriter& dataWriter, AVPacket* packet, int64_t& framePts, int64_t& frameDuration)
+HRESULT MediaSampleProvider::DecodeAVPacket(const DataWriter& dataWriter, const AVPacket_ptr& packet, int64_t& framePts, int64_t& frameDuration)
 {
 	// For the simple case of compressed samples, each packet is a sample
 	frameDuration = packet->duration;
@@ -136,17 +141,13 @@ HRESULT MediaSampleProvider::DecodeAVPacket(const DataWriter& dataWriter, AVPack
 	return S_OK;
 }
 
-void MediaSampleProvider::QueuePacket(AVPacket* packet)
+void MediaSampleProvider::QueuePacket(AVPacket_ptr packet)
 {
 	DebugMessage(L" - QueuePacket\n");
 
 	if (m_isEnabled)
 	{
-		m_packetQueue.push_back(packet);
-	}
-	else
-	{
-		av_packet_free(&packet);
+		m_packetQueue.push_back(std::move(packet));
 	}
 }
 
@@ -154,7 +155,7 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(const DataWriter& data
 {
 	HRESULT hr = S_OK;
 
-	AVPacket* packet = nullptr;
+	AVPacket_ptr packet;
 	bool frameComplete = false;
 	bool decodeSuccess = true;
 	int64_t framePts = 0;
@@ -183,7 +184,7 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(const DataWriter& data
 		if (!m_packetQueue.empty())
 		{
 			// Pick the packets from the queue one at a time
-			packet = m_packetQueue.front();
+			packet = std::move(m_packetQueue.front());
 			m_packetQueue.pop_front();
 
 			// Decode the packet if necessary, it will update the presentation time if necessary
@@ -192,7 +193,6 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(const DataWriter& data
 
 			if (!frameComplete)
 			{
-				av_packet_free(&packet);
 				m_isDiscontinuous = true;
 
 				if (allowSkip && errorCount++ < 10)
@@ -209,7 +209,6 @@ HRESULT FFmpegInterop::MediaSampleProvider::GetNextPacket(const DataWriter& data
 	{
 		// Write the packet out
 		hr = WriteAVPacketToStream(dataWriter, packet);
-		av_packet_free(&packet);
 
 		pts = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * framePts) - m_startOffset;
 		dur = LONGLONG(av_q2d(m_pAvFormatCtx->streams[m_streamIndex]->time_base) * 10000000 * frameDuration);
@@ -222,12 +221,7 @@ void MediaSampleProvider::Flush()
 {
 	DebugMessage(L"Flush\n");
 
-	for (AVPacket* packet : m_packetQueue)
-	{
-		av_packet_free(&packet);
-	}
 	m_packetQueue.clear();
-
 	m_isDiscontinuous = true;
 }
 

@@ -29,6 +29,13 @@ namespace FFmpegInterop
 {
 	class FFmpegReader;
 
+	// Smart pointer for managing AVPacket
+	struct AVPacketDeleter
+	{
+		void operator()(AVPacket* packet);
+	};
+	typedef std::unique_ptr<AVPacket, AVPacketDeleter> AVPacket_ptr;
+
 	class MediaSampleProvider
 	{
 	public:
@@ -38,13 +45,13 @@ namespace FFmpegInterop
 		void SetCurrentStreamIndex(int streamIndex);
 		void DisableStream();
 		void EnableStream();
-		void QueuePacket(AVPacket* packet);
+		void QueuePacket(AVPacket_ptr packet);
 		void Flush();
 
 		virtual winrt::Windows::Media::Core::MediaStreamSample GetNextSample();
 		virtual HRESULT AllocateResources();
-		virtual HRESULT WriteAVPacketToStream(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, AVPacket* packet);
-		virtual HRESULT DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, AVPacket* packet, int64_t& framePts, int64_t& frameDuration);
+		virtual HRESULT WriteAVPacketToStream(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet);
+		virtual HRESULT DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet, int64_t& framePts, int64_t& frameDuration);
 		virtual HRESULT GetNextPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, LONGLONG& pts, LONGLONG& dur, bool allowSkip);
 
 	private:
@@ -54,7 +61,7 @@ namespace FFmpegInterop
 		int m_streamIndex;
 		bool m_isDiscontinuous;
 		bool m_isEnabled;
-		std::deque<AVPacket*> m_packetQueue;
+		std::deque<AVPacket_ptr> m_packetQueue;
 		int64_t m_startOffset;
 		int64_t m_nextFramePts;
 	};

@@ -18,9 +18,15 @@
 
 #pragma once
 
+// Windows
 #include <winrt/base.h>
 #include <Windows.h>
 #include <mferror.h>
+
+// STL
+#include <algorithm>
+#include <memory>
+#include <deque>
 
 // Disable debug string output on non-debug build
 #if !_DEBUG

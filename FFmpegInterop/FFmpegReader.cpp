@@ -41,35 +41,30 @@ FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx) :
 // Read the next packet from the stream and push it into the appropriate sample provider
 int FFmpegReader::ReadPacket()
 {
-	AVPacket* packet = av_packet_alloc();
+	AVPacket_ptr packet(av_packet_alloc());
 	if (packet == nullptr)
 	{
 		return AVERROR(ENOMEM);
 	}
 
-	int ret = av_read_frame(m_pAvFormatCtx, packet);
+	int ret = av_read_frame(m_pAvFormatCtx, packet.get());
 	if (ret < 0)
 	{
 		return ret;
 	}
 
-	// Push the packet to the appropriate
+	// Push the packet to the appropriate stream or drop the packet if the stream is not being used
 	if (packet->stream_index == m_audioStreamIndex && m_audioSampleProvider != nullptr)
 	{
-		m_audioSampleProvider->QueuePacket(packet);
+		m_audioSampleProvider->QueuePacket(std::move(packet));
 	}
 	else if (packet->stream_index == m_videoStreamIndex && m_videoSampleProvider != nullptr)
 	{
-		m_videoSampleProvider->QueuePacket(packet);
+		m_videoSampleProvider->QueuePacket(std::move(packet));
 	}
 	else if (packet->stream_index == m_subtitleStreamIndex && m_subtitleSampleProvider != nullptr)
 	{
-		m_subtitleSampleProvider->QueuePacket(packet);
-	}
-	else
-	{
-		DebugMessage(L"Ignoring unused stream\n");
-		av_packet_free(&packet);
+		m_subtitleSampleProvider->QueuePacket(std::move(packet));
 	}
 
 	return ret;

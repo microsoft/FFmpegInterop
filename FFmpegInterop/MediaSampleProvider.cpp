@@ -18,7 +18,6 @@
 
 #include "pch.h"
 #include "MediaSampleProvider.h"
-#include "FFmpegInteropMSS.h"
 #include "FFmpegReader.h"
 
 extern "C"
@@ -55,11 +54,6 @@ HRESULT MediaSampleProvider::AllocateResources()
 {
 	DebugMessage(L"AllocateResources\n");
 	return S_OK;
-}
-
-MediaSampleProvider::~MediaSampleProvider()
-{
-	DebugMessage(L"~MediaSampleProvider\n");
 }
 
 void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)

@@ -17,24 +17,20 @@
 //*****************************************************************************
 
 #pragma once
+
 #include "MediaSampleProvider.h"
 
 namespace FFmpegInterop
 {
-	ref class H264SampleProvider :
+	class H264SampleProvider :
 		public MediaSampleProvider
 	{
 	public:
-		virtual ~H264SampleProvider();
+		H264SampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx);
+
+		HRESULT WriteAVPacketToStream(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet) override;
 
 	private:
-		HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter);
-
-	internal:
-		H264SampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
+		HRESULT GetSPSAndPPSBuffer(const winrt::Windows::Storage::Streams::DataWriter& dataWriter);
 	};
 }

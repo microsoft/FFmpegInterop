@@ -40,7 +40,7 @@ namespace FFmpegInterop
 	{
 	public:
 		MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx);
-		virtual ~MediaSampleProvider();
+		virtual ~MediaSampleProvider() = default;
 		
 		void SetCurrentStreamIndex(int streamIndex);
 		void DisableStream();
@@ -54,11 +54,13 @@ namespace FFmpegInterop
 		virtual HRESULT DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet, int64_t& framePts, int64_t& frameDuration);
 		virtual HRESULT GetNextPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, LONGLONG& pts, LONGLONG& dur, bool allowSkip);
 
-	private:
-		FFmpegReader& m_reader;
+	protected:
 		const AVFormatContext* m_pAvFormatCtx;
 		const AVCodecContext* m_pAvCodecCtx;
 		int m_streamIndex;
+
+	private:
+		FFmpegReader& m_reader;
 		bool m_isDiscontinuous;
 		bool m_isEnabled;
 		std::deque<AVPacket_ptr> m_packetQueue;

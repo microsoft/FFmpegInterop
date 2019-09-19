@@ -18,26 +18,28 @@
 
 #include "pch.h"
 #include "H264SampleProvider.h"
+#include "FFmpegReader.h"
+
+extern "C"
+{
+#include <libavformat/avformat.h>
+}
 
 using namespace FFmpegInterop;
+using namespace winrt;
+using namespace winrt::Windows::Storage::Streams;
 
-H264SampleProvider::H264SampleProvider(
-	FFmpegReader^ reader,
-	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
+H264SampleProvider::H264SampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx) :
+	MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
 {
 }
 
-H264SampleProvider::~H264SampleProvider()
-{
-}
-
-HRESULT H264SampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
+HRESULT H264SampleProvider::WriteAVPacketToStream(const DataWriter& dataWriter, const AVPacket_ptr& packet)
 {
 	HRESULT hr = S_OK;
+
 	// On a KeyFrame, write the SPS and PPS
-	if (avPacket->flags & AV_PKT_FLAG_KEY)
+	if (packet->flags & AV_PKT_FLAG_KEY)
 	{
 		hr = GetSPSAndPPSBuffer(dataWriter);
 	}
@@ -45,18 +47,18 @@ HRESULT H264SampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPack
 	if (SUCCEEDED(hr))
 	{
 		// Call base class method that simply write the packet to stream as is
-		hr = MediaSampleProvider::WriteAVPacketToStream(dataWriter, avPacket);
+		hr = MediaSampleProvider::WriteAVPacketToStream(dataWriter, packet);
 	}
 
 	// We have a complete frame
 	return hr;
 }
 
-HRESULT H264SampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
+HRESULT H264SampleProvider::GetSPSAndPPSBuffer(const DataWriter& dataWriter)
 {
 	HRESULT hr = S_OK;
 
-	if (!m_pAvCodecCtx || (m_pAvCodecCtx->extradata == nullptr && m_pAvCodecCtx->extradata_size < 8))
+	if (m_pAvCodecCtx == nullptr || m_pAvCodecCtx->extradata == nullptr || m_pAvCodecCtx->extradata_size < 8)
 	{
 		// The data isn't present
 		hr = E_FAIL;
@@ -64,8 +66,7 @@ HRESULT H264SampleProvider::GetSPSAndPPSBuffer(DataWriter^ dataWriter)
 	else
 	{
 		// Write both SPS and PPS sequence as is from extradata
-		auto vSPSPPS = ref new Platform::Array<uint8_t>(m_pAvCodecCtx->extradata, m_pAvCodecCtx->extradata_size);
-		dataWriter->WriteBytes(vSPSPPS);
+		dataWriter.WriteBytes(array_view<const byte>(m_pAvCodecCtx->extradata, m_pAvCodecCtx->extradata + m_pAvCodecCtx->extradata_size));
 	}
 
 	return hr;

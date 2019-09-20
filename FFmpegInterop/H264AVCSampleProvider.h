@@ -26,7 +26,7 @@ namespace FFmpegInterop
 		public MediaSampleProvider
 	{
 	public:
-		H264AVCSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx);
+		H264AVCSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx);
 
 		HRESULT WriteAVPacketToStream(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet) override;
 

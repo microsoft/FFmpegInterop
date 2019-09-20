@@ -19,104 +19,73 @@
 #include "pch.h"
 #include "UncompressedSampleProvider.h"
 
+extern "C"
+{
+#include <libavformat/avformat.h>
+}
+
 using namespace FFmpegInterop;
+using namespace winrt::Windows::Storage::Streams;
 
-UncompressedSampleProvider::UncompressedSampleProvider(FFmpegReader^ reader, AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx)
-	: MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_pAvFrame(nullptr)
+void AVFrameDeleter::operator()(AVFrame* frame)
+{
+	av_frame_free(&frame);
+}
+
+UncompressedSampleProvider::UncompressedSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx) :
+	MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
 {
 }
 
-HRESULT UncompressedSampleProvider::ProcessDecodedFrame(DataWriter^ dataWriter)
-{
-	return S_OK;
-}
-
-// Return S_FALSE for an incomplete frame
-HRESULT UncompressedSampleProvider::GetFrameFromFFmpegDecoder(AVPacket* avPacket)
+HRESULT UncompressedSampleProvider::DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet, int64_t& framePts, int64_t& frameDuration)
 {
 	HRESULT hr = S_OK;
-	int decodeFrame = 0;
 
-	if (avPacket != nullptr)
+	int sendPacketResult = avcodec_send_packet(m_pAvCodecCtx, packet.get());
+	if (sendPacketResult == AVERROR(EAGAIN))
 	{
-		int sendPacketResult = avcodec_send_packet(m_pAvCodecCtx, avPacket);
-		if (sendPacketResult == AVERROR(EAGAIN))
-		{
-			// The decoder should have been drained and always ready to access input
-			_ASSERT(FALSE);
-			hr = E_UNEXPECTED;
-		}
-		else if (sendPacketResult < 0)
-		{
-			// We failed to send the packet
-			hr = E_FAIL;
-			DebugMessage(L"Decoder failed on the sample\n");
-		}
+		// The decoder should have been drained and always ready to access input
+		_ASSERT(FALSE);
+		hr = E_UNEXPECTED;
 	}
-	if (SUCCEEDED(hr))
+	else if (sendPacketResult < 0)
 	{
-		AVFrame *pFrame = av_frame_alloc();
+		// We failed to send the packet
+		DebugMessage(L"Decoder failed on the sample\n");
+		hr = E_FAIL;
+	}
+
+	bool fGotFrame  = false;
+	while (SUCCEEDED(hr))
+	{
 		// Try to get a frame from the decoder.
-		decodeFrame = avcodec_receive_frame(m_pAvCodecCtx, pFrame);
+		AVFrame_ptr frame(av_frame_alloc());
+		int decodeFrame = avcodec_receive_frame(m_pAvCodecCtx, frame.get());
 
 		// The decoder is empty, send a packet to it.
 		if (decodeFrame == AVERROR(EAGAIN))
 		{
-			// The decoder doesn't have enough data to produce a frame,
-			// return S_FALSE to indicate a partial frame
-			hr = S_FALSE;
-			av_frame_unref(pFrame);
-			av_frame_free(&pFrame);
+			// The decoder doesn't have enough data to produce a frame.
+			// If the decoder didn't give an initial frame we still need to feed it more frames.
+			// Return S_FALSE to indicate a partial frame
+			hr = fGotFrame ? S_OK : S_FALSE;
+			break;
 		}
 		else if (decodeFrame < 0)
 		{
 			hr = E_FAIL;
-			av_frame_unref(pFrame);
-			av_frame_free(&pFrame);
 			DebugMessage(L"Failed to get a frame from the decoder\n");
 		}
-		else
+
+		// Update the timestamp if the packet has one
+		if (frame->pts != AV_NOPTS_VALUE)
 		{
-			m_pAvFrame = pFrame;
+			framePts = frame->pts;
+			frameDuration = frame->pkt_duration;
 		}
-	}
+		fGotFrame = true;
 
-	return hr;
-}
-
-HRESULT UncompressedSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration)
-{
-	HRESULT hr = S_OK;
-	bool fGotFrame  = false;
-	AVPacket *pPacket = avPacket;
-
-	while (SUCCEEDED(hr))
-	{
-		hr = GetFrameFromFFmpegDecoder(pPacket);
-		pPacket = nullptr;
-		if (SUCCEEDED(hr))
-		{
-			if (hr == S_FALSE)
-			{
-				// If the decoder didn't give an initial frame we still need
-				// to feed it more frames. Keep S_FALSE as the result
-				if (fGotFrame)
-				{
-					hr = S_OK;
-				}
-				break;
-			}
-			// Update the timestamp if the packet has one
-			else if (m_pAvFrame->pts != AV_NOPTS_VALUE)
-			{
-				framePts = m_pAvFrame->pts;
-				frameDuration = m_pAvFrame->pkt_duration;
-			}
-			fGotFrame = true;
-
-			hr = ProcessDecodedFrame(dataWriter);
-		}
+		hr = ProcessDecodedFrame(dataWriter);
 	}
 
 	return hr;

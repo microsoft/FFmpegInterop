@@ -29,7 +29,7 @@ using namespace FFmpegInterop;
 using namespace winrt;
 using namespace winrt::Windows::Storage::Streams;
 
-H264SampleProvider::H264SampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx) :
+H264SampleProvider::H264SampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx) :
 	MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
 {
 }

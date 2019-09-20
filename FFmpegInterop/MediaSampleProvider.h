@@ -39,7 +39,7 @@ namespace FFmpegInterop
 	class MediaSampleProvider
 	{
 	public:
-		MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx);
+		MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx);
 		virtual ~MediaSampleProvider() = default;
 		
 		void SetCurrentStreamIndex(int streamIndex);
@@ -56,7 +56,7 @@ namespace FFmpegInterop
 
 	protected:
 		const AVFormatContext* m_pAvFormatCtx;
-		const AVCodecContext* m_pAvCodecCtx;
+		AVCodecContext* m_pAvCodecCtx;
 		int m_streamIndex;
 
 	private:

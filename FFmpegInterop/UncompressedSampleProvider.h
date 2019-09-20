@@ -17,29 +17,29 @@
 //*****************************************************************************
 
 #pragma once
+
 #include "MediaSampleProvider.h"
 
-extern "C"
-{
-#include <libswresample/swresample.h>
-}
+struct AVFrame;
 
 namespace FFmpegInterop
 {
-	ref class UncompressedSampleProvider abstract : public MediaSampleProvider
+	// Smart pointer for managing AVFrame
+	struct AVFrameDeleter
 	{
-	internal:
-		// Try to get a frame from FFmpeg, otherwise, feed a frame to start decoding
-		virtual HRESULT GetFrameFromFFmpegDecoder(AVPacket* avPacket);
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter);
-		UncompressedSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
+		void operator()(AVFrame* frame);
+	};
+	typedef std::unique_ptr<AVFrame, AVFrameDeleter> AVFrame_ptr;
 
-	internal:
-		AVFrame* m_pAvFrame;
+	class UncompressedSampleProvider :
+		public MediaSampleProvider
+	{
+	public:
+		UncompressedSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx);
+
+		HRESULT DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet, int64_t& framePts, int64_t& frameDuration) override;
+
+	protected:
+		virtual HRESULT ProcessDecodedFrame(const winrt::Windows::Storage::Streams::DataWriter& dataWriter) = 0;
 	};
 }
-

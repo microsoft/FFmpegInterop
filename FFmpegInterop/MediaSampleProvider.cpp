@@ -36,7 +36,7 @@ void AVPacketDeleter::operator()(AVPacket* packet)
 	av_packet_free(&packet);
 }
 
-MediaSampleProvider::MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, const AVCodecContext* avCodecCtx) :
+MediaSampleProvider::MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx) :
 	m_reader(reader),
 	m_pAvFormatCtx(avFormatCtx),
 	m_pAvCodecCtx(avCodecCtx),

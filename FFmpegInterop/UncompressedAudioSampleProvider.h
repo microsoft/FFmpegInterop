@@ -19,11 +19,6 @@
 #pragma once
 #include "UncompressedSampleProvider.h"
 
-extern "C"
-{
-#include <libswresample/swresample.h>
-}
-
 namespace FFmpegInterop
 {
 	ref class UncompressedAudioSampleProvider: UncompressedSampleProvider

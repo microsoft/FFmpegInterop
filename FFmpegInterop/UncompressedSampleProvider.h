@@ -20,17 +20,8 @@
 
 #include "MediaSampleProvider.h"
 
-struct AVFrame;
-
 namespace FFmpegInterop
 {
-	// Smart pointer for managing AVFrame
-	struct AVFrameDeleter
-	{
-		void operator()(AVFrame* frame);
-	};
-	typedef std::unique_ptr<AVFrame, AVFrameDeleter> AVFrame_ptr;
-
 	class UncompressedSampleProvider :
 		public MediaSampleProvider
 	{

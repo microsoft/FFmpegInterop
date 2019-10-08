@@ -18,8 +18,6 @@
 
 #pragma once
 
-struct AVFormatContext;
-
 namespace FFmpegInterop
 {
 	class MediaSampleProvider;

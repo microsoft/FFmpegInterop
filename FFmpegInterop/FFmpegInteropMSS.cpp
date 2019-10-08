@@ -23,18 +23,11 @@
 #include "H264SampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
-#include "CritSec.h"
 #include "shcore.h"
-#include <mfapi.h>
 #include "collection.h"
 #include <string>
 #include <locale>
 #include <codecvt>
-
-extern "C"
-{
-#include <libavutil/imgutils.h>
-}
 
 using namespace concurrency;
 using namespace FFmpegInterop;

@@ -19,12 +19,6 @@
 #pragma once
 #include "UncompressedSampleProvider.h"
 
-extern "C"
-{
-#include <libswscale/swscale.h>
-}
-
-
 namespace FFmpegInterop
 {
 	ref class UncompressedVideoSampleProvider: UncompressedSampleProvider

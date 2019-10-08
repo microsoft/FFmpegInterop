@@ -18,13 +18,6 @@
 
 #include "pch.h"
 #include "UncompressedVideoSampleProvider.h"
-#include <mfapi.h>
-
-extern "C"
-{
-#include <libavutil/imgutils.h>
-}
-
 
 using namespace FFmpegInterop;
 

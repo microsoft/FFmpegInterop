@@ -17,6 +17,8 @@
     <ClCompile Include="UncompressedSampleProvider.cpp" />
     <ClCompile Include="UncompressedVideoSampleProvider.cpp" />
     <ClCompile Include="FFmpegInteropLogging.cpp" />
+    <ClCompile Include="Tracing.cpp" />
+    <ClCompile Include="dllmain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -30,6 +32,8 @@
     <ClInclude Include="UncompressedVideoSampleProvider.h" />
     <ClInclude Include="FFmpegInteropLogging.h" />
     <ClInclude Include="MediaThumbnailData.h" />
+    <ClInclude Include="Tracing.h" />
+    <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

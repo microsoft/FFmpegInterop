@@ -18,23 +18,9 @@
 
 #pragma once
 
-#include <winrt/Windows.Media.Core.h>
-#include <winrt/Windows.Storage.Streams.h>
-
-struct AVFormatContext;
-struct AVCodecContext;
-struct AVPacket;
-
 namespace FFmpegInterop
 {
 	class FFmpegReader;
-
-	// Smart pointer for managing AVPacket
-	struct AVPacketDeleter
-	{
-		void operator()(AVPacket* packet);
-	};
-	typedef std::unique_ptr<AVPacket, AVPacketDeleter> AVPacket_ptr;
 
 	class MediaSampleProvider
 	{

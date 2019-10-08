@@ -19,11 +19,6 @@
 #include "pch.h"
 #include "UncompressedSampleProvider.h"
 
-extern "C"
-{
-#include <libavformat/avformat.h>
-}
-
 using namespace FFmpegInterop;
 using namespace winrt::Windows::Storage::Streams;
 

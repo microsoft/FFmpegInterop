@@ -28,11 +28,6 @@ using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Media::Core;
 
-extern "C"
-{
-#include <libavformat/avformat.h>
-}
-
 namespace FFmpegInterop
 {
 	public ref class FFmpegInteropMSS sealed

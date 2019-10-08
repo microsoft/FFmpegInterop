@@ -236,18 +236,22 @@
     <ClInclude Include="H264SampleProvider.h" />
     <ClInclude Include="MediaSampleProvider.h" />
     <ClInclude Include="MediaThumbnailData.h" />
+    <ClInclude Include="Tracing.h" />
     <ClInclude Include="UncompressedAudioSampleProvider.h" />
     <ClInclude Include="UncompressedSampleProvider.h" />
     <ClInclude Include="UncompressedVideoSampleProvider.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="FFmpegInteropLogging.cpp" />
     <ClCompile Include="FFmpegInteropMSS.cpp" />
     <ClCompile Include="FFmpegReader.cpp" />
     <ClCompile Include="H264AVCSampleProvider.cpp" />
     <ClCompile Include="H264SampleProvider.cpp" />
     <ClCompile Include="MediaSampleProvider.cpp" />
+    <ClCompile Include="Tracing.cpp" />
     <ClCompile Include="UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="UncompressedSampleProvider.cpp" />
     <ClCompile Include="UncompressedVideoSampleProvider.cpp" />

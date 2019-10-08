@@ -22,15 +22,38 @@
 #include <wil/cppwinrt.h>
 #include <wil/result.h>
 
-// Windows
+// WinRT
 #include <winrt/base.h>
+#include <winrt/Windows.Media.Core.h>
+#include <winrt/Windows.Storage.Streams.h>
+
+// Windows
 #include <Windows.h>
+#include <evntrace.h>
+#include <TraceLoggingProvider.h>
+#include <TraceLoggingActivity.h>
+
+// MF
+#include <mfapi.h>
 #include <mferror.h>
+
+// FFmpeg
+extern "C"
+{
+#include <libavformat/avformat.h>
+#include <libavutil/imgutils.h>
+#include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
+}
 
 // STL
 #include <algorithm>
 #include <memory>
 #include <deque>
+
+// FFmpegInterop
+#include "Tracing.h"
+#include "Utility.h"
 
 // Disable debug string output on non-debug build
 #if !_DEBUG

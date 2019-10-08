@@ -20,11 +20,6 @@
 #include "FFmpegReader.h"
 #include "MediaSampleProvider.h"
 
-extern "C"
-{
-#include <libavformat/avformat.h>
-}
-
 using namespace FFmpegInterop;
 
 FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx) :

@@ -69,7 +69,6 @@ IMapView<int, String^>^ AvCodecMap = create_map();
 // Static functions passed to FFmpeg
 static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
-static int lock_manager(void **mtx, enum AVLockOp op);
 
 // Flag for ffmpeg global setup
 static bool isRegistered = false;
@@ -1003,35 +1002,4 @@ static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
 	}
 
 	return out.QuadPart; // Return the new position:
-}
-
-static int lock_manager(void **mtx, enum AVLockOp op)
-{
-	switch (op)
-	{
-	case AV_LOCK_CREATE:
-	{
-		*mtx = new CritSec();
-		return 0;
-	}
-	case AV_LOCK_OBTAIN:
-	{
-		auto mutex = static_cast<CritSec*>(*mtx);
-		mutex->Lock();
-		return 0;
-	}
-	case AV_LOCK_RELEASE:
-	{
-		auto mutex = static_cast<CritSec*>(*mtx);
-		mutex->Unlock();
-		return 0;
-	}
-	case AV_LOCK_DESTROY:
-	{
-		auto mutex = static_cast<CritSec*>(*mtx);
-		delete mutex;
-		return 0;
-	}
-	}
-	return 1;
 }

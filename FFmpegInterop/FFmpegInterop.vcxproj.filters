@@ -30,7 +30,6 @@
     <ClInclude Include="UncompressedVideoSampleProvider.h" />
     <ClInclude Include="FFmpegInteropLogging.h" />
     <ClInclude Include="MediaThumbnailData.h" />
-    <ClInclude Include="CritSec.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

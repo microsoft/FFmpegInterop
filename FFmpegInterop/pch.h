@@ -18,6 +18,10 @@
 
 #pragma once
 
+// WIL
+#include <wil/cppwinrt.h>
+#include <wil/result.h>
+
 // Windows
 #include <winrt/base.h>
 #include <Windows.h>

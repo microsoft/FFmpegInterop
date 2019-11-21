@@ -18,7 +18,7 @@
 
 #include "pch.h"
 
-using namespace FFmpegInterop;
+using namespace winrt::FFmpegInterop::implementation;
 
 BOOL WINAPI DllMain(_In_ HINSTANCE hInstance, _In_ DWORD dwReason, _In_opt_ LPVOID lpReserved)
 {

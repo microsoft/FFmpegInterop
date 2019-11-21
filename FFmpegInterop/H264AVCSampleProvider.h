@@ -20,18 +20,36 @@
 
 #include "MediaSampleProvider.h"
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
 	class H264AVCSampleProvider :
 		public MediaSampleProvider
 	{
 	public:
-		H264AVCSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx);
+		H264AVCSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
 
-		HRESULT WriteAVPacketToStream(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet) override;
+	protected:
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t> GetSampleData() override;
 
 	private:
-		HRESULT WriteNALPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet);
-		HRESULT GetSPSAndPPSBuffer(const winrt::Windows::Storage::Streams::DataWriter& dataWriter);
+		void WriteSPSAndPPS(
+			_Inout_opt_ Windows::Storage::Streams::DataWriter& dataWriter,
+			_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData,
+			_In_ uint32_t codecPrivateDataSize);
+
+		uint32_t WriteParameterSetData(
+			_Inout_opt_ Windows::Storage::Streams::DataWriter& dataWriter,
+			_In_ uint8_t parameterSetCount,
+			_In_reads_(parameterSetDataSize) const uint8_t* parameterSetData,
+			_In_ uint32_t parameterSetDataSize);
+
+		void WriteNALPacket(
+			_Inout_opt_ Windows::Storage::Streams::DataWriter& dataWriter,
+			_In_reads_(packetDataSize) const uint8_t* packetData,
+			_In_ uint32_t packetDataSize);
+
+		bool m_isAVC; // Indicates whether bitstream format is AVC or Annex B
+		uint8_t m_nalLenSize; // Not used for Annex B
+		Windows::Storage::Streams::DataWriter m_dataWriter; // TODO: Reuse data writer?
 	};
 }

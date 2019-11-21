@@ -17,30 +17,25 @@
 //*****************************************************************************
 
 #pragma once
+
 #include "UncompressedSampleProvider.h"
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
-	ref class UncompressedVideoSampleProvider: UncompressedSampleProvider
+	// TODO: Minimize resource usage when stream is deselected
+	class UncompressedVideoSampleProvider :
+		public UncompressedSampleProvider
 	{
 	public:
-		virtual ~UncompressedVideoSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
-	internal:
-		UncompressedVideoSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT AllocateResources() override;
+		UncompressedVideoSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
+
+	protected:
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t> GetSampleData() override;
+		void SetSampleProperties(const Windows::Media::Core::MediaStreamSample& sample) override;
 
 	private:
-		SwsContext* m_pSwsCtx;
-		int m_rgVideoBufferLineSize[4];
-		uint8_t* m_rgVideoBufferData[4];
-		bool m_interlaced_frame;
-		bool m_top_field_first;
+		SwsContext_ptr m_swsContext;
+		int m_lineSizes[4];
+		AVBufferPool_ptr m_bufferPool;
 	};
 }
-

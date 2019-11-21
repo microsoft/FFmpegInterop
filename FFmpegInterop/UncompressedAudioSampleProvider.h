@@ -19,25 +19,22 @@
 #pragma once
 #include "UncompressedSampleProvider.h"
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
-	ref class UncompressedAudioSampleProvider: UncompressedSampleProvider
+	// TODO: Minimize resource usage when stream is deselected
+	class UncompressedAudioSampleProvider :
+		public UncompressedSampleProvider
 	{
 	public:
-		virtual ~UncompressedAudioSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
+		UncompressedAudioSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
 
-	internal:
-		UncompressedAudioSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter) override;
-		virtual HRESULT AllocateResources() override;
+	protected:
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t> GetSampleData() override;
 
 	private:
-		SwrContext* m_pSwrCtx;
+		void InitResamplerIfNeeded();
+
+		SwrContext_ptr m_swrContext;
+		AVFrame_ptr m_resampledFrame;
 	};
 }
-

@@ -19,69 +19,61 @@
 #include "pch.h"
 #include "UncompressedSampleProvider.h"
 
-using namespace FFmpegInterop;
 using namespace winrt::Windows::Storage::Streams;
+using namespace std;
 
-void AVFrameDeleter::operator()(AVFrame* frame)
+namespace winrt::FFmpegInterop::implementation
 {
-	av_frame_free(&frame);
-}
-
-UncompressedSampleProvider::UncompressedSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx) :
-	MediaSampleProvider(reader, avFormatCtx, avCodecCtx)
-{
-}
-
-HRESULT UncompressedSampleProvider::DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet, int64_t& framePts, int64_t& frameDuration)
-{
-	HRESULT hr = S_OK;
-
-	int sendPacketResult = avcodec_send_packet(m_pAvCodecCtx, packet.get());
-	if (sendPacketResult == AVERROR(EAGAIN))
+	UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader) :
+		MediaSampleProvider(stream, reader)
 	{
-		// The decoder should have been drained and always ready to access input
-		_ASSERT(FALSE);
-		hr = E_UNEXPECTED;
-	}
-	else if (sendPacketResult < 0)
-	{
-		// We failed to send the packet
-		DebugMessage(L"Decoder failed on the sample\n");
-		hr = E_FAIL;
-	}
+		// Create a new decoding context
+		AVCodec* codec = avcodec_find_decoder(stream->codecpar->codec_id);
+		THROW_HR_IF_NULL(MF_E_INVALIDMEDIATYPE, codec);
 
-	bool fGotFrame  = false;
-	while (SUCCEEDED(hr))
-	{
-		// Try to get a frame from the decoder.
-		AVFrame_ptr frame(av_frame_alloc());
-		int decodeFrame = avcodec_receive_frame(m_pAvCodecCtx, frame.get());
+		m_codecContext.reset(avcodec_alloc_context3(codec));
+		THROW_IF_NULL_ALLOC(m_codecContext);
+		THROW_IF_FFMPEG_FAILED(avcodec_parameters_to_context(m_codecContext.get(), stream->codecpar));
 
-		// The decoder is empty, send a packet to it.
-		if (decodeFrame == AVERROR(EAGAIN))
+		unsigned int threadCount = std::thread::hardware_concurrency();
+		if (threadCount > 0)
 		{
-			// The decoder doesn't have enough data to produce a frame.
-			// If the decoder didn't give an initial frame we still need to feed it more frames.
-			// Return S_FALSE to indicate a partial frame
-			hr = fGotFrame ? S_OK : S_FALSE;
+			m_codecContext->thread_count = threadCount;
+			m_codecContext->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+		}
+
+		THROW_IF_FFMPEG_FAILED(avcodec_open2(m_codecContext.get(), codec, nullptr));
+
+		// Allocate a frame
+		m_frame.reset(av_frame_alloc());
+		THROW_IF_NULL_ALLOC(m_frame);
+	}
+
+	void UncompressedSampleProvider::Flush() noexcept
+	{
+		MediaSampleProvider::Flush();
+
+		avcodec_flush_buffers(m_codecContext.get());
+	}
+
+	void UncompressedSampleProvider::GetFrame()
+	{
+		while (true)
+		{
+			// Send a packet to the decoder and see if it can produce a frame
+			AVPacket_ptr packet{ GetPacket() };
+
+			THROW_IF_FFMPEG_FAILED(avcodec_send_packet(m_codecContext.get(), packet.get()));
+
+			int decodeResult = avcodec_receive_frame(m_codecContext.get(), m_frame.get());
+			if (decodeResult == AVERROR(EAGAIN))
+			{
+				// The decoder needs more data to produce a frame
+				continue;
+			}
+			THROW_IF_FFMPEG_FAILED(decodeResult);
+
 			break;
 		}
-		else if (decodeFrame < 0)
-		{
-			hr = E_FAIL;
-			DebugMessage(L"Failed to get a frame from the decoder\n");
-		}
-
-		// Update the timestamp if the packet has one
-		if (frame->pts != AV_NOPTS_VALUE)
-		{
-			framePts = frame->pts;
-			frameDuration = frame->pkt_duration;
-		}
-		fGotFrame = true;
-
-		hr = ProcessDecodedFrame(dataWriter);
 	}
-
-	return hr;
 }

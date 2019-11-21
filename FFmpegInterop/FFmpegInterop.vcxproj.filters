@@ -11,7 +11,6 @@
     <ClCompile Include="FFmpegInteropMSS.cpp" />
     <ClCompile Include="FFmpegReader.cpp" />
     <ClCompile Include="H264AVCSampleProvider.cpp" />
-    <ClCompile Include="H264SampleProvider.cpp" />
     <ClCompile Include="MediaSampleProvider.cpp" />
     <ClCompile Include="UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="UncompressedSampleProvider.cpp" />
@@ -19,21 +18,22 @@
     <ClCompile Include="FFmpegInteropLogging.cpp" />
     <ClCompile Include="Tracing.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="SubtitleSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="FFmpegInteropMSS.h" />
     <ClInclude Include="FFmpegReader.h" />
     <ClInclude Include="H264AVCSampleProvider.h" />
-    <ClInclude Include="H264SampleProvider.h" />
     <ClInclude Include="MediaSampleProvider.h" />
     <ClInclude Include="UncompressedAudioSampleProvider.h" />
     <ClInclude Include="UncompressedSampleProvider.h" />
     <ClInclude Include="UncompressedVideoSampleProvider.h" />
     <ClInclude Include="FFmpegInteropLogging.h" />
-    <ClInclude Include="MediaThumbnailData.h" />
     <ClInclude Include="Tracing.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="FFmpegBuffer.h" />
+    <ClInclude Include="SubtitleSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -41,6 +41,6 @@
   </ItemGroup>
   <ItemGroup>
     <Midl Include="FFmpegInteropLogging.idl" />
-    <Midl Include="MediaThumbnailData.idl" />
+    <Midl Include="FFmpegInteropMSS.idl" />
   </ItemGroup>
 </Project>

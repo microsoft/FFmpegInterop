@@ -19,132 +19,83 @@
 #include "pch.h"
 #include "UncompressedVideoSampleProvider.h"
 
-using namespace FFmpegInterop;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media::Core;
+using namespace winrt::Windows::Storage::Streams;
+using namespace std;
 
-UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
-	FFmpegReader^ reader,
-	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_pSwsCtx(nullptr)
+namespace winrt::FFmpegInterop::implementation
 {
-	for (int i = 0; i < 4; i++)
+	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader) :
+		UncompressedSampleProvider(stream, reader)
 	{
-		m_rgVideoBufferLineSize[i] = 0;
-		m_rgVideoBufferData[i] = nullptr;
-	}
-}
-
-HRESULT UncompressedVideoSampleProvider::AllocateResources()
-{
-	HRESULT hr = S_OK;
-	hr = UncompressedSampleProvider::AllocateResources();
-	if (SUCCEEDED(hr))
-	{
-		// Setup software scaler to convert any decoder pixel format (e.g. YUV420P) to NV12 that is supported in Windows & Windows Phone MediaElement
-		m_pSwsCtx = sws_getContext(
-			m_pAvCodecCtx->width,
-			m_pAvCodecCtx->height,
-			m_pAvCodecCtx->pix_fmt,
-			m_pAvCodecCtx->width,
-			m_pAvCodecCtx->height,
-			AV_PIX_FMT_NV12,
-			SWS_BICUBIC,
-			NULL,
-			NULL,
-			NULL);
-
-		if (m_pSwsCtx == nullptr)
+		if (m_codecContext->pix_fmt != AV_PIX_FMT_NV12)
 		{
-			hr = E_OUTOFMEMORY;
+			// Setup software scaler to convert the pixel format to NV12
+			m_swsContext.reset(sws_getContext(
+				m_codecContext->width,
+				m_codecContext->height,
+				m_codecContext->pix_fmt,
+				m_codecContext->width,
+				m_codecContext->height,
+				AV_PIX_FMT_NV12,
+				SWS_BICUBIC,
+				nullptr,
+				nullptr,
+				nullptr));
+			THROW_IF_NULL_ALLOC(m_swsContext);
+
+			THROW_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, AV_PIX_FMT_NV12, m_codecContext->width));
+
+			// Create a buffer pool
+			const int requiredBufferSize = av_image_get_buffer_size(AV_PIX_FMT_NV12, m_codecContext->width, m_codecContext->height, 1);
+			THROW_IF_FFMPEG_FAILED(requiredBufferSize);
+
+			m_bufferPool.reset(av_buffer_pool_init(requiredBufferSize, nullptr));
+			THROW_IF_NULL_ALLOC(m_bufferPool);
 		}
 	}
 
-	if (SUCCEEDED(hr))
+	tuple<IBuffer, int64_t, int64_t> UncompressedVideoSampleProvider::GetSampleData()
 	{
-		m_pAvFrame = av_frame_alloc();
-		if (m_pAvFrame == nullptr)
+		GetFrame();
+
+		if (m_swsContext == nullptr)
 		{
-			hr = E_OUTOFMEMORY;
-		}
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, AV_PIX_FMT_NV12, 1) < 0)
-		{
-			hr = E_FAIL;
-		}
-	}
-
-	return hr;
-}
-
-UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
-{
-	if (m_pAvFrame)
-	{
-		av_frame_free(&m_pAvFrame);
-	}
-
-	if (m_rgVideoBufferData)
-	{
-		av_freep(m_rgVideoBufferData);
-	}
-}
-
-HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration)
-{
-	HRESULT hr = S_OK;
-	hr = UncompressedSampleProvider::DecodeAVPacket(dataWriter, avPacket, framePts, frameDuration);
-
-	// Don't set a timestamp on S_FALSE
-	if (hr == S_OK)
-	{
-		// Try to get the best effort timestamp for the frame.
-		framePts = m_pAvFrame->best_effort_timestamp;
-		m_interlaced_frame = m_pAvFrame->interlaced_frame == 1;
-		m_top_field_first = m_pAvFrame->top_field_first == 1;
-	}
-
-	return hr;
-}
-
-MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
-{
-	MediaStreamSample^ sample = MediaSampleProvider::GetNextSample();
-
-	if (sample != nullptr)
-	{
-		if (m_interlaced_frame)
-		{
-			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, TRUE);
-			sample->ExtendedProperties->Insert(MFSampleExtension_BottomFieldFirst, m_top_field_first ? safe_cast<Platform::Object^>(FALSE) : TRUE);
-			sample->ExtendedProperties->Insert(MFSampleExtension_RepeatFirstField, safe_cast<Platform::Object^>(FALSE));
+			return { make<FFmpegBuffer>(m_frame->buf[0]), m_frame->best_effort_timestamp, m_frame->pkt_duration };
 		}
 		else
 		{
-			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
+			// Scale the image to the desired output format
+			AVBufferRef_ptr bufferRef{ av_buffer_pool_get(m_bufferPool.get()) };
+			THROW_IF_NULL_ALLOC(bufferRef);
+
+			uint8_t* data[4]{ };
+			const int requiredBufferSize = av_image_fill_pointers(data, AV_PIX_FMT_NV12, m_codecContext->height, bufferRef->data, m_lineSizes);
+			THROW_IF_FFMPEG_FAILED(requiredBufferSize);
+			THROW_HR_IF(MF_E_UNEXPECTED, requiredBufferSize != bufferRef->size);
+
+			THROW_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), m_frame->data, m_frame->linesize, 0, m_codecContext->height, data, m_lineSizes));
+
+			return { make<FFmpegBuffer>(move(bufferRef)), m_frame->best_effort_timestamp, m_frame->pkt_duration };
 		}
 	}
 
-	return sample;
-}
-
-HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
-{
-	// Convert decoded video pixel format to NV12 using FFmpeg software scaler
-	if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, m_rgVideoBufferData, m_rgVideoBufferLineSize) < 0)
+	void UncompressedVideoSampleProvider::SetSampleProperties(const MediaStreamSample& sample)
 	{
-		return E_FAIL;
+		MediaStreamSamplePropertySet propertySet = sample.ExtendedProperties();
+
+		if (m_frame->interlaced_frame)
+		{
+			propertySet.Insert(MFSampleExtension_Interlaced, PropertyValue::CreateBoolean(true));
+			propertySet.Insert(MFSampleExtension_BottomFieldFirst, PropertyValue::CreateBoolean(!m_frame->top_field_first));
+			propertySet.Insert(MFSampleExtension_RepeatFirstField, PropertyValue::CreateBoolean(false));
+		}
+		else
+		{
+			propertySet.Insert(MFSampleExtension_Interlaced, PropertyValue::CreateBoolean(false));
+		}
+
+		av_frame_unref(m_frame.get()); // We no longer need the current frame
 	}
-
-	auto YBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[0], m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height);
-	auto UVBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[1], m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2);
-	dataWriter->WriteBytes(YBuffer);
-	dataWriter->WriteBytes(UVBuffer);
-	av_frame_unref(m_pAvFrame);
-	av_frame_free(&m_pAvFrame);
-
-	return S_OK;
 }

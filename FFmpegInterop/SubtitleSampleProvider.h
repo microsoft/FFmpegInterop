@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2017 Microsoft Corporation
+//	Copyright 2019 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -16,11 +16,26 @@
 //
 //*****************************************************************************
 
-namespace FFmpegInterop
+#pragma once
+
+#include <MediaSampleProvider.h>
+
+namespace winrt::FFmpegInterop::implementation
 {
-	runtimeclass MediaThumbnailData
+	class SubtitleSampleProvider :
+		public MediaSampleProvider
 	{
-		Windows.Storage.Streams.IBuffer Buffer{ get; };
-		String Extension{ get; };
+	public:
+		SubtitleSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
+
+		void GetSample(_Inout_ const Windows::Media::Core::MediaStreamSourceSampleRequest& request) override;
+		void QueuePacket(_In_ AVPacket_ptr packet) override;
+
+	protected:
+		void Flush() noexcept override;
+
+	private:
+		Windows::Media::Core::MediaStreamSourceSampleRequest m_sampleRequest{ nullptr };
+		Windows::Media::Core::MediaStreamSourceSampleRequestDeferral m_sampleRequestDeferral{ nullptr };
 	};
 }

@@ -19,14 +19,7 @@
 
 #include "pch.h"
 #include "FFmpegInteropLogging.h"
-
-extern "C"
-{
-#include <libavutil/log.h>
-}
-
-using namespace winrt;
-using namespace winrt::FFmpegInterop;
+#include "FFmpegInteropLogging.g.cpp"
 
 namespace winrt::FFmpegInterop::implementation
 {
@@ -34,7 +27,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void FFmpegInteropLogging::SetLogLevel(const LogLevel& level)
 	{
-		av_log_set_level((int)level);
+		av_log_set_level(static_cast<int>(level));
 	}
 
 	void FFmpegInteropLogging::SetLogProvider(const ILogProvider& logProvider)

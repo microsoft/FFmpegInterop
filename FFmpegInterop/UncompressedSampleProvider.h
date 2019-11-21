@@ -20,17 +20,21 @@
 
 #include "MediaSampleProvider.h"
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
+	// TODO: Minimize resource usage when stream is deselected
 	class UncompressedSampleProvider :
 		public MediaSampleProvider
 	{
 	public:
-		UncompressedSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx);
-
-		HRESULT DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet, int64_t& framePts, int64_t& frameDuration) override;
+		UncompressedSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
 
 	protected:
-		virtual HRESULT ProcessDecodedFrame(const winrt::Windows::Storage::Streams::DataWriter& dataWriter) = 0;
+		void Flush() noexcept override;
+
+		void GetFrame();
+
+		AVCodecContext_ptr m_codecContext;
+		AVFrame_ptr m_frame;
 	};
 }

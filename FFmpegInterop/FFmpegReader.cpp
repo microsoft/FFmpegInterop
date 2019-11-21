@@ -20,77 +20,30 @@
 #include "FFmpegReader.h"
 #include "MediaSampleProvider.h"
 
-using namespace FFmpegInterop;
+using namespace std;
 
-FFmpegReader::FFmpegReader(AVFormatContext* avFormatCtx) :
-	m_pAvFormatCtx(avFormatCtx),
-	m_audioSampleProvider(nullptr),
-	m_audioStreamIndex(AVERROR_STREAM_NOT_FOUND),
-	m_videoSampleProvider(nullptr),
-	m_videoStreamIndex(AVERROR_STREAM_NOT_FOUND),
-	m_subtitleSampleProvider(nullptr),
-	m_subtitleStreamIndex(AVERROR_STREAM_NOT_FOUND)
+namespace winrt::FFmpegInterop::implementation
 {
-}
-
-// Read the next packet from the stream and push it into the appropriate sample provider
-int FFmpegReader::ReadPacket()
-{
-	AVPacket_ptr packet(av_packet_alloc());
-	if (packet == nullptr)
+	FFmpegReader::FFmpegReader(_In_ AVFormatContext* formatContext, _In_ const map<int, MediaSampleProvider*>& streamMap) :
+		m_formatContext(formatContext),
+		m_streamIdMap(streamMap)
 	{
-		return AVERROR(ENOMEM);
+
 	}
 
-	int ret = av_read_frame(m_pAvFormatCtx, packet.get());
-	if (ret < 0)
+	void FFmpegReader::ReadPacket()
 	{
-		return ret;
-	}
+		AVPacket_ptr packet{ av_packet_alloc() };
+		THROW_IF_NULL_ALLOC(packet);
 
-	// Push the packet to the appropriate stream or drop the packet if the stream is not being used
-	if (packet->stream_index == m_audioStreamIndex && m_audioSampleProvider != nullptr)
-	{
-		m_audioSampleProvider->QueuePacket(std::move(packet));
-	}
-	else if (packet->stream_index == m_videoStreamIndex && m_videoSampleProvider != nullptr)
-	{
-		m_videoSampleProvider->QueuePacket(std::move(packet));
-	}
-	else if (packet->stream_index == m_subtitleStreamIndex && m_subtitleSampleProvider != nullptr)
-	{
-		m_subtitleSampleProvider->QueuePacket(std::move(packet));
-	}
+		// Read the next packet and push it into the appropriate sample provider.
+		// Drop the packet if the stream is not being used.
+		THROW_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
 
-	return ret;
-}
-
-void FFmpegReader::SetAudioStream(int audioStreamIndex, MediaSampleProvider* audioSampleProvider)
-{
-	m_audioStreamIndex = audioStreamIndex;
-	m_audioSampleProvider = audioSampleProvider;
-	if (audioSampleProvider != nullptr)
-	{
-		audioSampleProvider->SetCurrentStreamIndex(m_audioStreamIndex);
-	}
-}
-
-void FFmpegReader::SetVideoStream(int videoStreamIndex, MediaSampleProvider* videoSampleProvider)
-{
-	m_videoStreamIndex = videoStreamIndex;
-	m_videoSampleProvider = videoSampleProvider;
-	if (videoSampleProvider != nullptr)
-	{
-		videoSampleProvider->SetCurrentStreamIndex(m_videoStreamIndex);
-	}
-}
-
-void FFmpegReader::SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider* subtitleSampleProvider)
-{
-	m_subtitleStreamIndex = subtitleStreamIndex;
-	m_subtitleSampleProvider = subtitleSampleProvider;
-	if (subtitleSampleProvider != nullptr)
-	{
-		subtitleSampleProvider->SetCurrentStreamIndex(m_subtitleStreamIndex);
+		auto iter = m_streamIdMap.find(packet->stream_index);
+		if (iter != m_streamIdMap.end())
+		{
+			iter->second->QueuePacket(move(packet));
+		}
 	}
 }

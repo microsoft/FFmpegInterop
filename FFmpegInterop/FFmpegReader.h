@@ -18,27 +18,19 @@
 
 #pragma once
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
 	class MediaSampleProvider;
 
 	class FFmpegReader
 	{
 	public:
-		FFmpegReader(AVFormatContext* avFormatCtx);
+		FFmpegReader(_In_ AVFormatContext* formatContext, _In_ const std::map<int, MediaSampleProvider*>& streamMap);
 
-		int ReadPacket();
-		void SetAudioStream(int audioStreamIndex, MediaSampleProvider* audioSampleProvider);
-		void SetVideoStream(int videoStreamIndex, MediaSampleProvider* videoSampleProvider);
-		void SetSubtitleStream(int subtitleStreamIndex, MediaSampleProvider* subtitleSampleProvider);
+		void ReadPacket();
 
 	private:
-		AVFormatContext* m_pAvFormatCtx;
-		MediaSampleProvider* m_audioSampleProvider;
-		int m_audioStreamIndex;
-		MediaSampleProvider* m_videoSampleProvider;
-		int m_videoStreamIndex;
-		MediaSampleProvider* m_subtitleSampleProvider;
-		int m_subtitleStreamIndex;
+		AVFormatContext* m_formatContext;
+		const std::map<int, MediaSampleProvider*>& m_streamIdMap;
 	};
 }

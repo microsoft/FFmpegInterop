@@ -18,39 +18,40 @@
 
 #pragma once
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
 	class FFmpegReader;
 
 	class MediaSampleProvider
 	{
 	public:
-		MediaSampleProvider(FFmpegReader& reader, const AVFormatContext* avFormatCtx, AVCodecContext* avCodecCtx);
-		virtual ~MediaSampleProvider() = default;
-		
-		void SetCurrentStreamIndex(int streamIndex);
-		void DisableStream();
-		void EnableStream();
-		void QueuePacket(AVPacket_ptr packet);
-		void Flush();
+		MediaSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
 
-		virtual winrt::Windows::Media::Core::MediaStreamSample GetNextSample();
-		virtual HRESULT AllocateResources();
-		virtual HRESULT WriteAVPacketToStream(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet);
-		virtual HRESULT DecodeAVPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, const AVPacket_ptr& packet, int64_t& framePts, int64_t& frameDuration);
-		virtual HRESULT GetNextPacket(const winrt::Windows::Storage::Streams::DataWriter& dataWriter, LONGLONG& pts, LONGLONG& dur, bool allowSkip);
+		virtual ~MediaSampleProvider() = default;
+
+		void Select() noexcept;
+		void Deselect() noexcept;
+		void OnSeek(_In_ int64_t seekTime) noexcept;
+
+		virtual void GetSample(_Inout_ const Windows::Media::Core::MediaStreamSourceSampleRequest& request);
+		virtual void QueuePacket(_In_ AVPacket_ptr packet);
 
 	protected:
-		const AVFormatContext* m_pAvFormatCtx;
-		AVCodecContext* m_pAvCodecCtx;
-		int m_streamIndex;
+		AVPacket_ptr GetPacket();
+		bool HasPacket() const noexcept { return !m_packetQueue.empty(); }
+
+		virtual void Flush() noexcept;
+		virtual std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t> GetSampleData();
+		virtual void SetSampleProperties(const Windows::Media::Core::MediaStreamSample& sample) { }
+
+		const AVStream* m_stream;
 
 	private:
+		bool m_isSelected{ false };
 		FFmpegReader& m_reader;
-		bool m_isDiscontinuous;
-		bool m_isEnabled;
+		bool m_isDiscontinuous{ true };
 		std::deque<AVPacket_ptr> m_packetQueue;
 		int64_t m_startOffset;
-		int64_t m_nextFramePts;
+		int64_t m_nextSamplePts;
 	};
 }

@@ -22,14 +22,25 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	struct FFmpegInteropLogging
+	// TODO: Update for trace logging
+	class FFmpegInteropLogging
 	{
-		static void SetLogLevel(FFmpegInterop::LogLevel const& level);
-		static void SetLogProvider(FFmpegInterop::ILogProvider const& logProvider);
+	public:
+		static void SetLogLevel(const FFmpegInterop::LogLevel& level);
+		static void SetLogProvider(const FFmpegInterop::ILogProvider& logProvider);
 		static void SetDefaultLogProvider();
 
 	private:
 		FFmpegInteropLogging() = delete;
 		static ILogProvider s_LogProvider;
+	};
+}
+
+namespace winrt::FFmpegInterop::factory_implementation
+{
+	struct FFmpegInteropLogging :
+		public FFmpegInteropLoggingT<FFmpegInteropLogging, implementation::FFmpegInteropLogging>
+	{
+
 	};
 }

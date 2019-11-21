@@ -98,13 +98,13 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FFmpegBuffer.h" />
     <ClInclude Include="FFmpegInteropLogging.h" />
     <ClInclude Include="FFmpegInteropMSS.h" />
     <ClInclude Include="FFmpegReader.h" />
     <ClInclude Include="H264AVCSampleProvider.h" />
-    <ClInclude Include="H264SampleProvider.h" />
     <ClInclude Include="MediaSampleProvider.h" />
-    <ClInclude Include="MediaThumbnailData.h" />
+    <ClInclude Include="SubtitleSampleProvider.h" />
     <ClInclude Include="Tracing.h" />
     <ClInclude Include="UncompressedAudioSampleProvider.h" />
     <ClInclude Include="UncompressedSampleProvider.h" />
@@ -118,12 +118,13 @@
     <ClCompile Include="FFmpegInteropMSS.cpp" />
     <ClCompile Include="FFmpegReader.cpp" />
     <ClCompile Include="H264AVCSampleProvider.cpp" />
-    <ClCompile Include="H264SampleProvider.cpp" />
     <ClCompile Include="MediaSampleProvider.cpp" />
+    <ClCompile Include="SubtitleSampleProvider.cpp" />
     <ClCompile Include="Tracing.cpp" />
     <ClCompile Include="UncompressedAudioSampleProvider.cpp" />
     <ClCompile Include="UncompressedSampleProvider.cpp" />
     <ClCompile Include="UncompressedVideoSampleProvider.cpp" />
+    <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -134,7 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <Midl Include="FFmpegInteropLogging.idl" />
-    <Midl Include="MediaThumbnailData.idl" />
+    <Midl Include="FFmpegInteropMSS.idl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

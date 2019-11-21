@@ -18,575 +18,563 @@
 
 #include "pch.h"
 #include "FFmpegInteropMSS.h"
-#include "MediaSampleProvider.h"
-#include "H264AVCSampleProvider.h"
-#include "H264SampleProvider.h"
+#include "FFmpegInteropMSS.g.cpp"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
-#include "shcore.h"
-#include "collection.h"
-#include <string>
-#include <locale>
-#include <codecvt>
+#include "H264AVCSampleProvider.h"
+#include "SubtitleSampleProvider.h"
 
-using namespace concurrency;
-using namespace FFmpegInterop;
-using namespace Platform;
-using namespace Windows::Storage::Streams;
-using namespace Windows::Media::MediaProperties;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Storage::Streams;
+using namespace winrt::Windows::Media::Core;
+using namespace winrt::Windows::Media::MediaProperties;
 using namespace std;
 
-// Size of the buffer when reading a stream
-const int FILESTREAMBUFFERSZ = 16384;
-
-// Mapping of FFMPEG codec types to Windows recognized subtype strings
-IMapView<int, String^>^ create_map()
+namespace
 {
-	Platform::Collections::Map<int, String^>^ m = ref new Platform::Collections::Map<int, String^>();
-
-	// Audio codecs
-	m->Insert(AV_CODEC_ID_OPUS, L"OPUS");
-
-	// Subtitle codecs
-	m->Insert(AV_CODEC_ID_ASS, L"SSA");
-	m->Insert(AV_CODEC_ID_DVD_SUBTITLE, L"VobSub");
-	m->Insert(AV_CODEC_ID_HDMV_PGS_SUBTITLE, L"PGS");
-	m->Insert(AV_CODEC_ID_SSA, L"SSA");
-	m->Insert(AV_CODEC_ID_SUBRIP, L"SRT");
-	m->Insert(AV_CODEC_ID_TEXT, L"SRT");
-
-	return m->GetView();
-}
-IMapView<int, String^>^ AvCodecMap = create_map();
-
-// Static functions passed to FFmpeg
-static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
-static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
-
-// Flag for ffmpeg global setup
-static bool isRegistered = false;
-
-void FFmpegInterop::FFmpegInteropMSS::ReleaseFileStream()
-{
-	mutexGuard.lock();
-	if (fileStreamData != nullptr)
+	// Function to read from file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
+	int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 	{
-		fileStreamData->Release();
-		fileStreamData = nullptr;
-	}
+		IStream* fileStream = reinterpret_cast<IStream*>(ptr);
+		ULONG bytesRead = 0;
 
-	mutexGuard.unlock();
-}
-
-// Initialize an FFmpegInteropObject
-FFmpegInteropMSS::FFmpegInteropMSS()
-	: avDict(nullptr)
-	, avIOCtx(nullptr)
-	, avFormatCtx(nullptr)
-	, avAudioCodecCtx(nullptr)
-	, avVideoCodecCtx(nullptr)
-	, audioStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, subtitleStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, thumbnailStreamIndex(AVERROR_STREAM_NOT_FOUND)
-	, audioStreamSelected(false)
-	, videoStreamSelected(false)
-	, subtitleStreamSelected(false)
-	, fileStreamData(nullptr)
-	, fileStreamBuffer(nullptr)
-{
-	if (!isRegistered)
-	{
-		isRegistered = true;
-	}
-}
-
-FFmpegInteropMSS::~FFmpegInteropMSS()
-{
-	mutexGuard.lock();
-	if (mss)
-	{
-		mss->Starting -= startingRequestedToken;
-		mss->SampleRequested -= sampleRequestedToken;
-		mss->SwitchStreamsRequested -= switchStreamsRequestedToken;
-		mss = nullptr;
-	}
-
-	// Clear our data
-	audioSampleProvider = nullptr;
-	videoSampleProvider = nullptr;
-
-	if (m_pReader != nullptr)
-	{
-		m_pReader->SetAudioStream(AVERROR_STREAM_NOT_FOUND, nullptr);
-		m_pReader->SetVideoStream(AVERROR_STREAM_NOT_FOUND, nullptr);
-		m_pReader->SetSubtitleStream(AVERROR_STREAM_NOT_FOUND, nullptr);
-		m_pReader = nullptr;
-	}
-
-	avcodec_close(avVideoCodecCtx);
-	avcodec_close(avAudioCodecCtx);
-	avformat_close_input(&avFormatCtx);
-	av_free(avIOCtx);
-	av_dict_free(&avDict);
-
-	if (fileStreamData != nullptr)
-	{
-		fileStreamData->Release();
-		fileStreamData = nullptr;
-	}
-	mutexGuard.unlock();
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
-{
-	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(stream, forceAudioDecode, forceVideoDecode, ffmpegOptions, mss)))
-	{
-		// We failed to initialize, clear the variable to return failure
-		interopMSS = nullptr;
-	}
-
-	return interopMSS;
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
-{
-	return CreateFFmpegInteropMSSFromStream(stream, forceAudioDecode, forceVideoDecode, nullptr, nullptr);
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode)
-{
-	return CreateFFmpegInteropMSSFromStream(stream, forceAudioDecode, forceVideoDecode, nullptr);
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
-{
-	auto interopMSS = ref new FFmpegInteropMSS();
-	if (FAILED(interopMSS->CreateMediaStreamSource(uri, forceAudioDecode, forceVideoDecode, ffmpegOptions)))
-	{
-		// We failed to initialize, clear the variable to return failure
-		interopMSS = nullptr;
-	}
-
-	return interopMSS;
-}
-
-FFmpegInteropMSS^ FFmpegInteropMSS::CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode)
-{
-	return CreateFFmpegInteropMSSFromUri(uri, forceAudioDecode, forceVideoDecode, nullptr);
-}
-
-MediaStreamSource^ FFmpegInteropMSS::GetMediaStreamSource()
-{
-	return mss;
-}
-
-HRESULT FFmpegInteropMSS::CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions)
-{
-	HRESULT hr = S_OK;
-	const char* charStr = nullptr;
-	if (!uri)
-	{
-		hr = E_INVALIDARG;
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		avFormatCtx = avformat_alloc_context();
-		if (avFormatCtx == nullptr)
+		if (FAILED(fileStream->Read(buf, bufSize, &bytesRead)))
 		{
-			hr = E_OUTOFMEMORY;
+			return AVERROR_EXTERNAL;
+		}
+
+		// Assume we've reached EOF if we didn't read any bytes
+		if (bytesRead == 0)
+		{
+			return AVERROR_EOF;
+		}
+
+		return bytesRead;
+	}
+
+	// Function to seek in file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
+	int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
+	{
+		IStream* fileStream = reinterpret_cast<IStream*>(ptr);
+		LARGE_INTEGER in{ 0 };
+		in.QuadPart = pos;
+		ULARGE_INTEGER out{ 0 };
+
+		if (FAILED(fileStream->Seek(in, whence, &out)))
+		{
+			return AVERROR_EXTERNAL;
+		}
+
+		return out.QuadPart;
+	}
+}
+
+namespace winrt::FFmpegInterop::implementation
+{
+	FFmpegInterop::FFmpegInteropMSS FFmpegInteropMSS::CreateFromStream(const IRandomAccessStream& fileStream, const MediaStreamSource& mss)
+	{
+		auto logger{ CreateFromStreamActivity::Start() };
+
+		FFmpegInterop::FFmpegInteropMSS ffmpegInteropMSS{ make<FFmpegInteropMSS>(fileStream, mss) };
+
+		logger.Stop();
+		return ffmpegInteropMSS;
+	}
+
+	FFmpegInterop::FFmpegInteropMSS FFmpegInteropMSS::CreateFromUri(const hstring& uri, const MediaStreamSource& mss)
+	{
+		auto logger{ CreateFromUriActivity::Start() };
+
+		FFmpegInterop::FFmpegInteropMSS ffmpegInteropMSS{ make<FFmpegInteropMSS>(uri, mss) };
+
+		logger.Stop();
+		return ffmpegInteropMSS;
+	}
+
+	FFmpegInteropMSS::FFmpegInteropMSS(const MediaStreamSource& mss) :
+		m_mss(mss),
+		m_formatContext(avformat_alloc_context()),
+		m_reader(m_formatContext.get(), m_streamIdMap)
+	{
+		THROW_HR_IF_NULL(E_INVALIDARG, mss);
+		THROW_IF_NULL_ALLOC(m_formatContext);
+	}
+
+	FFmpegInteropMSS::FFmpegInteropMSS(const IRandomAccessStream& fileStream, const MediaStreamSource& mss) :
+		FFmpegInteropMSS(mss)
+	{
+		try
+		{
+			OpenFile(fileStream);
+			InitFFmpegContext();
+		}
+		catch (...)
+		{
+			// Notify the MSS that an error occurred
+			mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+			throw;
 		}
 	}
 
-	if (SUCCEEDED(hr))
+	FFmpegInteropMSS::FFmpegInteropMSS(const hstring& uri, const MediaStreamSource& mss) :
+		FFmpegInteropMSS(mss)
 	{
-		// Populate AVDictionary avDict based on PropertySet ffmpegOptions. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-		hr = ParseOptions(ffmpegOptions);
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		std::wstring uriW(uri->Begin());
-		std::string uriA(uriW.begin(), uriW.end());
-		charStr = uriA.c_str();
-
-		// Open media in the given URI using the specified options
-		if (avformat_open_input(&avFormatCtx, charStr, NULL, &avDict) < 0)
+		try
 		{
-			hr = E_FAIL; // Error opening file
+			wstring_convert<codecvt_utf16<wchar_t>> conv;
+			string uriA{ conv.to_bytes(uri.c_str()) };
+
+			OpenFile(uriA.c_str());
+			InitFFmpegContext();
 		}
-
-		// avDict is not NULL only when there is an issue with the given ffmpegOptions such as invalid key, value type etc. Iterate through it to see which one is causing the issue.
-		if (avDict != nullptr)
+		catch (...)
 		{
-			DebugMessage(L"Invalid FFmpeg option(s)");
-			av_dict_free(&avDict);
-			avDict = nullptr;
+			// Notify the MSS that an error occurred
+			mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+			throw;
 		}
 	}
 
-	if (SUCCEEDED(hr))
+	void FFmpegInteropMSS::OpenFile(const IRandomAccessStream& fileStream)
 	{
-		this->mss = nullptr;
-		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
-	}
+		// Convert async IRandomAccessStream to sync IStream
+		THROW_HR_IF_NULL(E_INVALIDARG, fileStream);
+		THROW_IF_FAILED(CreateStreamOverRandomAccessStream(reinterpret_cast<::IUnknown*>(get_abi(fileStream)), __uuidof(m_fileStream), m_fileStream.put_void()));
 
-	return hr;
-}
-
-HRESULT FFmpegInteropMSS::CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss)
-{
-	HRESULT hr = S_OK;
-	if (!stream)
-	{
-		hr = E_INVALIDARG;
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		// Convert asynchronous IRandomAccessStream to synchronous IStream. This API requires shcore.h and shcore.lib
-		hr = CreateStreamOverRandomAccessStream(reinterpret_cast<IUnknown*>(stream), IID_PPV_ARGS(&fileStreamData));
-	}
-
-	if (SUCCEEDED(hr))
-	{
 		// Setup FFmpeg custom IO to access file as stream. This is necessary when accessing any file outside of app installation directory and appdata folder.
 		// Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
-		fileStreamBuffer = (unsigned char*)av_malloc(FILESTREAMBUFFERSZ);
-		if (fileStreamBuffer == nullptr)
+		constexpr int c_ioBufferSize = 16 * 1024;
+		AVBlob_ptr ioBuffer{ av_malloc(c_ioBufferSize) };
+		THROW_IF_NULL_ALLOC(ioBuffer);
+
+		m_ioContext.reset(avio_alloc_context(reinterpret_cast<unsigned char*>(ioBuffer.get()), c_ioBufferSize, 0, m_fileStream.get(), FileStreamRead, 0, FileStreamSeek));
+		THROW_IF_NULL_ALLOC(m_ioContext);
+		ioBuffer.release(); // The IO context has taken ownership of the buffer
+
+		m_formatContext->pb = m_ioContext.get();
+
+		OpenFile(nullptr);
+	}
+
+	void FFmpegInteropMSS::OpenFile(const char* uri)
+	{
+		// TODO: Add ffmpeg config options
+
+		// Open the format context for the stream
+		AVFormatContext* formatContext = m_formatContext.release();
+		THROW_IF_FFMPEG_FAILED(avformat_open_input(&formatContext, uri, nullptr, nullptr)); // The format context is freed on failure
+		m_formatContext.reset(exchange(formatContext, nullptr));
+	}
+
+	void FFmpegInteropMSS::InitFFmpegContext()
+	{
+		THROW_IF_FFMPEG_FAILED(avformat_find_stream_info(m_formatContext.get(), nullptr));
+
+		bool hasVideo = false;
+		bool hasAudio = false;
+
+		for (unsigned int i = 0; i < m_formatContext->nb_streams; i++)
 		{
-			hr = E_OUTOFMEMORY;
-		}
-	}
+			const AVStream* stream = m_formatContext->streams[i];
+			IMediaStreamDescriptor streamDescriptor{ nullptr };
+			unique_ptr<MediaSampleProvider> sampleProvider;
 
-	if (SUCCEEDED(hr))
-	{
-		avIOCtx = avio_alloc_context(fileStreamBuffer, FILESTREAMBUFFERSZ, 0, fileStreamData, FileStreamRead, 0, FileStreamSeek);
-		if (avIOCtx == nullptr)
-		{
-			hr = E_OUTOFMEMORY;
-		}
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		avFormatCtx = avformat_alloc_context();
-		if (avFormatCtx == nullptr)
-		{
-			hr = E_OUTOFMEMORY;
-		}
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		// Populate AVDictionary avDict based on PropertySet ffmpegOptions. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-		hr = ParseOptions(ffmpegOptions);
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		avFormatCtx->pb = avIOCtx;
-		avFormatCtx->flags |= AVFMT_FLAG_CUSTOM_IO;
-
-		// Open media file using custom IO setup above instead of using file name. Opening a file using file name will invoke fopen C API call that only have
-		// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
-		if (avformat_open_input(&avFormatCtx, "", NULL, &avDict) < 0)
-		{
-			hr = E_FAIL; // Error opening file
-		}
-
-		// avDict is not NULL only when there is an issue with the given ffmpegOptions such as invalid key, value type etc. Iterate through it to see which one is causing the issue.
-		if (avDict != nullptr)
-		{
-			DebugMessage(L"Invalid FFmpeg option(s)");
-			av_dict_free(&avDict);
-			avDict = nullptr;
-		}
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		this->mss = mss;
-		hr = InitFFmpegContext(forceAudioDecode, forceVideoDecode);
-	}
-
-	return hr;
-}
-
-HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode)
-{
-	HRESULT hr = S_OK;
-
-	if (SUCCEEDED(hr))
-	{
-		if (avformat_find_stream_info(avFormatCtx, NULL) < 0)
-		{
-			hr = E_FAIL; // Error finding info
-		}
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		m_pReader = ref new FFmpegReader(avFormatCtx);
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		// Find the audio stream and its decoder
-		AVCodec* avAudioCodec = nullptr;
-		audioStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, &avAudioCodec, 0);
-		if (audioStreamIndex != AVERROR_STREAM_NOT_FOUND && avAudioCodec)
-		{
-			// allocate a new decoding context
-			avAudioCodecCtx = avcodec_alloc_context3(avAudioCodec);
-			if (!avAudioCodecCtx)
+			switch (stream->codecpar->codec_type)
 			{
-				hr = E_OUTOFMEMORY;
-				DebugMessage(L"Could not allocate a decoding context\n");
-				avformat_close_input(&avFormatCtx);
-			}
+			case AVMEDIA_TYPE_AUDIO:
+				tie(streamDescriptor, sampleProvider) = CreateAudioStream(stream);
 
-			if (SUCCEEDED(hr))
-			{
-				// initialize the stream parameters with demuxer information
-				if (avcodec_parameters_to_context(avAudioCodecCtx, avFormatCtx->streams[audioStreamIndex]->codecpar) < 0)
+				if (!hasAudio)
 				{
-					hr = E_FAIL;
-					avformat_close_input(&avFormatCtx);
-					avcodec_free_context(&avAudioCodecCtx);
-				}
+					hasAudio = true;
 
-				if (SUCCEEDED(hr))
-				{
-					if (avcodec_open2(avAudioCodecCtx, avAudioCodec, NULL) < 0)
-					{
-						avAudioCodecCtx = nullptr;
-						hr = E_FAIL;
-					}
-					else
-					{
-						// Detect audio format and create audio stream descriptor accordingly
-						hr = CreateAudioStreamDescriptor(forceAudioDecode);
-						if (SUCCEEDED(hr))
-						{
-							hr = audioSampleProvider->AllocateResources();
-							if (SUCCEEDED(hr))
-							{
-								audioStreamSelected = true;
-								audioSampleProvider->EnableStream();
-								m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
-							}
-						}
-
-						if (SUCCEEDED(hr))
-						{
-							// Convert audio codec name for property
-							hr = ConvertCodecName(avAudioCodec->name, &audioCodecName);
-						}
-					}
+					// The first audio stream is selected
+					sampleProvider->Select();
 				}
-			}
-		}
-		else if (!forceAudioDecode)
-		{
-			// FFMPEG doesn't have the codec but we can try to output the encoded type
-			audioStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
-			
-			if (audioStreamIndex != AVERROR_STREAM_NOT_FOUND)
-			{
-				// Create audio stream descriptor from parameters
-				hr = CreateAudioStreamDescriptorFromParameters(avFormatCtx->streams[audioStreamIndex]->codecpar);
-				if (SUCCEEDED(hr))
-				{
-					hr = audioSampleProvider->AllocateResources();
-					if (SUCCEEDED(hr))
-					{
-						audioStreamSelected = true;
-						audioSampleProvider->EnableStream();
-						m_pReader->SetAudioStream(audioStreamIndex, audioSampleProvider);
-					}
-				}
-			}
-		}
-	}
+				break;
 
-	if (SUCCEEDED(hr))
-	{
-		// Find the video stream and its decoder
-		AVCodec* avVideoCodec = nullptr;
-		videoStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &avVideoCodec, 0);
-		if (videoStreamIndex != AVERROR_STREAM_NOT_FOUND && avVideoCodec)
-		{
-			// FFmpeg identifies album/cover art from a music file as a video stream
-			// Avoid creating unnecessarily video stream from this album/cover art
-			if (avFormatCtx->streams[videoStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
-			{
-				thumbnailStreamIndex = videoStreamIndex;
-				videoStreamIndex = AVERROR_STREAM_NOT_FOUND;
-				avVideoCodec = nullptr;
-			}
-			else
-			{
-				thumbnailStreamIndex = AVERROR_STREAM_NOT_FOUND;
-				AVDictionaryEntry *rotate_tag = av_dict_get(avFormatCtx->streams[videoStreamIndex]->metadata, "rotate", NULL, 0);
-				if (rotate_tag != NULL)
-				{
-					rotateVideo = true;
-					rotationAngle = atoi(rotate_tag->value);
-				}
-				else
-				{
-					rotateVideo = false;
-				}
-				// allocate a new decoding context
-				avVideoCodecCtx = avcodec_alloc_context3(avVideoCodec);
-				if (!avVideoCodecCtx)
-				{
-					DebugMessage(L"Could not allocate a decoding context\n");
-					avformat_close_input(&avFormatCtx);
-					hr = E_OUTOFMEMORY;
-				}
-
-				if (SUCCEEDED(hr))
-				{
-					// initialize the stream parameters with demuxer information
-					if (avcodec_parameters_to_context(avVideoCodecCtx, avFormatCtx->streams[videoStreamIndex]->codecpar) < 0)
-					{
-						avformat_close_input(&avFormatCtx);
-						avcodec_free_context(&avVideoCodecCtx);
-						hr = E_FAIL;
-					}
-				}
-
-				if (SUCCEEDED(hr))
-				{
-					// enable multi threading
-					unsigned threads = std::thread::hardware_concurrency();
-					if (threads > 0)
-					{
-						avVideoCodecCtx->thread_count = threads;
-						avVideoCodecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
-					}
-
-					if (avcodec_open2(avVideoCodecCtx, avVideoCodec, NULL) < 0)
-					{
-						avVideoCodecCtx = nullptr;
-						hr = E_FAIL; // Cannot open the video codec
-					}
-					else
-					{
-						// Detect video format and create video stream descriptor accordingly
-						hr = CreateVideoStreamDescriptor(forceVideoDecode);
-						if (SUCCEEDED(hr))
-						{
-							hr = videoSampleProvider->AllocateResources();
-							if (SUCCEEDED(hr))
-							{
-								videoStreamSelected = true;
-								videoSampleProvider->EnableStream();
-								m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
-							}
-						}
-
-						if (SUCCEEDED(hr))
-						{
-							// Convert video codec name for property
-							hr = ConvertCodecName(avVideoCodec->name, &videoCodecName);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		// Get the subtitle stream
-		for (unsigned int i = 0; i < avFormatCtx->nb_streams; i++)
-		{
-			if (avFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
-			{
-				if (FAILED(CreateSubtitleStreamDescriptor(avFormatCtx->streams[i])))
+			case AVMEDIA_TYPE_VIDEO:
+				// FFmpeg identifies album/cover art from a music file as a video stream
+				// Avoid creating unnecessarily video stream from this album/cover art
+				if (stream->disposition == AV_DISPOSITION_ATTACHED_PIC)
 				{
 					continue;
 				}
 
-				subtitleStreamIndex = i;
+				tie(streamDescriptor, sampleProvider) = CreateVideoStream(stream);
 
-				hr = subtitleSampleProvider->AllocateResources();
-				if (SUCCEEDED(hr))
+				if (!hasVideo)
 				{
-					m_pReader->SetSubtitleStream(subtitleStreamIndex, subtitleSampleProvider);
-				}
+					hasVideo = true;
 
-				if (SUCCEEDED(hr))
-				{
-					hr = ConvertCodecName(avcodec_get_name(avFormatCtx->streams[i]->codecpar->codec_id), &subtitleCodecName);
+					// The first video stream is selected
+					sampleProvider->Select();
 				}
-
 				break;
+
+			case AVMEDIA_TYPE_SUBTITLE:
+				try
+				{
+					tie(streamDescriptor, sampleProvider) = CreateSubtitleStream(stream);
+				}
+				catch (...)
+				{
+					if (to_hresult() == MF_E_INVALIDMEDIATYPE)
+					{
+						// We don't support the subtitle codec. Just ignore this stream.
+						continue;
+					}
+
+					throw;
+				}
+				break;
+
+			default:
+				// Ignore this stream
+				continue;
 			}
-		}
-	}
 
-	if (SUCCEEDED(hr))
-	{
-		// Create the MSS if one was not provided
-		if (mss == nullptr)
-		{
-			mss = ref new MediaStreamSource(nullptr);
+			// Add the stream to the MSS
+			m_mss.AddStreamDescriptor(streamDescriptor);
+
+			// Add the stream to our maps
+			m_streamIdMap[i] = sampleProvider.get();
+			m_streamDescriptorMap[move(streamDescriptor)] = move(sampleProvider);
 		}
 
-		// Add streams to the MSS
-		if (videoStreamDescriptor)
+		if (m_formatContext->duration > 0)
 		{
-			mss->AddStreamDescriptor(videoStreamDescriptor);
-		}
-
-		if (audioStreamDescriptor)
-		{
-			mss->AddStreamDescriptor(audioStreamDescriptor);
-		}
-
-		if (subtitleStreamDescriptor)
-		{
-			mss->AddStreamDescriptor(subtitleStreamDescriptor);
-		}
-
-		// Set the duration
-		mediaDuration = { LONGLONG(avFormatCtx->duration * 10000000 / double(AV_TIME_BASE)) }; // Convert media duration from AV_TIME_BASE to TimeSpan unit
-
-		if (mediaDuration.Duration > 0)
-		{
-			mss->Duration = mediaDuration;
-			mss->CanSeek = true;
+			// Set the duration
+			m_mss.Duration(TimeSpan{ static_cast<int64_t>(static_cast<double>(m_formatContext->duration) * HNS_PER_SEC / AV_TIME_BASE) });
+			m_mss.CanSeek(true);
 		}
 		else
 		{
 			// Set buffer time to 0 for realtime streaming to reduce latency
-			mss->BufferTime = { 0 };
+			m_mss.BufferTime(TimeSpan{ 0 });
 		}
 
-		// Register event handlers
-		startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);
-		sampleRequestedToken = mss->SampleRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSampleRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSampleRequested);
-		switchStreamsRequestedToken = mss->SwitchStreamsRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSwitchStreamsRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSwitchStreamsRequested);
+		// Register event handlers. The delegates hold strong references to tie the lifetime of this object to the MSS.
+		m_startingEventToken = m_mss.Starting({ get_strong(), &FFmpegInteropMSS::OnStarting });
+		m_sampleRequestedEventToken = m_mss.SampleRequested({ get_strong(), &FFmpegInteropMSS::OnSampleRequested });
+		m_switchStreamsRequestedEventToken = m_mss.SwitchStreamsRequested({ get_strong(), &FFmpegInteropMSS::OnSwitchStreamsRequested });
+		m_closedEventToken = m_mss.Closed({ get_strong(), &FFmpegInteropMSS::OnClosed });
+	}
+	
+	tuple<AudioStreamDescriptor, unique_ptr<MediaSampleProvider>> FFmpegInteropMSS::CreateAudioStream(const AVStream* stream)
+	{
+		AudioEncodingProperties audioEncProp{ nullptr };
+		unique_ptr<MediaSampleProvider> audioSampleProvider;
+
+		switch (stream->codecpar->codec_id)
+		{
+		case AV_CODEC_ID_AAC:
+			if (stream->codecpar->extradata_size == 0)
+			{
+				audioEncProp = AudioEncodingProperties::CreateAacAdts(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
+			}
+			else
+			{
+				audioEncProp = AudioEncodingProperties::CreateAac(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
+			}
+
+			audioSampleProvider = make_unique<MediaSampleProvider>(stream, m_reader);
+			break;
+
+		case AV_CODEC_ID_MP3:
+			audioEncProp = AudioEncodingProperties::CreateMp3(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
+			audioSampleProvider = make_unique<MediaSampleProvider>(stream, m_reader);
+			break;
+
+		case AV_CODEC_ID_OPUS:
+			WINRT_ASSERT(c_codecMap.find(stream->codecpar->codec_id) != c_codecMap.end());
+
+			audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+			audioEncProp.Subtype(c_codecMap.at(stream->codecpar->codec_id));
+			audioEncProp.SampleRate(stream->codecpar->sample_rate);
+			audioEncProp.ChannelCount(stream->codecpar->channels);
+			audioEncProp.Bitrate(static_cast<uint32_t>(stream->codecpar->bit_rate));
+
+			audioSampleProvider = make_unique<MediaSampleProvider>(stream, m_reader);
+			break;
+
+		default:
+			constexpr uint32_t bitsPerSample = 16;
+			audioEncProp = AudioEncodingProperties::CreatePcm(stream->codecpar->sample_rate, stream->codecpar->channels, bitsPerSample);
+			audioSampleProvider = make_unique<UncompressedAudioSampleProvider>(stream, m_reader);
+			break;
+		}
+
+		AudioStreamDescriptor audioStreamDescriptor{ audioEncProp };
+		SetStreamDescriptorProperties(stream, audioStreamDescriptor);
+
+		return { move(audioStreamDescriptor), move(audioSampleProvider) };
+	}
+
+	tuple<VideoStreamDescriptor, unique_ptr<MediaSampleProvider>> FFmpegInteropMSS::CreateVideoStream(const AVStream* stream)
+	{
+		VideoEncodingProperties videoEncProp{ nullptr };
+		unique_ptr<MediaSampleProvider> videoSampleProvider;
+		bool isUncompressedFormat = false;
+
+		switch (stream->codecpar->codec_id)
+		{
+		case AV_CODEC_ID_H264:
+			videoEncProp = VideoEncodingProperties::CreateH264();
+			videoSampleProvider = make_unique<H264AVCSampleProvider>(stream, m_reader);
+			break;
+
+		default:
+			isUncompressedFormat = true;
+			videoEncProp = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12(), stream->codecpar->width, stream->codecpar->height);
+			videoSampleProvider = make_unique<UncompressedVideoSampleProvider>(stream, m_reader);
+
+			// TODO: Update framerate from AVCodecContext
+			break;
+		}
+
+		MediaPropertySet videoProp{ videoEncProp.Properties() };
+
+		if (isUncompressedFormat)
+		{
+			videoProp.Insert(MF_MT_INTERLACE_MODE, PropertyValue::CreateUInt32(MFVideoInterlace_MixedInterlaceOrProgressive));
+		}
+		else
+		{
+			videoEncProp.ProfileId(stream->codecpar->profile);
+			videoEncProp.Height(stream->codecpar->height);
+			videoEncProp.Width(stream->codecpar->width);
+		}
+
+		if (stream->codecpar->sample_aspect_ratio.num > 0 && stream->codecpar->sample_aspect_ratio.den != 0)
+		{
+			MediaRatio pixelAspectRatio{ videoEncProp.PixelAspectRatio() };
+			pixelAspectRatio.Numerator(stream->codecpar->sample_aspect_ratio.num);
+			pixelAspectRatio.Denominator(stream->codecpar->sample_aspect_ratio.den);
+		}
+
+		const AVDictionaryEntry* rotateTag = av_dict_get(stream->metadata, "rotate", nullptr, 0);
+		if (rotateTag != nullptr)
+		{
+			videoProp.Insert(MF_MT_VIDEO_ROTATION, PropertyValue::CreateUInt32(atoi(rotateTag->value)));
+		}
+
+		if (stream->avg_frame_rate.num != 0 || stream->avg_frame_rate.den != 0)
+		{
+			MediaRatio frameRate{ videoEncProp.FrameRate() };
+			frameRate.Numerator(stream->avg_frame_rate.num);
+			frameRate.Denominator(stream->avg_frame_rate.den);
+		}
+
+		videoEncProp.Bitrate(static_cast<uint32_t>(stream->codecpar->bit_rate));
+
+		VideoStreamDescriptor videoStreamDescriptor{ videoEncProp };
+		SetStreamDescriptorProperties(stream, videoStreamDescriptor);
+		
+		return { move(videoStreamDescriptor), move(videoSampleProvider) };
+	}
+
+	tuple<TimedMetadataStreamDescriptor, unique_ptr<MediaSampleProvider>> FFmpegInteropMSS::CreateSubtitleStream(const AVStream* stream)
+	{
+		// Check if we recognize the codec
+		auto subtypeIter = c_codecMap.find(stream->codecpar->codec_id);
+		THROW_HR_IF(MF_E_INVALIDMEDIATYPE, subtypeIter == c_codecMap.end());
+
+		// Create encoding properties
+		TimedMetadataEncodingProperties subtitleEncProp;
+
+		subtitleEncProp.Subtype(subtypeIter->second);
+
+		if (stream->codecpar->extradata != nullptr && stream->codecpar->extradata_size > 0)
+		{
+			subtitleEncProp.SetFormatUserData({ stream->codecpar->extradata, stream->codecpar->extradata + stream->codecpar->extradata_size });
+		}
+
+		// Create stream descriptor
+		TimedMetadataStreamDescriptor subtitleStreamDescriptor{ subtitleEncProp };
+		SetStreamDescriptorProperties(stream, subtitleStreamDescriptor);
+
+		return { move(subtitleStreamDescriptor), make_unique<SubtitleSampleProvider>(stream, m_reader) };
+	}
+
+	void FFmpegInteropMSS::SetStreamDescriptorProperties(const AVStream* stream, const IMediaStreamDescriptor& streamDescriptor)
+	{
+		wstring_convert<codecvt_utf16<wchar_t>> conv;
+
+		const AVDictionaryEntry* titleTag = av_dict_get(stream->metadata, "title", nullptr, 0);
+		if (titleTag != nullptr)
+		{
+			streamDescriptor.Name(conv.from_bytes(titleTag->value));
+		}
+
+		const AVDictionaryEntry* languageTag = av_dict_get(stream->metadata, "language", nullptr, 0);
+		if (languageTag != nullptr)
+		{
+			streamDescriptor.Language(conv.from_bytes(languageTag->value));
+		}
+	}
+
+	void FFmpegInteropMSS::OnStarting(const MediaStreamSource& sender, const MediaStreamSourceStartingEventArgs& args)
+	{
+		const MediaStreamSourceStartingRequest request{ args.Request() };
+		const TimeSpan startPosition{ request.StartPosition().Value() };
+
+		auto logger{ OnStartingActivity::Start() };
+		lock_guard<mutex> lock{ m_lock };
+
+		try
+		{
+			// Convert the seek time from HNS to AV_TIME_BASE
+			int64_t seekTime = static_cast<int64_t>(static_cast<double>(startPosition.count()) * AV_TIME_BASE / HNS_PER_SEC);
+
+			if (m_formatContext->start_time != AV_NOPTS_VALUE)
+			{
+				// Adjust the seek time by the start time offset
+				seekTime += m_formatContext->start_time;
+			}
+
+			THROW_HR_IF(MF_E_INVALID_TIMESTAMP, seekTime > m_formatContext->duration);
+			THROW_IF_FFMPEG_FAILED(avformat_seek_file(m_formatContext.get(), -1, numeric_limits<int64_t>::min(), seekTime, seekTime, 0));
+
+			for (auto& [streamId, stream] : m_streamIdMap)
+			{
+				stream->OnSeek(seekTime);
+			}
+
+			request.SetActualStartPosition(startPosition);
+
+			logger.Stop();
+		}
+		catch (...)
+		{
+			// Notify the MSS that an error occurred
+			m_mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+		}
+	}
+
+	void FFmpegInteropMSS::OnSampleRequested(const MediaStreamSource& sender, const MediaStreamSourceSampleRequestedEventArgs& args)
+	{
+		const MediaStreamSourceSampleRequest& request = args.Request();
+
+		auto logger{ OnSampleRequestedActivity::Start() };
+		lock_guard<mutex> lock{ m_lock };
+
+		try
+		{
+			m_streamDescriptorMap.at(request.StreamDescriptor())->GetSample(request);
+
+			logger.Stop();
+		}
+		catch (...)
+		{
+			// Notify the MSS that an error occurred
+			m_mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+		}
+	}
+
+	void FFmpegInteropMSS::OnSwitchStreamsRequested(const MediaStreamSource& sender, const MediaStreamSourceSwitchStreamsRequestedEventArgs& args)
+	{
+		const MediaStreamSourceSwitchStreamsRequest request{ args.Request() };
+		const IMediaStreamDescriptor oldStreamDescriptor{ request.OldStreamDescriptor() };
+		const IMediaStreamDescriptor newStreamDescriptor{ request.NewStreamDescriptor() };
+
+		// The old/new stream descriptors should not be the same and at least one should be valid.
+		WINRT_ASSERT(oldStreamDescriptor != newStreamDescriptor);
+
+		auto logger{ OnSwitchStreamsRequestedActivity::Start() };
+		lock_guard<mutex> lock{ m_lock };
+
+		try
+		{
+			if (oldStreamDescriptor != nullptr)
+			{
+				m_streamDescriptorMap.at(oldStreamDescriptor)->Deselect();
+			}
+
+			if (newStreamDescriptor != nullptr)
+			{
+				m_streamDescriptorMap.at(newStreamDescriptor)->Select();
+			}
+
+			logger.Stop();
+		}
+		catch (...)
+		{
+			// Notify the MSS that an error occurred
+			m_mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+		}
+	}
+
+	void FFmpegInteropMSS::OnClosed(const MediaStreamSource& sender, const MediaStreamSourceClosedEventArgs& args)
+	{
+		auto logger{ OnClosedActivity::Start() };
+
+		lock_guard<mutex> lock{ m_lock };
+
+		// Unregister event handlers
+		m_mss.Starting(m_startingEventToken);
+		m_mss.SampleRequested(m_sampleRequestedEventToken);
+		m_mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
+		m_mss.Closed(m_closedEventToken);
+
+		// Release all references and clear all data structures
+		m_mss = nullptr;
+		m_fileStream = nullptr;
+		m_ioContext.reset();
+		m_formatContext.reset();
+		m_streamDescriptorMap.clear();
+		m_streamIdMap.clear();
+
+		logger.Stop();
+	}
+}
+
+/*
+HRESULT FFmpegInteropMSS::ParseOptions(PropertySet^ ffmpegOptions)
+{
+	HRESULT hr = S_OK;
+
+	// Convert FFmpeg options given in PropertySet to AVDictionary. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
+	if (ffmpegOptions != nullptr)
+	{
+		auto options = ffmpegOptions->First();
+
+		while (options->HasCurrent)
+		{
+			String^ key = options->Current->Key;
+			std::wstring keyW(key->Begin());
+			std::string keyA(keyW.begin(), keyW.end());
+			const char* keyChar = keyA.c_str();
+
+			// Convert value from Object^ to const char*. avformat_open_input will internally convert value from const char* to the correct type
+			String^ value = options->Current->Value->ToString();
+			std::wstring valueW(value->Begin());
+			std::string valueA(valueW.begin(), valueW.end());
+			const char* valueChar = valueA.c_str();
+
+			// Add key and value pair entry
+			if (av_dict_set(&m_ffmpegOptions, keyChar, valueChar, 0) < 0)
+			{
+				hr = E_INVALIDARG;
+				break;
+			}
+
+			options->MoveNext();
+		}
 	}
 
 	return hr;
 }
 
-MediaThumbnailData ^ FFmpegInterop::FFmpegInteropMSS::ExtractThumbnail()
+MediaThumbnailData ^ FFmpegInteropMSS::ExtractThumbnail()
 {
 	if (thumbnailStreamIndex != AVERROR_STREAM_NOT_FOUND)
 	{
 		// FFmpeg identifies album/cover art from a music file as a video stream
 		// Avoid creating unnecessarily video stream from this album/cover art
-		if (avFormatCtx->streams[thumbnailStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
+		if (m_formatContext->streams[thumbnailStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
 		{
-			auto imageStream = avFormatCtx->streams[thumbnailStreamIndex];
+			auto imageStream = m_formatContext->streams[thumbnailStreamIndex];
 			//save album art to file.
 			String^ extension = ".jpeg";
 			switch (imageStream->codecpar->codec_id)
@@ -634,365 +622,4 @@ HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outpu
 
 	return hr;
 }
-
-HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptor(bool forceAudioDecode)
-{
-	if (avAudioCodecCtx->codec_id == AV_CODEC_ID_AAC && !forceAudioDecode)
-	{
-		if (avAudioCodecCtx->extradata_size == 0)
-		{
-			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateAacAdts(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int)avAudioCodecCtx->bit_rate));
-		}
-		else
-		{
-			audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateAac(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int)avAudioCodecCtx->bit_rate));
-		}
-		audioSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
-	}
-	else if (avAudioCodecCtx->codec_id == AV_CODEC_ID_MP3 && !forceAudioDecode)
-	{
-		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreateMp3(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, (unsigned int)avAudioCodecCtx->bit_rate));
-		audioSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
-	}
-	else
-	{
-		// We always convert to 16-bit audio so set the size here
-		audioStreamDescriptor = ref new AudioStreamDescriptor(AudioEncodingProperties::CreatePcm(avAudioCodecCtx->sample_rate, avAudioCodecCtx->channels, 16));
-		audioSampleProvider = ref new UncompressedAudioSampleProvider(m_pReader, avFormatCtx, avAudioCodecCtx);
-	}
-
-	return (audioStreamDescriptor != nullptr && audioSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
-}
-
-HRESULT FFmpegInteropMSS::CreateAudioStreamDescriptorFromParameters(const AVCodecParameters* avCodecParams)
-{
-	if (!AvCodecMap->HasKey(avCodecParams->codec_id))
-	{
-		return E_FAIL;
-	}
-
-	AudioEncodingProperties^ audioProperties = ref new AudioEncodingProperties();
-	audioProperties->SampleRate = avCodecParams->sample_rate;
-	audioProperties->ChannelCount = avCodecParams->channels;
-	audioProperties->Bitrate = static_cast<unsigned int>(avCodecParams->bit_rate);
-	audioProperties->Subtype = AvCodecMap->Lookup(avCodecParams->codec_id);
-
-	audioStreamDescriptor = ref new AudioStreamDescriptor(audioProperties);
-	audioSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, nullptr);
-
-	return (audioStreamDescriptor != nullptr && audioSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
-}
-
-HRESULT FFmpegInteropMSS::CreateVideoStreamDescriptor(bool forceVideoDecode)
-{
-	VideoEncodingProperties^ videoProperties;
-
-	if (avVideoCodecCtx->codec_id == AV_CODEC_ID_H264 && !forceVideoDecode)
-	{
-		videoProperties = VideoEncodingProperties::CreateH264();
-		videoProperties->ProfileId = avVideoCodecCtx->profile;
-		videoProperties->Height = avVideoCodecCtx->height;
-		videoProperties->Width = avVideoCodecCtx->width;
-
-		// Check for H264 bitstream flavor. H.264 AVC extradata starts with 1 while non AVC one starts with 0
-		if (avVideoCodecCtx->extradata != nullptr && avVideoCodecCtx->extradata_size > 0 && avVideoCodecCtx->extradata[0] == 1)
-		{
-			videoSampleProvider = ref new H264AVCSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
-		}
-		else
-		{
-			videoSampleProvider = ref new H264SampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
-		}
-	}
-	else
-	{
-		videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
-		videoSampleProvider = ref new UncompressedVideoSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
-
-		if (avVideoCodecCtx->sample_aspect_ratio.num > 0 && avVideoCodecCtx->sample_aspect_ratio.den != 0)
-		{
-			videoProperties->PixelAspectRatio->Numerator = avVideoCodecCtx->sample_aspect_ratio.num;
-			videoProperties->PixelAspectRatio->Denominator = avVideoCodecCtx->sample_aspect_ratio.den;
-		}
-
-		videoProperties->Properties->Insert(MF_MT_INTERLACE_MODE, (uint32)_MFVideoInterlaceMode::MFVideoInterlace_MixedInterlaceOrProgressive);
-	}
-
-	if (rotateVideo)
-	{
-		Platform::Guid MF_MT_VIDEO_ROTATION(0xC380465D, 0x2271, 0x428C, 0x9B, 0x83, 0xEC, 0xEA, 0x3B, 0x4A, 0x85, 0xC1);
-		videoProperties->Properties->Insert(MF_MT_VIDEO_ROTATION, (uint32)rotationAngle);
-	}
-
-	// Detect the correct framerate
-	if (avVideoCodecCtx->framerate.num != 0 || avVideoCodecCtx->framerate.den != 1)
-	{
-		videoProperties->FrameRate->Numerator = avVideoCodecCtx->framerate.num;
-		videoProperties->FrameRate->Denominator = avVideoCodecCtx->framerate.den;
-	}
-	else if (avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.num != 0 || avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.den != 0)
-	{
-		videoProperties->FrameRate->Numerator = avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.num;
-		videoProperties->FrameRate->Denominator = avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.den;
-	}
-
-	videoProperties->Bitrate = (unsigned int)avVideoCodecCtx->bit_rate;
-	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
-
-	return (videoStreamDescriptor != nullptr && videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
-}
-
-HRESULT FFmpegInteropMSS::CreateSubtitleStreamDescriptor(const AVStream* avStream)
-{
-	_ASSERT(avStream->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE);
-
-	// Check if we recognize the codec
-	if (!AvCodecMap->HasKey(avStream->codecpar->codec_id))
-	{
-		return MF_E_INVALIDMEDIATYPE;
-	}
-
-	// Create encoding properties and set subtype
-	TimedMetadataEncodingProperties^ subtitleEncProp = ref new TimedMetadataEncodingProperties();
-
-	subtitleEncProp->Subtype = AvCodecMap->Lookup(avStream->codecpar->codec_id);
-
-	if (avStream->codecpar->extradata != nullptr && avStream->codecpar->extradata_size > 0)
-	{
-		subtitleEncProp->SetFormatUserData(ArrayReference<BYTE>(avStream->codecpar->extradata, avStream->codecpar->extradata_size));
-	}
-
-	// Create stream descriptor
-	subtitleStreamDescriptor = ref new TimedMetadataStreamDescriptor(subtitleEncProp);
-
-	const AVDictionaryEntry* avDictEntry = nullptr;
-	wstring_convert<codecvt_utf8<wchar_t>> conv;
-
-	avDictEntry = av_dict_get(avStream->metadata, "title", nullptr, 0);
-	if (avDictEntry != nullptr)
-	{
-		subtitleStreamDescriptor->Name = StringReference(conv.from_bytes(avDictEntry->value).c_str());
-	}
-
-	avDictEntry = av_dict_get(avStream->metadata, "language", nullptr, 0);
-	if (avDictEntry != nullptr)
-	{
-		subtitleStreamDescriptor->Language = StringReference(conv.from_bytes(avDictEntry->value).c_str());
-	}
-
-	// Create sample provider for this stream
-	subtitleSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, nullptr);
-
-	return S_OK;
-}
-
-HRESULT FFmpegInteropMSS::ParseOptions(PropertySet^ ffmpegOptions)
-{
-	HRESULT hr = S_OK;
-
-	// Convert FFmpeg options given in PropertySet to AVDictionary. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-	if (ffmpegOptions != nullptr)
-	{
-		auto options = ffmpegOptions->First();
-
-		while (options->HasCurrent)
-		{
-			String^ key = options->Current->Key;
-			std::wstring keyW(key->Begin());
-			std::string keyA(keyW.begin(), keyW.end());
-			const char* keyChar = keyA.c_str();
-
-			// Convert value from Object^ to const char*. avformat_open_input will internally convert value from const char* to the correct type
-			String^ value = options->Current->Value->ToString();
-			std::wstring valueW(value->Begin());
-			std::string valueA(valueW.begin(), valueW.end());
-			const char* valueChar = valueA.c_str();
-
-			// Add key and value pair entry
-			if (av_dict_set(&avDict, keyChar, valueChar, 0) < 0)
-			{
-				hr = E_INVALIDARG;
-				break;
-			}
-
-			options->MoveNext();
-		}
-	}
-
-	return hr;
-}
-
-void FFmpegInteropMSS::OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args)
-{
-	MediaStreamSourceStartingRequest^ request = args->Request;
-
-	// Perform seek operation when MediaStreamSource received seek event from MediaElement
-	if (request->StartPosition && request->StartPosition->Value.Duration <= mediaDuration.Duration)
-	{
-		// Select the first valid stream either from video or audio
-		int streamIndex = videoStreamIndex >= 0 ? videoStreamIndex : audioStreamIndex >= 0 ? audioStreamIndex : -1;
-
-		if (streamIndex >= 0)
-		{
-			// Convert TimeSpan unit to AV_TIME_BASE
-			int64_t startOffset = (avFormatCtx->start_time != AV_NOPTS_VALUE) ? static_cast<int64_t>(avFormatCtx->start_time * 10000000 / double(AV_TIME_BASE)) : 0;
-			int64_t seekTarget = static_cast<int64_t>((startOffset + request->StartPosition->Value.Duration) / (av_q2d(avFormatCtx->streams[streamIndex]->time_base) * 10000000));
-
-			if (av_seek_frame(avFormatCtx, streamIndex, seekTarget, AVSEEK_FLAG_BACKWARD) < 0)
-			{
-				DebugMessage(L" - ### Error while seeking\n");
-			}
-			else
-			{
-				// Add deferral
-
-				// Flush the AudioSampleProvider
-				if (audioSampleProvider != nullptr && audioStreamSelected)
-				{
-					audioSampleProvider->EnableStream();
-					audioSampleProvider->Flush();
-					if (avAudioCodecCtx != nullptr)
-					{
-						avcodec_flush_buffers(avAudioCodecCtx);
-					}
-				}
-
-				// Flush the VideoSampleProvider
-				if (videoSampleProvider != nullptr && videoStreamSelected)
-				{
-					videoSampleProvider->EnableStream();
-					videoSampleProvider->Flush();
-					if (avVideoCodecCtx != nullptr)
-					{
-						avcodec_flush_buffers(avVideoCodecCtx);
-					}
-				}
-
-				// Flush the subtitleSampleProvider
-				if (subtitleSampleProvider != nullptr && subtitleStreamSelected)
-				{
-					subtitleSampleProvider->EnableStream();
-					subtitleSampleProvider->Flush();
-				}
-			}
-		}
-
-		request->SetActualStartPosition(request->StartPosition->Value);
-	}
-}
-
-void FFmpegInteropMSS::OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args)
-{
-	mutexGuard.lock();
-	if (mss != nullptr)
-	{
-		if (args->Request->StreamDescriptor == audioStreamDescriptor && audioSampleProvider != nullptr)
-		{
-			args->Request->Sample = audioSampleProvider->GetNextSample();
-		}
-		else if (args->Request->StreamDescriptor == videoStreamDescriptor && videoSampleProvider != nullptr)
-		{
-			args->Request->Sample = videoSampleProvider->GetNextSample();
-		}
-		else if (args->Request->StreamDescriptor == subtitleStreamDescriptor && subtitleSampleProvider != nullptr)
-		{
-			args->Request->Sample = subtitleSampleProvider->GetNextSample();
-		}
-		else
-		{
-			args->Request->Sample = nullptr;
-		}
-	}
-	mutexGuard.unlock();
-}
-
-void FFmpegInteropMSS::OnSwitchStreamsRequested(MediaStreamSource ^sender, MediaStreamSourceSwitchStreamsRequestedEventArgs ^args)
-{
-	mutexGuard.lock();
-	if (mss != nullptr)
-	{
-		if (args->Request->OldStreamDescriptor != nullptr)
-		{
-			if (args->Request->OldStreamDescriptor == audioStreamDescriptor)
-			{
-				audioStreamSelected = false;
-				audioSampleProvider->DisableStream();
-				if (avAudioCodecCtx != nullptr)
-				{
-					avcodec_flush_buffers(avAudioCodecCtx);
-				}
-			}
-			else if (args->Request->OldStreamDescriptor == videoStreamDescriptor)
-			{
-				videoStreamSelected = false;
-				videoSampleProvider->DisableStream();
-				if (avVideoCodecCtx != nullptr)
-				{
-					avcodec_flush_buffers(avVideoCodecCtx);
-				}
-			}
-			else if (args->Request->OldStreamDescriptor == subtitleStreamDescriptor)
-			{
-				subtitleStreamSelected = false;
-				subtitleSampleProvider->DisableStream();
-			}
-		}
-
-		if (args->Request->NewStreamDescriptor != nullptr)
-		{
-			if (args->Request->NewStreamDescriptor == audioStreamDescriptor)
-			{
-				audioStreamSelected = true;
-				audioSampleProvider->EnableStream();
-			}
-			else if (args->Request->NewStreamDescriptor == videoStreamDescriptor)
-			{
-				videoStreamSelected = true;
-				videoSampleProvider->EnableStream();
-			}
-			else if (args->Request->NewStreamDescriptor == subtitleStreamDescriptor)
-			{
-				subtitleStreamSelected = true;
-				subtitleSampleProvider->EnableStream();
-			}
-		}
-	}
-	mutexGuard.unlock();
-}
-
-// Static function to read file stream and pass data to FFmpeg. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
-static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
-{
-	IStream* pStream = reinterpret_cast<IStream*>(ptr);
-	ULONG bytesRead = 0;
-	HRESULT hr = pStream->Read(buf, bufSize, &bytesRead);
-
-	if (FAILED(hr))
-	{
-		return -1;
-	}
-
-	// If we succeed but don't have any bytes, assume end of file
-	if (bytesRead == 0)
-	{
-		return AVERROR_EOF;  // Let FFmpeg know that we have reached eof
-	}
-
-	return bytesRead;
-}
-
-// Static function to seek in file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
-static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
-{
-	IStream* pStream = reinterpret_cast<IStream*>(ptr);
-	LARGE_INTEGER in;
-	in.QuadPart = pos;
-	ULARGE_INTEGER out = { 0 };
-
-	if (FAILED(pStream->Seek(in, whence, &out)))
-	{
-		return -1;
-	}
-
-	return out.QuadPart; // Return the new position:
-}
+*/

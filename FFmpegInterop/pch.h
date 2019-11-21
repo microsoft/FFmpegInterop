@@ -18,20 +18,31 @@
 
 #pragma once
 
+#ifndef NOMINMAX
+#define NOMINMAX // Don't define min()/max() macros in Windows.h
+#endif
+
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+
 // WIL
 #include <wil/cppwinrt.h>
 #include <wil/result.h>
 
 // WinRT
 #include <winrt/base.h>
-#include <winrt/Windows.Media.Core.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Media.Core.h>
+#include <winrt/Windows.Media.MediaProperties.h>
+#include <robuffer.h>
 
 // Windows
 #include <Windows.h>
 #include <evntrace.h>
 #include <TraceLoggingProvider.h>
 #include <TraceLoggingActivity.h>
+#include <shcore.h>
 
 // MF
 #include <mfapi.h>
@@ -41,6 +52,7 @@
 extern "C"
 {
 #include <libavformat/avformat.h>
+#include <libavutil/log.h>
 #include <libavutil/imgutils.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
@@ -49,11 +61,18 @@ extern "C"
 // STL
 #include <algorithm>
 #include <memory>
+#include <functional>
 #include <deque>
+#include <map>
+#include <mutex>
+#include <tuple>
+#include <limits>
+#include <codecvt> // TODO: Deprecated in C++17. Replace when an alternative is available.
 
 // FFmpegInterop
 #include "Tracing.h"
 #include "Utility.h"
+#include "FFmpegBuffer.h"
 
 // Disable debug string output on non-debug build
 #if !_DEBUG

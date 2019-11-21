@@ -18,7 +18,7 @@
 
 #pragma once
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
 	TRACELOGGING_DECLARE_PROVIDER(g_FFmpegInteropProvider);
 
@@ -31,7 +31,7 @@ namespace FFmpegInterop
 		ActivityClassName(_Inout_ ActivityClassName&& other) noexcept : \
 			m_failureCache(std::move(other.m_failureCache)), \
 			m_activity(std::move(other.m_activity)), \
-			m_stopped(std::exchange(other.m_stopped, false)) \
+			m_stopped(std::exchange(other.m_stopped, true)) \
 		{ \
 			\
 		} \
@@ -97,8 +97,10 @@ namespace FFmpegInterop
 		bool m_stopped{ false }; \
 	} \
 
-	TRACE_LOGGING_ACTIVITY_CLASS(CreateMediaStreamSource);
+	TRACE_LOGGING_ACTIVITY_CLASS(CreateFromStream);
+	TRACE_LOGGING_ACTIVITY_CLASS(CreateFromUri);
 	TRACE_LOGGING_ACTIVITY_CLASS(OnStarting);
 	TRACE_LOGGING_ACTIVITY_CLASS(OnSampleRequested);
 	TRACE_LOGGING_ACTIVITY_CLASS(OnSwitchStreamsRequested);
+	TRACE_LOGGING_ACTIVITY_CLASS(OnClosed);
 }

@@ -36,7 +36,7 @@ namespace FFmpegInterop
 		void Log(LogLevel level, String message);
 	}
 
-	runtimeclass FFmpegInteropLogging
+	static runtimeclass FFmpegInteropLogging
 	{
 		static void SetLogLevel(LogLevel level);
 		static void SetLogProvider(ILogProvider logProvider);

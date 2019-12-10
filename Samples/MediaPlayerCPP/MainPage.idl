@@ -1,6 +1,6 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //
-//	Copyright 2015 Microsoft Corporation
+//	Copyright 2019 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -16,4 +16,15 @@
 //
 //*****************************************************************************
 
-#include "pch.h"
+namespace MediaPlayerCPP
+{
+    [default_interface]
+    runtimeclass MainPage : Windows.UI.Xaml.Controls.Page
+    {
+        MainPage();
+
+        void OpenFileAsync(Object sender, Windows.UI.Xaml.RoutedEventArgs e);
+        void UriBoxKeyUp(Object sender, Windows.UI.Xaml.Input.KeyRoutedEventArgs e);
+        void MediaFailed(Object sender, Windows.UI.Xaml.ExceptionRoutedEventArgs e);
+    }
+}

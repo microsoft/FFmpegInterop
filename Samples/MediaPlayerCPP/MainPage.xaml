@@ -22,7 +22,6 @@
     x:Class="MediaPlayerCPP.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:MediaPlayerCPP"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
@@ -33,30 +32,30 @@
             <!-- Control panel -->
             <SplitView.Pane>
                 <StackPanel VerticalAlignment="Stretch" Margin="10, 50, 0, 0">
-                    <TextBlock x:Name="Header" Text="Open Local File or URI"/>
+                    <TextBlock Text="Open local file"/>
                     <StackPanel Orientation="Horizontal">
-                        <AppBarButton Content="Open Local File" Icon="OpenFile" Margin="0, 10, 10, 0" Click="OpenLocalFile"/>
-                        <TextBox PlaceholderText="Enter URI and press Enter" InputScope="Url" Width="210" Height="30" KeyUp="URIBoxKeyUp"/>
+                        <AppBarButton Content="Open local file" Icon="OpenFile" Margin="0, 10, 10, 0" Click="{x:Bind OpenFileAsync}"/>
+                        <TextBox x:Name="UriBox" PlaceholderText="Enter URI and press Enter" InputScope="Url" Width="210" Height="30" KeyUp="{x:Bind UriBoxKeyUp}"/>
                     </StackPanel>
-                    <ToggleSwitch x:Name="toggleSwitchAudioDecode" Header="Force Decode Audio" OffContent="OFF" OnContent="ON" IsOn="False"/>
-                    <ToggleSwitch x:Name="toggleSwitchVideoDecode" Header="Force Decode Video" OffContent="OFF" OnContent="ON" IsOn="False"/>
+                    <ToggleSwitch x:Name="ToggleSwitchAudioDecode" Header="Force audio decode" OffContent="Off" OnContent="On" IsOn="False"/>
+                    <ToggleSwitch x:Name="ToggleSwitchVideoDecode" Header="Force video decode" OffContent="Off" OnContent="On" IsOn="False"/>
                 </StackPanel>
             </SplitView.Pane>
 
             <!-- Main content -->
-            <MediaElement x:Name="mediaElement"
-                        AreTransportControlsEnabled="True"
-                        AudioCategory="ForegroundOnlyMedia"
-                        AutoPlay="True"
-                        MediaFailed="MediaFailed"
-            />
+            <MediaElement 
+                x:Name="MediaElement"
+                AreTransportControlsEnabled="True"
+                AudioCategory="ForegroundOnlyMedia"
+                AutoPlay="True"
+                MediaFailed="{x:Bind MediaFailed}" />
 
         </SplitView>
 
         <!-- Control panel toggle button -->
         <ToggleButton VerticalAlignment="Top" Margin="10, 10, 0, 0" IsChecked="{Binding ElementName=Splitter, Path=IsPaneOpen, Mode=TwoWay}">
             <ToggleButton.Content>
-                <FontIcon x:Name="Hamburger" FontFamily="Segoe MDL2 Assets" Foreground="White" Glyph="&#xE700;"/>
+                <FontIcon FontFamily="Segoe MDL2 Assets" Foreground="White" Glyph="&#xE700;"/>
             </ToggleButton.Content>
         </ToggleButton>
     </Grid>

@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Common">
-      <UniqueIdentifier>9c0eb7ec-6fed-46e7-9cc9-f36132050aa1</UniqueIdentifier>
-    </Filter>
     <Filter Include="Assets">
       <UniqueIdentifier>0bb4a647-f146-47f5-aa40-3e282b14193d</UniqueIdentifier>
       <Extensions>bmp;fbx;gif;jpg;jpeg;tga;tiff;tif;png</Extensions>
@@ -13,14 +10,20 @@
     <ApplicationDefinition Include="App.xaml" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="App.xaml.cpp" />
-    <ClCompile Include="MainPage.xaml.cpp" />
+    <Page Include="MainPage.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="App.idl" />
+    <Midl Include="MainPage.idl" />
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="MainPage.cpp" />
+    <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="App.xaml.h" />
-    <ClInclude Include="MainPage.xaml.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\LockScreenLogo.scale-200.png">
@@ -49,10 +52,14 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\*.dll" />
+    <None Include="packages.config" />
     <None Include="..\..\FFmpegInterop.pfx" />
-  </ItemGroup>
-  <ItemGroup>
-    <Page Include="MainPage.xaml" />
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec-58_ms.dll" />
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avdevice-58_ms.dll" />
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avfilter-7_ms.dll" />
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avformat-58_ms.dll" />
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avutil-56_ms.dll" />
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swresample-3_ms.dll" />
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swscale-5_ms.dll" />
   </ItemGroup>
 </Project>

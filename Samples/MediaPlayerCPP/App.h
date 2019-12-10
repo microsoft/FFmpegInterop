@@ -16,34 +16,22 @@
 //
 //*****************************************************************************
 
-//
-// App.xaml.h
-// Declaration of the App class.
-//
-
 #pragma once
 
-#include "App.g.h"
+#include "App.xaml.g.h"
 
-namespace MediaPlayerCPP
+namespace winrt::MediaPlayerCPP::implementation
 {
-	/// <summary>
-	/// Provides application-specific behavior to supplement the default Application class.
-	/// </summary>
-	ref class App sealed :
-		public FFmpegInterop::ILogProvider
+	class App : 
+		public AppT<App>
 	{
-	protected:
-		virtual void OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEventArgs^ e) override;
-
-	internal:
+	public:
 		App();
 
-	public:
-		virtual void Log(FFmpegInterop::LogLevel level, Platform::String^ message);
+		void OnLaunched(const Windows::ApplicationModel::Activation::LaunchActivatedEventArgs& e);
+		void OnSuspending(const IInspectable& sender, const Windows::ApplicationModel::SuspendingEventArgs& e);
+		void OnNavigationFailed(const IInspectable& sender, const Windows::UI::Xaml::Navigation::NavigationFailedEventArgs& e);
 
-	private:
-		void OnSuspending(Platform::Object^ sender, Windows::ApplicationModel::SuspendingEventArgs^ e);
-		void OnNavigationFailed(Platform::Object ^sender, Windows::UI::Xaml::Navigation::NavigationFailedEventArgs ^e);
+		// virtual void Log(FFmpegInterop::LogLevel level, Platform::String^ message);
 	};
 }

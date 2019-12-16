@@ -18,32 +18,31 @@
 
 #include "pch.h"
 #include "FFmpegReader.h"
-#include "MediaSampleProvider.h"
+#include "SampleProvider.h"
 
 using namespace std;
 
-namespace winrt::FFmpegInterop::implementation
+using namespace winrt::FFmpegInterop::implementation;
+
+FFmpegReader::FFmpegReader(_In_ AVFormatContext* formatContext, _In_ const map<int, SampleProvider*>& streamMap) :
+	m_formatContext(formatContext),
+	m_streamIdMap(streamMap)
 {
-	FFmpegReader::FFmpegReader(_In_ AVFormatContext* formatContext, _In_ const map<int, MediaSampleProvider*>& streamMap) :
-		m_formatContext(formatContext),
-		m_streamIdMap(streamMap)
+
+}
+
+void FFmpegReader::ReadPacket()
+{
+	AVPacket_ptr packet{ av_packet_alloc() };
+	THROW_IF_NULL_ALLOC(packet);
+
+	// Read the next packet and push it into the appropriate sample provider.
+	// Drop the packet if the stream is not being used.
+	THROW_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
+
+	auto iter = m_streamIdMap.find(packet->stream_index);
+	if (iter != m_streamIdMap.end())
 	{
-
-	}
-
-	void FFmpegReader::ReadPacket()
-	{
-		AVPacket_ptr packet{ av_packet_alloc() };
-		THROW_IF_NULL_ALLOC(packet);
-
-		// Read the next packet and push it into the appropriate sample provider.
-		// Drop the packet if the stream is not being used.
-		THROW_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
-
-		auto iter = m_streamIdMap.find(packet->stream_index);
-		if (iter != m_streamIdMap.end())
-		{
-			iter->second->QueuePacket(move(packet));
-		}
+		iter->second->QueuePacket(move(packet));
 	}
 }

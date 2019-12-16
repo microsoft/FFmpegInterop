@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2015 Microsoft Corporation
+//	Copyright 2019 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -20,36 +20,43 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	class FFmpegBuffer :
+	class FFmpegInteropBuffer :
 		public implements<
-			FFmpegBuffer, 
+			FFmpegInteropBuffer, 
 			Windows::Storage::Streams::IBuffer,
 			::Windows::Storage::Streams::IBufferByteAccess>
 	{
 	public:
-		FFmpegBuffer(_In_ AVBufferRef* bufferRef) noexcept :
+		FFmpegInteropBuffer(_In_ AVBufferRef* bufferRef) noexcept :
 			m_length(bufferRef->size),
-			m_buffer(reinterpret_cast<uint8_t*>(bufferRef->data), [ AVBufferRef_ptr{ av_buffer_ref(bufferRef) } ](uint8_t*) noexcept { })
+			m_buffer(reinterpret_cast<uint8_t*>(bufferRef->data), [AVBufferRef_ptr{ av_buffer_ref(bufferRef) }](uint8_t*) noexcept { })
 		{
 
 		}
 
-		FFmpegBuffer(_In_ const AVPacket* packet) noexcept :
-			FFmpegBuffer(packet->buf)
+		FFmpegInteropBuffer(_In_ const AVPacket* packet) noexcept :
+			FFmpegInteropBuffer(packet->buf)
 		{
 
 		}
 
-		FFmpegBuffer(_In_ AVBufferRef_ptr bufferRef) noexcept :
+		FFmpegInteropBuffer(_In_ AVBufferRef_ptr bufferRef) noexcept :
 			m_length(bufferRef->size),
-			m_buffer(reinterpret_cast<uint8_t*>(bufferRef->data), [ AVBufferRef_ptr{ bufferRef.get() } ](uint8_t*) noexcept { })
+			m_buffer(reinterpret_cast<uint8_t*>(bufferRef->data), [AVBufferRef_ptr{ bufferRef.get() }](uint8_t*) noexcept { })
 		{
 			bufferRef.release(); // The lambda has taken ownership
 		}
 
-		FFmpegBuffer(AVBlob_ptr buffer, uint32_t length) noexcept :
+		FFmpegInteropBuffer(_In_ AVBlob_ptr buffer, _In_ uint32_t length) noexcept :
 			m_length(length),
 			m_buffer(static_cast<uint8_t*>(buffer.release()))
+		{
+
+		}
+
+		FFmpegInteropBuffer(_In_ std::vector<uint8_t> buffer) noexcept :
+			m_length(static_cast<uint32_t>(buffer.size())),
+			m_buffer(buffer.data(), [buffer = std::move(buffer)](uint8_t*) noexcept { })
 		{
 
 		}

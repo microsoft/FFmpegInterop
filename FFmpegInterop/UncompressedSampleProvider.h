@@ -18,23 +18,22 @@
 
 #pragma once
 
-#include "MediaSampleProvider.h"
+#include "SampleProvider.h"
 
 namespace winrt::FFmpegInterop::implementation
 {
 	// TODO: Minimize resource usage when stream is deselected
 	class UncompressedSampleProvider :
-		public MediaSampleProvider
+		public SampleProvider
 	{
 	public:
-		UncompressedSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
+		UncompressedSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
 
 	protected:
 		void Flush() noexcept override;
 
-		void GetFrame();
+		AVFrame_ptr GetFrame();
 
 		AVCodecContext_ptr m_codecContext;
-		AVFrame_ptr m_frame;
 	};
 }

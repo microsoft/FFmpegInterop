@@ -35,6 +35,10 @@ using namespace std;
 
 namespace winrt::MediaPlayerCPP::implementation
 {
+	// TODO:
+	// - Add file activation
+	// - Add track selection
+
 	MainPage::MainPage()
 	{
 		InitializeComponent();

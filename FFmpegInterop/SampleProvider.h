@@ -22,13 +22,15 @@ namespace winrt::FFmpegInterop::implementation
 {
 	class FFmpegReader;
 
-	class MediaSampleProvider
+	class SampleProvider
 	{
 	public:
-		MediaSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
+		SampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
 
-		virtual ~MediaSampleProvider() = default;
+		virtual ~SampleProvider() = default;
 
+		virtual void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp);
+		
 		void Select() noexcept;
 		void Deselect() noexcept;
 		void OnSeek(_In_ int64_t seekTime) noexcept;
@@ -41,8 +43,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool HasPacket() const noexcept { return !m_packetQueue.empty(); }
 
 		virtual void Flush() noexcept;
-		virtual std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t> GetSampleData();
-		virtual void SetSampleProperties(const Windows::Media::Core::MediaStreamSample& sample) { }
+		virtual std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData();
 
 		const AVStream* m_stream;
 

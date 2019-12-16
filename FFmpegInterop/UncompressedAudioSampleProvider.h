@@ -26,13 +26,15 @@ namespace winrt::FFmpegInterop::implementation
 		public UncompressedSampleProvider
 	{
 	public:
-		UncompressedAudioSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
+		UncompressedAudioSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
+
+		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp) override;
 
 	protected:
-		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t> GetSampleData() override;
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
 
 	private:
-		void InitResamplerIfNeeded();
+		void InitResamplerIfNeeded(const AVFrame* frame);
 
 		SwrContext_ptr m_swrContext;
 		AVFrame_ptr m_resampledFrame;

@@ -19,157 +19,241 @@
 #include "pch.h"
 #include "H264AVCSampleProvider.h"
 
+using namespace winrt::FFmpegInterop::implementation;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media::MediaProperties;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
 
-namespace winrt::FFmpegInterop::implementation
+namespace
 {
-	static constexpr size_t AVC_CONFIG_MIN_SIZE = 7;
-
-	H264AVCSampleProvider::H264AVCSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader) :
-		MediaSampleProvider(stream, reader)
+	uint32_t ReadNaluLength(_In_ uint8_t naluLengthSize, _In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
 	{
-		THROW_HR_IF_NULL(MF_E_INVALID_FILE_FORMAT, m_stream->codecpar->extradata);
+		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, naluLengthSize > dataSize);
 
-		// Determine whether the bitstream format is AVC or Annex B
-		m_isAVC = m_stream->codecpar->extradata_size < 1 || m_stream->codecpar->extradata[0] == 1;
+		switch (naluLengthSize)
+		{
+		case 1:
+			return data[0];
 
-		if (m_isAVC)
-		{
-			THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, m_stream->codecpar->extradata_size < AVC_CONFIG_MIN_SIZE);
-			m_nalLenSize = m_stream->codecpar->extradata[4] & 0x03 + 1;
-		}
-		else
-		{
-			m_nalLenSize = 0;
+		case 2:
+			return data[0] << 8 | data[1];
+
+		case 3:
+			return data[0] << 16 | data[1] << 8 | data[2];
+
+		case 4:
+			return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
+
+		default:
+			THROW_HR(MF_E_INVALID_FILE_FORMAT);
 		}
 	}
+}
 
-	tuple<IBuffer, int64_t, int64_t> H264AVCSampleProvider::GetSampleData()
+H264AVCSampleProvider::H264AVCSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader) :
+	SampleProvider(stream, reader),
+	m_avcCodecPrivate(m_stream->codecpar->extradata, m_stream->codecpar->extradata_size)
+{
+	// TODO: We currently only support the AVC bitstream format. Add support for Annex B
+}
+
+void H264AVCSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp)
+{
+	const AVCodecParameters* codecPar{ m_stream->codecpar };
+
+	SampleProvider::SetEncodingProperties(encProp);
+
+	VideoEncodingProperties videoEncProp{ encProp.as<VideoEncodingProperties>() };
+	videoEncProp.ProfileId(codecPar->profile);
+
+	MediaPropertySet videoProp{ videoEncProp.Properties() };
+	videoProp.Insert(MF_MT_MPEG2_LEVEL, PropertyValue::CreateUInt32(static_cast<uint32_t>(codecPar->level)));
+	videoProp.Insert(MF_NALU_LENGTH_SET, PropertyValue::CreateBoolean(true));
+	videoProp.Insert(MF_MT_MPEG_SEQUENCE_HEADER, PropertyValue::CreateUInt8Array({ m_avcCodecPrivate.GetSpsPpsData().data(), m_avcCodecPrivate.GetSpsPpsData().data() + m_avcCodecPrivate.GetSpsPpsData().size() }));
+
+	// TODO: Set MF_MT_VIDEO_H264_NO_FMOASO
+}
+
+tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> H264AVCSampleProvider::GetSampleData()
+{
+	// Get the next sample
+	AVPacket_ptr packet{ GetPacket() };
+
+	// Convert the sample to Annex B format by replacing NAL lengths with the NALU start code.
+	// Prepend SPS/PPS data to the sample if this is a key frame.
+	auto [buf, naluLengths] = TransformSample(packet.get());
+
+	map<GUID, IInspectable> properties;
+
+	// Set the NALU length info
+	const uint8_t* naluLengthsBuf{ reinterpret_cast<const uint8_t*>(naluLengths.data()) };
+	const size_t naluLengthsBufSize{ sizeof(decltype(naluLengths)::value_type) * naluLengths.size() };
+	properties[MF_NALU_LENGTH_INFORMATION] = PropertyValue::CreateUInt8Array({ naluLengthsBuf, naluLengthsBuf + naluLengthsBufSize });
+
+	return { move(buf), packet->pts, packet->duration, move(properties) };
+}
+
+tuple<IBuffer, vector<uint32_t>> H264AVCSampleProvider::TransformSample(const AVPacket* packet)
+{
+	// Check if we'll need to write the transformed sample to a new buffer
+	const bool isKeyFrame{ (packet->flags & AV_PKT_FLAG_KEY) != 0 };
+	const bool canDoInplaceTransform{ m_avcCodecPrivate.GetNaluLengthSize() == sizeof(NALU_START_CODE) };
+	const bool writeToBuf{ isKeyFrame || canDoInplaceTransform };
+
+	vector<uint8_t> buf;
+	if (writeToBuf)
 	{
-		// DataWriter is only used if we need to append SPS/PPS data to the sample or perform Annex B conversions
-		DataWriter dataWriter{ nullptr };
+		// Reserve space for the transformed sample now to avoid reallocations
+		size_t sampleSize = packet->size;
 
-		AVPacket_ptr packet{ GetPacket() };
-
-		// On a key frames write the SPS/PPS data
-		if (packet->flags & AV_PKT_FLAG_KEY)
+		if (isKeyFrame)
 		{
-			WriteSPSAndPPS(dataWriter, m_stream->codecpar->extradata, m_stream->codecpar->extradata_size);
+			// Add space for SPS/PPS data
+			sampleSize += m_avcCodecPrivate.GetSpsPpsData().size();
 		}
 
-		// Check for new SPS/PPS data on the sample
-		for (int i = 0; i < packet->side_data_elems; i++)
+		if (!canDoInplaceTransform)
 		{
-			if (packet->side_data[i].type == AV_PKT_DATA_NEW_EXTRADATA)
+			// Add additional space since NALU start code is longer than NAL length size
+			sampleSize += 64 * (sizeof(NALU_START_CODE) - m_avcCodecPrivate.GetNaluLengthSize());
+		}
+
+		buf.reserve(sampleSize);
+	}
+
+	// Convert the sample to Annex B format by replacing NAL lengths with the NALU start code. Prepend SPS/PPS data if this is a key frame.
+	vector<uint32_t> naluLengths;
+	bool needToCopySpsPpsData{ isKeyFrame };
+
+	for (int pos = 0; pos < packet->size;)
+	{
+		uint32_t naluLength{ ReadNaluLength(m_avcCodecPrivate.GetNaluLengthSize(), packet->data + pos, packet->size - pos) };
+		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos + m_avcCodecPrivate.GetNaluLengthSize() + naluLength > static_cast<uint32_t>(packet->size));
+
+		if (needToCopySpsPpsData)
+		{
+			// Check if the first NALU is an AUD (access unit delimiter). The AUD must be the first NALU in the sample.
+			if (packet->data[m_avcCodecPrivate.GetNaluLengthSize()] != NALU_TYPE_AUD)
 			{
-				WriteSPSAndPPS(dataWriter, packet->side_data[i].data, packet->side_data[i].size);
-				break;
+				// Copy the SPS/PPS data
+				const auto& spsPpsData{ m_avcCodecPrivate.GetSpsPpsData() };
+				buf.insert(buf.end(), spsPpsData.begin(), spsPpsData.end());
+
+				const auto& spsPpsNaluLengths{ m_avcCodecPrivate.GetSpsPpsNaluLengths() };
+				naluLengths.insert(naluLengths.end(), spsPpsNaluLengths.begin(), spsPpsNaluLengths.end());
+
+				needToCopySpsPpsData = false;
 			}
 		}
 
-		if (m_isAVC || dataWriter != nullptr)
+		if (writeToBuf)
 		{
-			WriteNALPacket(dataWriter, packet->data, packet->size);
-
-			return { dataWriter.DetachBuffer(), packet->pts, packet->duration };
+			// Write the NALU start code and data
+			const uint8_t* naluData{ packet->data + pos + m_avcCodecPrivate.GetNaluLengthSize() };
+			buf.insert(buf.end(), begin(NALU_START_CODE), end(NALU_START_CODE));
+			buf.insert(buf.end(), naluData, naluData + naluLength);
 		}
 		else
 		{
-			return { make<FFmpegBuffer>(packet.get()), packet->pts, packet->duration };
+			// Replace the NAL length with the NALU start code
+			copy(begin(NALU_START_CODE), end(NALU_START_CODE), packet->data + pos);
 		}
+
+		// Save the NALU length
+		naluLengths.push_back(sizeof(NALU_START_CODE) + naluLength);
+
+		if (needToCopySpsPpsData)
+		{
+			// Copy the SPS/PPS data
+			const auto& spsPpsData{ m_avcCodecPrivate.GetSpsPpsData() };
+			buf.insert(buf.end(), spsPpsData.begin(), spsPpsData.end());
+
+			const auto& spsPpsNaluLengths{ m_avcCodecPrivate.GetSpsPpsNaluLengths() };
+			naluLengths.insert(naluLengths.end(), spsPpsNaluLengths.begin(), spsPpsNaluLengths.end());
+
+			needToCopySpsPpsData = false;
+		}
+
+		pos += m_avcCodecPrivate.GetNaluLengthSize() + naluLength;
 	}
 
-	void H264AVCSampleProvider::WriteSPSAndPPS(
-		_Inout_opt_ DataWriter& dataWriter,
-		_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData,
-		_In_ uint32_t codecPrivateDataSize)
+	if (writeToBuf)
 	{
-		if (m_isAVC)
-		{
-			THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, codecPrivateDataSize < AVC_CONFIG_MIN_SIZE);
-
-			// Convert SPS/PPS data to Annex B format
-			uint32_t pos = 4;
-
-			uint8_t spsCount = codecPrivateData[pos++] & 0x1F;
-			pos += WriteParameterSetData(dataWriter, spsCount, codecPrivateData + pos, codecPrivateDataSize - pos);
-
-			THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos + 1 > codecPrivateDataSize);
-			uint8_t ppsCount = codecPrivateData[pos++];
-			WriteParameterSetData(dataWriter, ppsCount, codecPrivateData + pos, codecPrivateDataSize - pos);
-		}
-		else
-		{
-			// Copy SPS/PPS data as is
-			dataWriter.WriteBytes({ codecPrivateData, codecPrivateData + codecPrivateDataSize });
-		}
+		return { make<FFmpegInteropBuffer>(move(buf)), move(naluLengths) };
 	}
-
-	uint32_t H264AVCSampleProvider::WriteParameterSetData(
-		_Inout_opt_ DataWriter& dataWriter,
-		_In_ uint8_t parameterSetCount,
-		_In_reads_(parameterSetDataSize) const uint8_t* parameterSetData,
-		_In_ uint32_t parameterSetDataSize)
+	else
 	{
-		// Convert the parameter set data to Annex B format
-		uint32_t pos = 0;
-		for (uint8_t i = 0; i < parameterSetCount; i++)
-		{
-			// Get the NAL length
-			THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos + 2 > parameterSetDataSize);
-			uint16_t nalLen = (parameterSetData[pos] << 8) + parameterSetData[pos + 1];
-			pos += 2;
-
-			THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos + nalLen > parameterSetDataSize);
-
-			// Write the NAL unit start code
-			dataWriter.WriteBytes({ 0x00, 0x00, 0x00, 0x01 });
-
-			// Write the NAL unit data
-			dataWriter.WriteBytes({ parameterSetData + pos, parameterSetData + pos + nalLen });
-			pos += nalLen;
-		}
-
-		return pos; // Return the number of bytes read
+		return { make<FFmpegInteropBuffer>(packet), move(naluLengths) };
 	}
+}
 
-	void H264AVCSampleProvider::WriteNALPacket(
-		_Inout_opt_ DataWriter& dataWriter,
-		_In_reads_(packetDataSize) const uint8_t* packetData,
-		_In_ uint32_t packetDataSize)
+H264AVCSampleProvider::AVCCodecPrivate::AVCCodecPrivate(_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData, _In_ int codecPrivateDataSize)
+{
+	// Make sure the bitstream format is AVC
+	THROW_HR_IF_NULL(MF_E_INVALID_FILE_FORMAT, codecPrivateData);
+	THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, codecPrivateDataSize < MIN_SIZE);
+	THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, codecPrivateData[0] != 1);
+
+	// Parse profile, level, and NALU length size
+	m_profile = codecPrivateData[1];
+	m_level = codecPrivateData[3];
+	m_naluLengthSize = codecPrivateData[4] & 0x03 + 1;
+
+	// Parse SPS/PPS data
+	uint32_t pos = 5;
+
+	uint8_t spsCount = codecPrivateData[pos++] & 0x1F;
+	pos += ParseParameterSets(spsCount, codecPrivateData + pos, codecPrivateDataSize - pos);
+
+	THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos + 1 > static_cast<uint32_t>(codecPrivateDataSize));
+	uint8_t ppsCount = codecPrivateData[pos++];
+	ParseParameterSets(ppsCount, codecPrivateData + pos, codecPrivateDataSize - pos);
+}
+
+uint32_t H264AVCSampleProvider::AVCCodecPrivate::ParseParameterSets(
+	_In_ uint8_t parameterSetCount,
+	_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData,
+	_In_ uint32_t codecPrivateDataSize)
+{
+	// Reserve estimated space now to minimize reallocations
+	m_spsPpsNaluLengths.reserve(m_spsPpsNaluLengths.size() + parameterSetCount);
+	m_spsPpsData.reserve(m_spsPpsData.size() + codecPrivateDataSize + 2 * static_cast<size_t>(parameterSetCount));
+
+	// Parse the parameter sets and convert the SPS/PPS data to Annex B format
+	uint32_t pos = 0;
+	for (uint8_t i = 0; i < parameterSetCount; i++)
 	{
-		if (m_isAVC)
-		{
-			// Convert packet data to Annex B format
-			uint64_t pos = 0;
+		// Get the NALU length
+		uint32_t naluLength{ ReadNaluLength(2, codecPrivateData + pos, codecPrivateDataSize - pos) };
+		pos += 2;
 
-			do
-			{
-				// Get the NAL length
-				uint32_t nalLen = 0;
+		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos + naluLength > codecPrivateDataSize);
+		m_spsPpsNaluLengths.push_back(sizeof(NALU_START_CODE) + naluLength);
 
-				THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos + m_nalLenSize > packetDataSize);
-				for (uint8_t i = 0; i < m_nalLenSize; i++)
-				{
-					nalLen <<= 8;
-					nalLen += packetData[pos++];
-				}
+		// Write the NALU start code and SPS/PPS data to the buffer
+		m_spsPpsData.insert(m_spsPpsData.end(), begin(NALU_START_CODE), end(NALU_START_CODE));
+		m_spsPpsData.insert(m_spsPpsData.end(), codecPrivateData + pos, codecPrivateData + pos + naluLength);
 
-				THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos + nalLen > packetDataSize);
-
-				// Write the NAL unit start code
-				dataWriter.WriteBytes({ 0x00, 0x00, 0x00, 0x01 });
-
-				// Write the NAL unit data
-				dataWriter.WriteBytes({ packetData + pos, packetData + pos + nalLen });
-				pos += nalLen;
-			} while (pos < packetDataSize);
-		}
-		else
-		{
-			// Copy packet data as is
-			dataWriter.WriteBytes({ packetData, packetData + packetDataSize });
-		}
+		pos += naluLength;
 	}
+
+	return pos; // Return the number of bytes read
+}
+
+H264AVCSampleProvider::AVCSequenceParameterSet::AVCSequenceParameterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
+{
+	THROW_HR_IF_NULL(MF_E_INVALID_FILE_FORMAT, data);
+	THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, dataSize < 3);
+
+	m_profile = data[1];
+		
+	uint8_t profileCompatibility = data[2];
+	m_constraintSet1 = (profileCompatibility & (1 << 6)) != 0;
+}
+
+H264AVCSampleProvider::AVCPictureParamterSet::AVCPictureParamterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
+{
+	// TODO: Implement
+	m_numSliceGroups = 0;
 }

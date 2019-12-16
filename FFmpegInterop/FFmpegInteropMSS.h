@@ -40,10 +40,6 @@ namespace winrt::FFmpegInterop::implementation
 		void OpenFile(const char* uri);
 
 		void InitFFmpegContext();
-		std::tuple<Windows::Media::Core::AudioStreamDescriptor, std::unique_ptr<MediaSampleProvider>> CreateAudioStream(const AVStream* stream);
-		std::tuple<Windows::Media::Core::VideoStreamDescriptor, std::unique_ptr<MediaSampleProvider>> CreateVideoStream(const AVStream* stream);
-		std::tuple<Windows::Media::Core::TimedMetadataStreamDescriptor, std::unique_ptr<MediaSampleProvider>> CreateSubtitleStream(const AVStream* stream);
-		void SetStreamDescriptorProperties(const AVStream* stream, const Windows::Media::Core::IMediaStreamDescriptor& streamDescriptor);
 
 		void OnStarting(const Windows::Media::Core::MediaStreamSource& sender, const Windows::Media::Core::MediaStreamSourceStartingEventArgs& args);
 		void OnSampleRequested(const Windows::Media::Core::MediaStreamSource& sender, const Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs& args);
@@ -56,8 +52,8 @@ namespace winrt::FFmpegInterop::implementation
 		AVIOContext_ptr m_ioContext;
 		AVFormatContext_ptr m_formatContext;
 		FFmpegReader m_reader;
-		std::map<Windows::Media::Core::IMediaStreamDescriptor, std::unique_ptr<MediaSampleProvider>> m_streamDescriptorMap;
-		std::map<int, MediaSampleProvider*> m_streamIdMap;
+		std::map<Windows::Media::Core::IMediaStreamDescriptor, std::unique_ptr<SampleProvider>> m_streamDescriptorMap;
+		std::map<int, SampleProvider*> m_streamIdMap;
 
 		event_token m_startingEventToken;
 		event_token m_sampleRequestedEventToken;

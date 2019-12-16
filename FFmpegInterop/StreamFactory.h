@@ -18,28 +18,20 @@
 
 #pragma once
 
-#include <SampleProvider.h>
+#include "SampleProvider.h"
 
 namespace winrt::FFmpegInterop::implementation
 {
-	class SubtitleSampleProvider :
-		public SampleProvider
+	class StreamFactory
 	{
 	public:
-		SubtitleSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader, _In_ bool requiresInitCue);
-
-		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp) override;
-
-		void GetSample(_Inout_ const Windows::Media::Core::MediaStreamSourceSampleRequest& request) override;
-		void QueuePacket(_In_ AVPacket_ptr packet) override;
-
-	protected:
-		void Flush() noexcept override;
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::AudioStreamDescriptor> CreateAudioStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::VideoStreamDescriptor> CreateVideoStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::TimedMetadataStreamDescriptor> CreateSubtitleStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
 
 	private:
-		bool m_usesInitCue;
+		StreamFactory() = delete;
 
-		Windows::Media::Core::MediaStreamSourceSampleRequest m_sampleRequest{ nullptr };
-		Windows::Media::Core::MediaStreamSourceSampleRequestDeferral m_sampleRequestDeferral{ nullptr };
+		static void SetStreamDescriptorProperties(_In_ const AVStream* stream, _Inout_ const Windows::Media::Core::IMediaStreamDescriptor& streamDescriptor);
 	};
 }

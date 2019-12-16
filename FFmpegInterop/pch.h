@@ -45,8 +45,10 @@
 #include <shcore.h>
 
 // MF
+#include <mfidl.h>
 #include <mfapi.h>
 #include <mferror.h>
+#include <codecapi.h>
 
 // FFmpeg
 extern "C"
@@ -72,7 +74,7 @@ extern "C"
 // FFmpegInterop
 #include "Tracing.h"
 #include "Utility.h"
-#include "FFmpegBuffer.h"
+#include "FFmpegInteropBuffer.h"
 
 // Disable debug string output on non-debug build
 #if !_DEBUG

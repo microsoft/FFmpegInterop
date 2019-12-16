@@ -18,38 +18,77 @@
 
 #pragma once
 
-#include "MediaSampleProvider.h"
+#include "SampleProvider.h"
 
 namespace winrt::FFmpegInterop::implementation
 {
 	class H264AVCSampleProvider :
-		public MediaSampleProvider
+		public SampleProvider
 	{
 	public:
-		H264AVCSampleProvider(_In_ const AVStream* stream, _Inout_ FFmpegReader& reader);
+		H264AVCSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
+
+		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp) override;
 
 	protected:
-		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t> GetSampleData() override;
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
 
 	private:
-		void WriteSPSAndPPS(
-			_Inout_opt_ Windows::Storage::Streams::DataWriter& dataWriter,
-			_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData,
-			_In_ uint32_t codecPrivateDataSize);
+		static constexpr uint8_t NALU_START_CODE[]{ 0x00, 0x00, 0x00, 0x01 };
+		static constexpr uint8_t NALU_TYPE_AUD{ 0x1F };
 
-		uint32_t WriteParameterSetData(
-			_Inout_opt_ Windows::Storage::Streams::DataWriter& dataWriter,
-			_In_ uint8_t parameterSetCount,
-			_In_reads_(parameterSetDataSize) const uint8_t* parameterSetData,
-			_In_ uint32_t parameterSetDataSize);
+		class AVCCodecPrivate
+		{
+		public:
+			AVCCodecPrivate(_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData, _In_ int codecPrivateDataSize);
 
-		void WriteNALPacket(
-			_Inout_opt_ Windows::Storage::Streams::DataWriter& dataWriter,
-			_In_reads_(packetDataSize) const uint8_t* packetData,
-			_In_ uint32_t packetDataSize);
+			uint8_t GetProfile() const { return m_profile; }
+			uint8_t GetLevel() const { return m_level; }
+			uint8_t GetNaluLengthSize() const { return m_naluLengthSize; }
+			const std::vector<uint8_t>& GetSpsPpsData() const { return m_spsPpsData; }
+			const std::vector<uint32_t>& GetSpsPpsNaluLengths() const { return m_spsPpsNaluLengths; }
 
-		bool m_isAVC; // Indicates whether bitstream format is AVC or Annex B
-		uint8_t m_nalLenSize; // Not used for Annex B
-		Windows::Storage::Streams::DataWriter m_dataWriter; // TODO: Reuse data writer?
+		private:
+			static constexpr size_t MIN_SIZE{ 7 };
+
+			uint32_t ParseParameterSets(
+				_In_ uint8_t parameterSetCount,
+				_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData,
+				_In_ uint32_t codecPrivateDataSize);
+
+			uint8_t m_profile;
+			uint8_t m_level;
+			uint8_t m_naluLengthSize;
+			std::vector<uint8_t> m_spsPpsData;
+			std::vector<uint32_t> m_spsPpsNaluLengths;
+		};
+
+		class AVCSequenceParameterSet
+		{
+		public:
+			AVCSequenceParameterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize);
+
+			uint8_t GetProfile() const { return m_profile; }
+			bool GetConstraintSet1() const { return m_constraintSet1; }
+
+		private:
+			uint8_t m_profile;
+			bool m_constraintSet1;
+		};
+
+		class AVCPictureParamterSet
+		{
+		public:
+			AVCPictureParamterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize);
+
+			uint32_t GetNumSliceGroups() const { return m_numSliceGroups; }
+
+		private:
+			uint32_t m_numSliceGroups;
+		};
+
+		std::tuple<Windows::Storage::Streams::IBuffer, std::vector<uint32_t>> TransformSample(const AVPacket* packet);
+
+		AVCCodecPrivate m_avcCodecPrivate;
 	};
 }

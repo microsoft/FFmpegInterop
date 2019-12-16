@@ -18,26 +18,43 @@
 
 #pragma once
 
+namespace std
+{
+	// Less than comparator for using GUID as std::map key
+	template<> struct less<GUID>
+	{
+		bool operator() (_In_ const GUID& lhs, _In_ const GUID& rhs) const
+		{
+			auto a = reinterpret_cast<const unsigned long*>(&lhs);
+			auto b = reinterpret_cast<const unsigned long*>(&rhs);
+
+			if (a[0] != b[0])
+			{
+				return a[0] < b[0];
+			}
+			else if (a[1] != b[1])
+			{
+				return a[1] < b[1];
+			}
+			else if (a[2] != b[2])
+			{
+				return a[2] < b[2];
+			}
+			else if (a[3] != b[3])
+			{
+				return a[3] < b[3];
+			}
+			else
+			{
+				return false;
+			}
+		}
+	};
+}
+
 namespace winrt::FFmpegInterop::implementation
 {
 	constexpr int64_t HNS_PER_SEC = 10000000;
-
-	// Map of AVCodecID -> MF subtype format GUIDs
-	// IMediaEncodingProperties.Subtype is a mess... MF can accept GUIDs or friendly names for this property.
-	// Some of the friendly names come from MediaEncodingSubtypes properties and others are unpublished.
-	const std::map<AVCodecID, const wchar_t*, std::less<int>> c_codecMap
-	{
-		// Audio codecs
-		{ AV_CODEC_ID_OPUS, L"OPUS" },
-
-		// Subtitle codecs
-		{ AV_CODEC_ID_ASS, L"SSA" },
-		{ AV_CODEC_ID_DVD_SUBTITLE, L"VobSub" },
-		{ AV_CODEC_ID_HDMV_PGS_SUBTITLE, L"PGS" },
-		{ AV_CODEC_ID_SSA, L"SSA" },
-		{ AV_CODEC_ID_SUBRIP, L"SRT" },
-		{ AV_CODEC_ID_TEXT, L"SRT" },
-	};
 
 	// Map of AVERROR -> HRESULT
 	const std::map<int, HRESULT> c_errorCodeMap

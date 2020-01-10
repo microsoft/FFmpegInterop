@@ -52,7 +52,6 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
     <None Include="..\..\FFmpegInterop.pfx" />
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec-58_ms.dll" />
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avdevice-58_ms.dll" />
@@ -61,5 +60,6 @@
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avutil-56_ms.dll" />
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swresample-3_ms.dll" />
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swscale-5_ms.dll" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

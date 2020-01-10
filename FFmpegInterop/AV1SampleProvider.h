@@ -18,28 +18,20 @@
 
 #pragma once
 
-#include <SampleProvider.h>
+#include "SampleProvider.h"
 
 namespace winrt::FFmpegInterop::implementation
 {
-	class SubtitleSampleProvider :
+	class AV1SampleProvider :
 		public SampleProvider
 	{
 	public:
-		SubtitleSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader, _In_ bool usesInitCue);
-
-		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp) override;
-
-		void GetSample(_Inout_ const Windows::Media::Core::MediaStreamSourceSampleRequest& request) override;
-		void QueuePacket(_In_ AVPacket_ptr packet) override;
+		AV1SampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
 
 	protected:
-		void Flush() noexcept override;
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
 
 	private:
-		bool m_usesInitCue;
-
-		Windows::Media::Core::MediaStreamSourceSampleRequest m_sampleRequest{ nullptr };
-		Windows::Media::Core::MediaStreamSourceSampleRequestDeferral m_sampleRequestDeferral{ nullptr };
+		Windows::Storage::Streams::IBuffer TransformSample(_Inout_ AVPacket_ptr packet);
 	};
 }

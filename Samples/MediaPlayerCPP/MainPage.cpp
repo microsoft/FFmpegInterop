@@ -20,6 +20,8 @@
 #include "MainPage.h"
 #include "MainPage.g.cpp"
 
+using namespace winrt::MediaPlayerCPP::implementation;
+using namespace winrt;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Foundation::Collections;
 using namespace winrt::Windows::UI::Xaml;
@@ -30,110 +32,112 @@ using namespace winrt::Windows::Storage;
 using namespace winrt::Windows::Storage::Pickers;
 using namespace winrt::Windows::Storage::Streams;
 using namespace winrt::Windows::Media::Core;
+using namespace winrt::Windows::Media::Playback;
 using namespace winrt::FFmpegInterop;
 using namespace std;
 
-namespace winrt::MediaPlayerCPP::implementation
+MainPage::MainPage()
 {
-	// TODO:
-	// - Add file activation
-	// - Add track selection
+	InitializeComponent();
 
-	MainPage::MainPage()
+	// Show the control panel on startup so user can start opening media
+	splitter().IsPaneOpen(true);
+}
+
+fire_and_forget MainPage::OpenFileAsync(_In_ const IInspectable&, _In_ const RoutedEventArgs&)
+{
+	// Open the file picker
+	FileOpenPicker filePicker;
+	filePicker.ViewMode(PickerViewMode::Thumbnail);
+	filePicker.SuggestedStartLocation(PickerLocationId::VideosLibrary);
+	filePicker.FileTypeFilter().Append(L"*");
+
+	StorageFile file{ co_await filePicker.PickSingleFileAsync() };
+
+	// Check if the user selected a file
+	if (file != nullptr)
 	{
-		InitializeComponent();
+		// Populate the URI box with the path of the file selected
+		uriBox().Text(file.Path());
 
-		// Show the control panel on startup so user can start opening media
-		Splitter().IsPaneOpen(true);
+		OpenStream(co_await file.OpenReadAsync());
 	}
+}
 
-	fire_and_forget MainPage::OpenFileAsync(const IInspectable&, const RoutedEventArgs&)
+fire_and_forget MainPage::OnFileActivated(_In_ const StorageFile& file)
+{
+	// Populate the URI box with the path of the file selected
+	uriBox().Text(file.Path());
+
+	OpenStream(co_await file.OpenReadAsync());
+}
+
+void MainPage::OpenStream(_In_ const IRandomAccessStream& stream)
+{
+	// TODO: Validate this code path with full FFmpeg build
+	OpenMedia([&stream](const MediaStreamSource& mss)
 	{
-		// Take a strong reference to prevent *this* from being prematurely destructed
-		auto lifetime{ get_strong() };
+		FFmpegInteropMSS::CreateFromStream(stream, mss);
+	});
+}
 
-		// Open the file picker
-		FileOpenPicker filePicker;
-		filePicker.ViewMode(PickerViewMode::Thumbnail);
-		filePicker.SuggestedStartLocation(PickerLocationId::VideosLibrary);
-		filePicker.FileTypeFilter().Append(L"*");
+void MainPage::OnUriBoxKeyUp(_In_ const IInspectable& sender, _In_ const KeyRoutedEventArgs& args)
+{
+	hstring uri{ sender.as<TextBox>().Text() };
 
-		StorageFile file{ co_await filePicker.PickSingleFileAsync() };
-
-		// Check if the user selected a file
-		if (file != nullptr)
-		{
-			// Populate the URI box with the path of the file selected
-			UriBox().Text(file.Path());
-
-			OpenStream(co_await file.OpenReadAsync());
-		}
-	}
-
-	void MainPage::UriBoxKeyUp(const IInspectable& sender, const KeyRoutedEventArgs& e)
+	// Only respond when the text box is not empty and after Enter key is pressed
+	if (args.Key() == Windows::System::VirtualKey::Enter && !uri.empty())
 	{
-		hstring uri{ sender.as<TextBox>().Text() };
+		// Mark event as handled to prevent duplicate event to re-triggered
+		args.Handled(true);
 
-		// Only respond when the text box is not empty and after Enter key is pressed
-		if (e.Key() == Windows::System::VirtualKey::Enter && !uri.empty())
-		{
-			OpenUri(uri);
-		}
+		OpenUri(uri);
 	}
+}
 
-	void MainPage::OpenUri(const hstring& uri)
+void MainPage::OpenUri(_In_ const hstring& uri)
+{
+	OpenMedia([&uri](const MediaStreamSource& mss)
 	{
-		OpenMedia([&uri](const MediaStreamSource& mss)
-		{
-			FFmpegInteropMSS::CreateFromUri(uri, mss);
-		});
-	}
+		FFmpegInteropMSS::CreateFromUri(uri, mss);
+	});
+}
 
-	void MainPage::OpenStream(const IRandomAccessStream& stream)
+void MainPage::OpenMedia(_In_ function<void(const MediaStreamSource&)> createFunc)
+{
+	// Stop any media currently playing
+	mediaElement().Stop();
+
+	try
 	{
-		// TODO: Validate this code path with full FFmpeg build
-		OpenMedia([&stream](const MediaStreamSource& mss)
-		{
-			FFmpegInteropMSS::CreateFromStream(stream, mss);
-		});
-	}
+		// Create the media source
+		IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
+		MediaStreamSource mss{ mssFactory.ActivateInstance<MediaStreamSource>() };
+		createFunc(mss);
 
-	void MainPage::OpenMedia(function<void(const MediaStreamSource&)> createFunc)
+		// Set the MSS as the media element's source
+		mediaElement().SetMediaStreamSource(move(mss));
+
+		// Close the control panel
+		splitter().IsPaneOpen(false);
+	}
+	catch (...)
 	{
-		// Stop any media currently playing
-		MediaElement().Stop();
-
-		try
-		{
-			// Create the media source
-			auto mssFactory{ get_activation_factory<MediaStreamSource>() };
-			auto mss{ mssFactory.ActivateInstance<MediaStreamSource>() };
-			createFunc(mss);
-
-			// Set the MSS as the media element's source
-			MediaElement().SetMediaStreamSource(mss);
-
-			// Close the control panel
-			Splitter().IsPaneOpen(false);
-		}
-		catch (...)
-		{
-			OnError(L"Failed to open media");
-		}
+		OnError(L"Failed to open media");
 	}
+}
 
-	void MainPage::MediaFailed(const IInspectable&, const ExceptionRoutedEventArgs& e)
-	{
-		OnError(e.ErrorMessage());
-	}
+void MainPage::OnMediaFailed(_In_ const IInspectable&, _In_ const ExceptionRoutedEventArgs& args)
+{
+	OnError(args.ErrorMessage());
+}
 
-	void MainPage::OnError(const hstring& errMsg)
-	{
-		// Display an error message
-		MessageDialog dialog{ errMsg };
-		(void) dialog.ShowAsync();
+void MainPage::OnError(_In_ const hstring& errMsg)
+{
+	// Display an error message
+	MessageDialog dialog{ errMsg };
+	(void) dialog.ShowAsync();
 
-		// Open the control panel
-		Splitter().IsPaneOpen(true);
-	}
+	// Open the control panel
+	splitter().IsPaneOpen(true);
 }

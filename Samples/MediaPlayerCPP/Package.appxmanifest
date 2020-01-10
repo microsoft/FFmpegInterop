@@ -58,6 +58,64 @@
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
+      <Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="fileassociations">
+            <uap:SupportedFileTypes>
+              <uap:FileType>.3g2</uap:FileType>
+              <uap:FileType>.3gp</uap:FileType>
+              <uap:FileType>.3gp2</uap:FileType>
+              <uap:FileType>.3gpp</uap:FileType>
+              <uap:FileType>.aac</uap:FileType>
+              <uap:FileType>.ac3</uap:FileType>
+              <uap:FileType>.adt</uap:FileType>
+              <uap:FileType>.adts</uap:FileType>
+              <uap:FileType>.amr</uap:FileType>
+              <uap:FileType>.asf</uap:FileType>
+              <uap:FileType>.avi</uap:FileType>
+              <uap:FileType>.divx</uap:FileType>
+              <uap:FileType>.ec3</uap:FileType>
+              <uap:FileType>.flac</uap:FileType>
+              <uap:FileType>.m1v</uap:FileType>
+              <uap:FileType>.m2ts</uap:FileType>
+              <uap:FileType>.m2t</uap:FileType>
+              <uap:FileType>.m2v</uap:FileType>
+              <uap:FileType>.m4a</uap:FileType>
+              <uap:FileType>.m4r</uap:FileType>
+              <uap:FileType>.m4v</uap:FileType>
+              <uap:FileType>.mka</uap:FileType>
+              <uap:FileType>.mkv</uap:FileType>
+              <uap:FileType>.mod</uap:FileType>
+              <uap:FileType>.mov</uap:FileType>
+              <uap:FileType>.mp2v</uap:FileType>
+              <uap:FileType>.mp3</uap:FileType>
+              <uap:FileType>.mp4</uap:FileType>
+              <uap:FileType>.mp4v</uap:FileType>
+              <uap:FileType>.mpa</uap:FileType>
+              <uap:FileType>.mpe</uap:FileType>
+              <uap:FileType>.mpeg</uap:FileType>
+              <uap:FileType>.mpg</uap:FileType>
+              <uap:FileType>.mpv2</uap:FileType>
+              <uap:FileType>.mts</uap:FileType>
+              <uap:FileType>.oga</uap:FileType>
+              <uap:FileType>.ogg</uap:FileType>
+              <uap:FileType>.ogm</uap:FileType>
+              <uap:FileType>.ogv</uap:FileType>
+              <uap:FileType>.ogx</uap:FileType>
+              <uap:FileType>.opus</uap:FileType>
+              <uap:FileType>.tod</uap:FileType>
+              <uap:FileType>.ts</uap:FileType>
+              <uap:FileType>.tts</uap:FileType>
+              <uap:FileType>.wav</uap:FileType>
+              <uap:FileType>.webm</uap:FileType>
+              <uap:FileType>.wm</uap:FileType>
+              <uap:FileType>.wma</uap:FileType>
+              <uap:FileType>.wmv</uap:FileType>
+              <uap:FileType>.xvid</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
     </Application>
   </Applications>
 

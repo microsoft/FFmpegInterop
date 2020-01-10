@@ -17,7 +17,7 @@
 //*****************************************************************************
 
 #include "pch.h"
-#include "H264AVCSampleProvider.h"
+#include "H264SampleProvider.h"
 
 using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Foundation;
@@ -51,14 +51,14 @@ namespace
 	}
 }
 
-H264AVCSampleProvider::H264AVCSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader) :
+H264SampleProvider::H264SampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader) :
 	SampleProvider(stream, reader),
 	m_avcCodecPrivate(m_stream->codecpar->extradata, m_stream->codecpar->extradata_size)
 {
 	// TODO: We currently only support the AVC bitstream format. Add support for Annex B
 }
 
-void H264AVCSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp)
+void H264SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp)
 {
 	const AVCodecParameters* codecPar{ m_stream->codecpar };
 
@@ -69,20 +69,23 @@ void H264AVCSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingPr
 
 	MediaPropertySet videoProp{ videoEncProp.Properties() };
 	videoProp.Insert(MF_MT_MPEG2_LEVEL, PropertyValue::CreateUInt32(static_cast<uint32_t>(codecPar->level)));
-	videoProp.Insert(MF_NALU_LENGTH_SET, PropertyValue::CreateBoolean(true));
+	videoProp.Insert(MF_NALU_LENGTH_SET, PropertyValue::CreateUInt32(static_cast<uint32_t>(true)));
 	videoProp.Insert(MF_MT_MPEG_SEQUENCE_HEADER, PropertyValue::CreateUInt8Array({ m_avcCodecPrivate.GetSpsPpsData().data(), m_avcCodecPrivate.GetSpsPpsData().data() + m_avcCodecPrivate.GetSpsPpsData().size() }));
 
 	// TODO: Set MF_MT_VIDEO_H264_NO_FMOASO
 }
 
-tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> H264AVCSampleProvider::GetSampleData()
+tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> H264SampleProvider::GetSampleData()
 {
 	// Get the next sample
 	AVPacket_ptr packet{ GetPacket() };
 
+	const int64_t pts{ packet->pts };
+	const int64_t dur{ packet->duration };
+
 	// Convert the sample to Annex B format by replacing NAL lengths with the NALU start code.
 	// Prepend SPS/PPS data to the sample if this is a key frame.
-	auto [buf, naluLengths] = TransformSample(packet.get());
+	auto [buf, naluLengths] = TransformSample(move(packet));
 
 	map<GUID, IInspectable> properties;
 
@@ -91,10 +94,10 @@ tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> H264AVCSampleProvider:
 	const size_t naluLengthsBufSize{ sizeof(decltype(naluLengths)::value_type) * naluLengths.size() };
 	properties[MF_NALU_LENGTH_INFORMATION] = PropertyValue::CreateUInt8Array({ naluLengthsBuf, naluLengthsBuf + naluLengthsBufSize });
 
-	return { move(buf), packet->pts, packet->duration, move(properties) };
+	return { move(buf), pts, dur, move(properties) };
 }
 
-tuple<IBuffer, vector<uint32_t>> H264AVCSampleProvider::TransformSample(const AVPacket* packet)
+tuple<IBuffer, vector<uint32_t>> H264SampleProvider::TransformSample(_Inout_ AVPacket_ptr packet)
 {
 	// Check if we'll need to write the transformed sample to a new buffer
 	const bool isKeyFrame{ (packet->flags & AV_PKT_FLAG_KEY) != 0 };
@@ -105,7 +108,7 @@ tuple<IBuffer, vector<uint32_t>> H264AVCSampleProvider::TransformSample(const AV
 	if (writeToBuf)
 	{
 		// Reserve space for the transformed sample now to avoid reallocations
-		size_t sampleSize = packet->size;
+		size_t sampleSize{ static_cast<uint32_t>(packet->size) };
 
 		if (isKeyFrame)
 		{
@@ -184,11 +187,11 @@ tuple<IBuffer, vector<uint32_t>> H264AVCSampleProvider::TransformSample(const AV
 	}
 	else
 	{
-		return { make<FFmpegInteropBuffer>(packet), move(naluLengths) };
+		return { make<FFmpegInteropBuffer>(move(packet)), move(naluLengths) };
 	}
 }
 
-H264AVCSampleProvider::AVCCodecPrivate::AVCCodecPrivate(_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData, _In_ int codecPrivateDataSize)
+H264SampleProvider::AVCCodecPrivate::AVCCodecPrivate(_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData, _In_ int codecPrivateDataSize)
 {
 	// Make sure the bitstream format is AVC
 	THROW_HR_IF_NULL(MF_E_INVALID_FILE_FORMAT, codecPrivateData);
@@ -211,7 +214,7 @@ H264AVCSampleProvider::AVCCodecPrivate::AVCCodecPrivate(_In_reads_(codecPrivateD
 	ParseParameterSets(ppsCount, codecPrivateData + pos, codecPrivateDataSize - pos);
 }
 
-uint32_t H264AVCSampleProvider::AVCCodecPrivate::ParseParameterSets(
+uint32_t H264SampleProvider::AVCCodecPrivate::ParseParameterSets(
 	_In_ uint8_t parameterSetCount,
 	_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData,
 	_In_ uint32_t codecPrivateDataSize)
@@ -241,18 +244,18 @@ uint32_t H264AVCSampleProvider::AVCCodecPrivate::ParseParameterSets(
 	return pos; // Return the number of bytes read
 }
 
-H264AVCSampleProvider::AVCSequenceParameterSet::AVCSequenceParameterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
+H264SampleProvider::AVCSequenceParameterSet::AVCSequenceParameterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
 {
 	THROW_HR_IF_NULL(MF_E_INVALID_FILE_FORMAT, data);
 	THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, dataSize < 3);
 
 	m_profile = data[1];
 		
-	uint8_t profileCompatibility = data[2];
+	uint8_t profileCompatibility{ data[2] };
 	m_constraintSet1 = (profileCompatibility & (1 << 6)) != 0;
 }
 
-H264AVCSampleProvider::AVCPictureParamterSet::AVCPictureParamterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
+H264SampleProvider::AVCPictureParamterSet::AVCPictureParamterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
 {
 	// TODO: Implement
 	m_numSliceGroups = 0;

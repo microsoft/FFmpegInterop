@@ -26,8 +26,8 @@ namespace winrt::FFmpegInterop::implementation
 	class FFmpegInteropLogging
 	{
 	public:
-		static void SetLogLevel(const FFmpegInterop::LogLevel& level);
-		static void SetLogProvider(const FFmpegInterop::ILogProvider& logProvider);
+		static void SetLogLevel(_In_ const FFmpegInterop::LogLevel& level);
+		static void SetLogProvider(_In_ const FFmpegInterop::ILogProvider& logProvider);
 		static void SetDefaultLogProvider();
 
 	private:

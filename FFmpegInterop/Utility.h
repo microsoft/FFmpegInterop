@@ -54,7 +54,7 @@ namespace std
 
 namespace winrt::FFmpegInterop::implementation
 {
-	constexpr int64_t HNS_PER_SEC = 10000000;
+	constexpr int64_t HNS_PER_SEC{ 10000000 };
 
 	// Map of AVERROR -> HRESULT
 	const std::map<int, HRESULT> c_errorCodeMap
@@ -68,12 +68,12 @@ namespace winrt::FFmpegInterop::implementation
 	// Helper function to map AVERROR to HRESULT
 	inline HRESULT averror_to_hresult(_In_range_(< , 0) int result)
 	{
-		auto iter = c_errorCodeMap.find(result);
+		auto iter{ c_errorCodeMap.find(result) };
 		return (iter != c_errorCodeMap.end()) ? iter->second : E_FAIL;
 	}
 
 	// Macro to check the result of FFmpeg calls
-	#define THROW_IF_FFMPEG_FAILED(result) if ((result) < 0) { THROW_HR(averror_to_hresult(result)); }
+	#define THROW_HR_IF_FFMPEG_FAILED(result) if ((result) < 0) { THROW_HR(averror_to_hresult(result)); }
 
 	// Smart classes for managing FFmpeg objects
 	struct AVBlobDeleter

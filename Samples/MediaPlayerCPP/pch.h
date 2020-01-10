@@ -18,6 +18,10 @@
 
 #pragma once
 
+// WIL
+#include <wil/cppwinrt.h>
+#include <wil/result.h>
+
 // Windows
 #include <Windows.h>
 #include <unknwn.h>
@@ -26,6 +30,7 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.ApplicationModel.Activation.h>
+#include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.UI.Popups.h>
 #include <winrt/Windows.UI.Xaml.h>
 #include <winrt/Windows.UI.Xaml.Controls.h>
@@ -39,6 +44,7 @@
 #include <winrt/Windows.Storage.Pickers.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Media.Core.h>
+#include <winrt/Windows.Media.Playback.h>
 
 // STL
 #include <functional>

@@ -22,11 +22,11 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	class H264AVCSampleProvider :
+	class H264SampleProvider :
 		public SampleProvider
 	{
 	public:
-		H264AVCSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
+		H264SampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp) override;
 
@@ -87,7 +87,7 @@ namespace winrt::FFmpegInterop::implementation
 			uint32_t m_numSliceGroups;
 		};
 
-		std::tuple<Windows::Storage::Streams::IBuffer, std::vector<uint32_t>> TransformSample(const AVPacket* packet);
+		std::tuple<Windows::Storage::Streams::IBuffer, std::vector<uint32_t>> TransformSample(_Inout_ AVPacket_ptr packet);
 
 		AVCCodecPrivate m_avcCodecPrivate;
 	};

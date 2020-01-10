@@ -45,11 +45,11 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVSt
 			nullptr));
 		THROW_IF_NULL_ALLOC(m_swsContext);
 
-		THROW_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, AV_PIX_FMT_NV12, m_codecContext->width));
+		THROW_HR_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, AV_PIX_FMT_NV12, m_codecContext->width));
 
 		// Create a buffer pool
 		const int requiredBufferSize = av_image_get_buffer_size(AV_PIX_FMT_NV12, m_codecContext->width, m_codecContext->height, 1);
-		THROW_IF_FFMPEG_FAILED(requiredBufferSize);
+		THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
 
 		m_bufferPool.reset(av_buffer_pool_init(requiredBufferSize, nullptr));
 		THROW_IF_NULL_ALLOC(m_bufferPool);
@@ -87,7 +87,7 @@ tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> UncompressedVideoSampl
 	return { move(buf), frame->best_effort_timestamp, frame->pkt_duration, move(properties) };
 }
 
-IBuffer UncompressedVideoSampleProvider::GetSampleBuffer(const AVFrame* frame)
+IBuffer UncompressedVideoSampleProvider::GetSampleBuffer(_In_ const AVFrame* frame)
 {
 	if (m_swsContext == nullptr)
 	{
@@ -102,16 +102,16 @@ IBuffer UncompressedVideoSampleProvider::GetSampleBuffer(const AVFrame* frame)
 
 		uint8_t* data[4]{ };
 		const int requiredBufferSize = av_image_fill_pointers(data, AV_PIX_FMT_NV12, m_codecContext->height, bufferRef->data, m_lineSizes);
-		THROW_IF_FFMPEG_FAILED(requiredBufferSize);
+		THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
 		THROW_HR_IF(MF_E_UNEXPECTED, requiredBufferSize != bufferRef->size);
 
-		THROW_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), frame->data, frame->linesize, 0, m_codecContext->height, data, m_lineSizes));
+		THROW_HR_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), frame->data, frame->linesize, 0, m_codecContext->height, data, m_lineSizes));
 
 		return make<FFmpegInteropBuffer>(move(bufferRef));
 	}
 }
 
-map<GUID, IInspectable> UncompressedVideoSampleProvider::GetSampleProperties(const AVFrame* frame)
+map<GUID, IInspectable> UncompressedVideoSampleProvider::GetSampleProperties(_In_ const AVFrame* frame)
 {
 	map<GUID, IInspectable> properties;
 

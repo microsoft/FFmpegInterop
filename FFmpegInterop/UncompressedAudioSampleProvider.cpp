@@ -49,7 +49,7 @@ tuple<IBuffer, int64_t, int64_t, std::map<GUID, IInspectable>> UncompressedAudio
 	InitResamplerIfNeeded(frame.get());
 
 	IBuffer sampleData{ nullptr };
-	int sampleCount = 0;
+	int sampleCount{ 0 };
 
 	if (m_swrContext == nullptr)
 	{
@@ -59,17 +59,17 @@ tuple<IBuffer, int64_t, int64_t, std::map<GUID, IInspectable>> UncompressedAudio
 	else
 	{
 		// Resample the frame to the desired output format
-		int result = swr_convert_frame(m_swrContext.get(), m_resampledFrame.get(), frame.get());
+		int result{ swr_convert_frame(m_swrContext.get(), m_resampledFrame.get(), frame.get()) };
 		if (result == AVERROR_INPUT_CHANGED)
 		{
 			// There was a format change. Reconfigure the resampler and try again.
-			THROW_IF_FFMPEG_FAILED(swr_config_frame(m_swrContext.get(), m_resampledFrame.get(), frame.get()));
-			THROW_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
-			THROW_IF_FFMPEG_FAILED(swr_convert_frame(m_swrContext.get(), m_resampledFrame.get(), frame.get()));
+			THROW_HR_IF_FFMPEG_FAILED(swr_config_frame(m_swrContext.get(), m_resampledFrame.get(), frame.get()));
+			THROW_HR_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
+			THROW_HR_IF_FFMPEG_FAILED(swr_convert_frame(m_swrContext.get(), m_resampledFrame.get(), frame.get()));
 		}
 		else
 		{
-			THROW_IF_FFMPEG_FAILED(result);
+			THROW_HR_IF_FFMPEG_FAILED(result);
 		}
 
 		sampleData = make<FFmpegInteropBuffer>(m_resampledFrame->buf[0]);
@@ -84,12 +84,12 @@ tuple<IBuffer, int64_t, int64_t, std::map<GUID, IInspectable>> UncompressedAudio
 	return { move(sampleData), frame->best_effort_timestamp, dur, { } };
 }
 
-void UncompressedAudioSampleProvider::InitResamplerIfNeeded(const AVFrame* frame)
+void UncompressedAudioSampleProvider::InitResamplerIfNeeded(_In_ const AVFrame* frame)
 {
-	const bool resamplerNeeded =
+	const bool resamplerNeeded{
 		frame->format != AV_SAMPLE_FMT_S16 ||
 		frame->sample_rate != m_codecContext->sample_rate ||
-		frame->channels != m_codecContext->channels;
+		frame->channels != m_codecContext->channels };
 
 	if (resamplerNeeded)
 	{
@@ -133,7 +133,7 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVSt
 		0,
 		nullptr));
 	THROW_IF_NULL_ALLOC(E_OUTOFMEMORY, m_swrContext);
-	THROW_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
+	THROW_HR_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
 }
 
 	
@@ -158,11 +158,11 @@ tuple<IBuffer, int64_t, int64_t> UncompressedAudioSampleProvider::GetSampleData(
 		// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
 		uint8_t* buf = nullptr;
 		int bufSize = av_samples_alloc(&buf, nullptr, frame->channels, frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-		THROW_IF_FFMPEG_FAILED(bufSize);
+		THROW_HR_IF_FFMPEG_FAILED(bufSize);
 
 		int resampledSamplesCount = swr_convert(m_swrContext.get(), &buf, bufSize, frame->extended_data, frame->nb_samples);
 		AVBlob_ptr resampledData{ exchange(buf, nullptr) };
-		THROW_IF_FFMPEG_FAILED(resampledSamplesCount);
+		THROW_HR_IF_FFMPEG_FAILED(resampledSamplesCount);
 
 		const uint32_t resampledDataSize = resampledSamplesCount * frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 		WINRT_ASSERT(resampledDataSize <= bufSize);

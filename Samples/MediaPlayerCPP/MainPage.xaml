@@ -27,33 +27,33 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <SplitView x:Name="Splitter">
+        <SplitView x:Name="splitter">
 
             <!-- Control panel -->
             <SplitView.Pane>
                 <StackPanel VerticalAlignment="Stretch" Margin="10, 50, 0, 0">
-                    <TextBlock Text="Open local file"/>
+                    <TextBlock Text="Open local file or URI"/>
                     <StackPanel Orientation="Horizontal">
                         <AppBarButton Content="Open local file" Icon="OpenFile" Margin="0, 10, 10, 0" Click="{x:Bind OpenFileAsync}"/>
-                        <TextBox x:Name="UriBox" PlaceholderText="Enter URI and press Enter" InputScope="Url" Width="210" Height="30" KeyUp="{x:Bind UriBoxKeyUp}"/>
+                        <TextBox x:Name="uriBox" PlaceholderText="Enter URI and press Enter" InputScope="Url" Width="210" Height="30" KeyUp="{x:Bind OnUriBoxKeyUp}"/>
                     </StackPanel>
-                    <ToggleSwitch x:Name="ToggleSwitchAudioDecode" Header="Force audio decode" OffContent="Off" OnContent="On" IsOn="False"/>
-                    <ToggleSwitch x:Name="ToggleSwitchVideoDecode" Header="Force video decode" OffContent="Off" OnContent="On" IsOn="False"/>
+                    <ToggleSwitch x:Name="toggleSwitchAudioDecode" Header="Force audio decode" OffContent="Off" OnContent="On" IsOn="False"/>
+                    <ToggleSwitch x:Name="toggleSwitchVideoDecode" Header="Force video decode" OffContent="Off" OnContent="On" IsOn="False"/>
                 </StackPanel>
             </SplitView.Pane>
 
             <!-- Main content -->
             <MediaElement 
-                x:Name="MediaElement"
+                x:Name="mediaElement"
                 AreTransportControlsEnabled="True"
                 AudioCategory="ForegroundOnlyMedia"
                 AutoPlay="True"
-                MediaFailed="{x:Bind MediaFailed}" />
+                MediaFailed="{x:Bind OnMediaFailed}" />
 
         </SplitView>
 
         <!-- Control panel toggle button -->
-        <ToggleButton VerticalAlignment="Top" Margin="10, 10, 0, 0" IsChecked="{Binding ElementName=Splitter, Path=IsPaneOpen, Mode=TwoWay}">
+        <ToggleButton VerticalAlignment="Top" Margin="10, 10, 0, 0" IsChecked="{Binding ElementName=splitter, Path=IsPaneOpen, Mode=TwoWay}">
             <ToggleButton.Content>
                 <FontIcon FontFamily="Segoe MDL2 Assets" Foreground="White" Glyph="&#xE700;"/>
             </ToggleButton.Content>

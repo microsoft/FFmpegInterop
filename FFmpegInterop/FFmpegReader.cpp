@@ -38,7 +38,7 @@ void FFmpegReader::ReadPacket()
 
 	// Read the next packet and push it into the appropriate sample provider.
 	// Drop the packet if the stream is not being used.
-	THROW_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
+	THROW_HR_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
 
 	auto iter = m_streamIdMap.find(packet->stream_index);
 	if (iter != m_streamIdMap.end())

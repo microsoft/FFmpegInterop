@@ -26,12 +26,12 @@ using namespace winrt::FFmpegInterop::implementation;
 
 FFmpegInterop::ILogProvider FFmpegInteropLogging::s_LogProvider{ nullptr };
 
-void FFmpegInteropLogging::SetLogLevel(const FFmpegInterop::LogLevel& level)
+void FFmpegInteropLogging::SetLogLevel(_In_ const FFmpegInterop::LogLevel& level)
 {
 	av_log_set_level(static_cast<int>(level));
 }
 
-void FFmpegInteropLogging::SetLogProvider(const FFmpegInterop::ILogProvider& logProvider)
+void FFmpegInteropLogging::SetLogProvider(_In_ const FFmpegInterop::ILogProvider& logProvider)
 {
 	s_LogProvider = logProvider;
 	av_log_set_callback([](void* avcl, int level, const char* fmt, va_list vl)->void

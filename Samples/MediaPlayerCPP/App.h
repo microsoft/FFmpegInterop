@@ -28,10 +28,13 @@ namespace winrt::MediaPlayerCPP::implementation
 	public:
 		App();
 
-		void OnLaunched(const Windows::ApplicationModel::Activation::LaunchActivatedEventArgs& e);
-		void OnSuspending(const IInspectable& sender, const Windows::ApplicationModel::SuspendingEventArgs& e);
-		void OnNavigationFailed(const IInspectable& sender, const Windows::UI::Xaml::Navigation::NavigationFailedEventArgs& e);
+		void OnLaunched(const Windows::ApplicationModel::Activation::LaunchActivatedEventArgs& args);
+		void OnFileActivated(const Windows::ApplicationModel::Activation::FileActivatedEventArgs& args);
+		void OnSuspending(const IInspectable& sender, const Windows::ApplicationModel::SuspendingEventArgs& args);
+		void OnNavigationFailed(const IInspectable& sender, const Windows::UI::Xaml::Navigation::NavigationFailedEventArgs& args);
 
 		// virtual void Log(FFmpegInterop::LogLevel level, Platform::String^ message);
+	private:
+		void InitRootFrame();
 	};
 }

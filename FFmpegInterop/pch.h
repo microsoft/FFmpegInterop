@@ -49,6 +49,7 @@
 #include <mfapi.h>
 #include <mferror.h>
 #include <codecapi.h>
+#include <wmcodecdsp.h>
 
 // FFmpeg
 extern "C"
@@ -75,10 +76,3 @@ extern "C"
 #include "Tracing.h"
 #include "Utility.h"
 #include "FFmpegInteropBuffer.h"
-
-// Disable debug string output on non-debug build
-#if !_DEBUG
-#define DebugMessage(x)
-#else
-#define DebugMessage(x) OutputDebugString(x)
-#endif

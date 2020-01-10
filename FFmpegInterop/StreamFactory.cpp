@@ -20,7 +20,8 @@
 #include "StreamFactory.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
-#include "H264AVCSampleProvider.h"
+#include "H264SampleProvider.h"
+#include "AV1SampleProvider.h"
 #include "SubtitleSampleProvider.h"
 
 using namespace winrt::FFmpegInterop::implementation;
@@ -50,15 +51,64 @@ tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAu
 		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
 		break;
 
+	case AV_CODEC_ID_AC3:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_Dolby_AC3));
+		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_DTS:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_DTS_HD));
+		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_EAC3:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_Dolby_DDPlus));
+		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_MP1:
+	case AV_CODEC_ID_MP2:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_MPEG));
+		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
 	case AV_CODEC_ID_MP3:
 		audioEncProp = AudioEncodingProperties::CreateMp3(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
-
 		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
 		break;
 
 	case AV_CODEC_ID_OPUS:
 		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
-		audioEncProp.Subtype(L"OPUS");
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_Opus));
+		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_PCM_F32LE:
+	case AV_CODEC_ID_PCM_F64LE:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_Float));
+		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_PCM_S16BE:
+	case AV_CODEC_ID_PCM_S16LE:
+	case AV_CODEC_ID_PCM_S24BE:
+	case AV_CODEC_ID_PCM_S24LE:
+	case AV_CODEC_ID_PCM_S32BE:
+	case AV_CODEC_ID_PCM_S32LE:
+	case AV_CODEC_ID_PCM_U8:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_PCM));
+		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_TRUEHD:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MEDIASUBTYPE_DOLBY_TRUEHD));
 		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
 		break;
 
@@ -86,9 +136,34 @@ tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVi
 
 	switch (stream->codecpar->codec_id)
 	{
+	case AV_CODEC_ID_AV1:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_AV1));
+		videoSampleProvider = make_unique<AV1SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_MSMPEG4V3:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_MP43));
+		videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
 	case AV_CODEC_ID_H264:
-		videoEncProp = VideoEncodingProperties::CreateH264();
-		videoSampleProvider = make_unique<H264AVCSampleProvider>(stream, reader);
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_H264));
+		videoSampleProvider = make_unique<H264SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_VP8:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_VP80));
+		videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_VP9:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_VP90));
+		videoSampleProvider = make_unique<SampleProvider>(stream, reader);
 		break;
 
 	default:

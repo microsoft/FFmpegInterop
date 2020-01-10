@@ -28,15 +28,16 @@ namespace winrt::MediaPlayerCPP::implementation
 	public:
 		MainPage();
 
-		fire_and_forget OpenFileAsync(const Windows::Foundation::IInspectable& sender, const Windows::UI::Xaml::RoutedEventArgs& e);
-		void UriBoxKeyUp(const Windows::Foundation::IInspectable& sender, const Windows::UI::Xaml::Input::KeyRoutedEventArgs& e);
-		void MediaFailed(const Windows::Foundation::IInspectable& sender, const Windows::UI::Xaml::ExceptionRoutedEventArgs& e);
+		fire_and_forget OpenFileAsync(_In_ const Windows::Foundation::IInspectable& sender, _In_ const Windows::UI::Xaml::RoutedEventArgs& args);
+		fire_and_forget OnFileActivated(_In_ const Windows::Storage::StorageFile& file);
+		void OnUriBoxKeyUp(_In_ const Windows::Foundation::IInspectable& sender, _In_ const Windows::UI::Xaml::Input::KeyRoutedEventArgs& args);
+		void OnMediaFailed(_In_ const Windows::Foundation::IInspectable& sender, _In_ const Windows::UI::Xaml::ExceptionRoutedEventArgs& args);
 
 	private:
-		void OpenUri(const hstring& uri);
-		void OpenStream(const Windows::Storage::Streams::IRandomAccessStream& stream);
-		void OpenMedia(std::function<void(const Windows::Media::Core::MediaStreamSource&)> createFunc);
-		void OnError(const hstring& errMsg);
+		void OpenStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& stream);
+		void OpenUri(_In_ const hstring& uri);
+		void OpenMedia(_In_ std::function<void(const Windows::Media::Core::MediaStreamSource&)> createFunc);
+		void OnError(_In_ const hstring& errMsg);
 	};
 }
 

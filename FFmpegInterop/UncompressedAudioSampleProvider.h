@@ -21,7 +21,6 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	// TODO: Minimize resource usage when stream is deselected
 	class UncompressedAudioSampleProvider :
 		public UncompressedSampleProvider
 	{
@@ -34,7 +33,7 @@ namespace winrt::FFmpegInterop::implementation
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
 
 	private:
-		void InitResamplerIfNeeded(const AVFrame* frame);
+		void InitResamplerIfNeeded(_In_ const AVFrame* frame);
 
 		SwrContext_ptr m_swrContext;
 		AVFrame_ptr m_resampledFrame;

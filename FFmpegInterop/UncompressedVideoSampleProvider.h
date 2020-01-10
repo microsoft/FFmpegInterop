@@ -22,7 +22,6 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	// TODO: Minimize resource usage when stream is deselected
 	class UncompressedVideoSampleProvider :
 		public UncompressedSampleProvider
 	{
@@ -35,8 +34,8 @@ namespace winrt::FFmpegInterop::implementation
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
 
 	private:
-		Windows::Storage::Streams::IBuffer GetSampleBuffer(const AVFrame* frame);
-		std::map<GUID, Windows::Foundation::IInspectable> GetSampleProperties(const AVFrame* frame);
+		Windows::Storage::Streams::IBuffer GetSampleBuffer(_In_ const AVFrame* frame);
+		std::map<GUID, Windows::Foundation::IInspectable> GetSampleProperties(_In_ const AVFrame* frame);
 
 		SwsContext_ptr m_swsContext;
 		int m_lineSizes[4]{ 0, 0, 0, 0};

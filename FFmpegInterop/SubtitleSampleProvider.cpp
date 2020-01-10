@@ -23,9 +23,9 @@ using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Media::MediaProperties;
 
-SubtitleSampleProvider::SubtitleSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader, _In_ bool requiresInitCue) :
+SubtitleSampleProvider::SubtitleSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader, _In_ bool usesInitCue) :
 	SampleProvider(stream, reader),
-	m_usesInitCue(requiresInitCue)
+	m_usesInitCue(usesInitCue)
 {
 
 }
@@ -82,6 +82,7 @@ void SubtitleSampleProvider::GetSample(_Inout_ const MediaStreamSourceSampleRequ
 		WINRT_ASSERT(m_sampleRequestDeferral == nullptr);
 
 		// Request a deferral
+		m_sampleRequest = request;
 		m_sampleRequestDeferral = request.GetDeferral();
 	}
 }

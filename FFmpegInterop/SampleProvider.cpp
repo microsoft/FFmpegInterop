@@ -55,6 +55,7 @@ void SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingPropertie
 		audioEncProp.SampleRate(codecPar->sample_rate);
 		audioEncProp.ChannelCount(codecPar->channels);
 		audioEncProp.Bitrate(static_cast<uint32_t>(codecPar->bit_rate));
+		audioEncProp.BitsPerSample(static_cast<uint32_t>(codecPar->bits_per_coded_sample));
 
 		break;
 	}
@@ -170,7 +171,11 @@ void SampleProvider::GetSample(_Inout_ const MediaStreamSourceSampleRequest& req
 tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> SampleProvider::GetSampleData()
 {
 	AVPacket_ptr packet{ GetPacket() };
-	return { make<FFmpegInteropBuffer>(packet.get()), packet->pts, packet->duration, { } };
+
+	const int64_t pts{ packet->pts };
+	const int64_t dur{ packet->duration };
+
+	return { make<FFmpegInteropBuffer>(move(packet)), pts, dur, { } };
 }
 
 AVPacket_ptr SampleProvider::GetPacket()

@@ -19,12 +19,7 @@
 using FFmpegInterop;
 
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.Media.Core;
 using Windows.Storage;
 using Windows.Storage.Pickers;
@@ -32,139 +27,115 @@ using Windows.Storage.Streams;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Navigation;
 
 namespace MediaPlayerCS
 {
-    public sealed partial class MainPage : Page
-    {
-        private FFmpegInteropMSS FFmpegMSS;
+	public sealed partial class MainPage : Page
+	{
+		public MainPage()
+		{
+			InitializeComponent();
 
-        public MainPage()
-        {
-            this.InitializeComponent();
+			// Show the control panel on startup so user can start opening media
+			splitter.IsPaneOpen = true;
+		}
 
-            // Show the control panel on startup so user can start opening media
-            Splitter.IsPaneOpen = true;
-        }
+		private async void OpenFileAsync(object sender, RoutedEventArgs args)
+		{
+			// Open the file picker
+			FileOpenPicker filePicker = new FileOpenPicker();
+			filePicker.ViewMode = PickerViewMode.Thumbnail;
+			filePicker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
+			filePicker.FileTypeFilter.Add("*");
 
-        private async void OpenLocalFile(object sender, RoutedEventArgs e)
-        {
-            FileOpenPicker filePicker = new FileOpenPicker();
-            filePicker.ViewMode = PickerViewMode.Thumbnail;
-            filePicker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
-            filePicker.FileTypeFilter.Add("*");
+			StorageFile file = await filePicker.PickSingleFileAsync();
 
-            // Show file picker so user can select a file
-            StorageFile file = await filePicker.PickSingleFileAsync();
+			// Check if the user selected a file
+			if (file != null)
+			{
+				// Populate the URI box with the path of the file selected
+				uriBox.Text = file.Path;
 
-            if (file != null)
-            {
-                mediaElement.Stop();
+				OpenStream(await file.OpenReadAsync());
+			}
+		}
+		public async void OnFileActivated(StorageFile file)
+		{
+			// Populate the URI box with the path of the file selected
+			uriBox.Text = file.Path;
 
-                // Open StorageFile as IRandomAccessStream to be passed to FFmpegInteropMSS
-                IRandomAccessStream readStream = await file.OpenAsync(FileAccessMode.Read);
+			OpenStream(await file.OpenReadAsync());
+		}
 
-                try
-                {
-                    // Read toggle switches states and use them to setup FFmpeg MSS
-                    bool forceDecodeAudio = toggleSwitchAudioDecode.IsOn;
-                    bool forceDecodeVideo = toggleSwitchVideoDecode.IsOn;
+		private void OpenStream(IRandomAccessStream stream)
+		{
+			// TODO: Validate this code path with full FFmpeg build
+			OpenMedia(mss =>
+			{
+				FFmpegInteropMSS.CreateFromStream(stream, mss);
+			});
+		}
 
-					// Instantiate FFmpegInteropMSS using the opened local file stream
-                    FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(readStream, forceDecodeAudio, forceDecodeVideo);
-                    MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
+		private void OnUriBoxKeyUp(object sender, KeyRoutedEventArgs args)
+		{
+			String uri = (sender as TextBox).Text;
 
-                    if (mss != null)
-                    {
-                        // Pass MediaStreamSource to Media Element
-                        mediaElement.SetMediaStreamSource(mss);
+			// Only respond when the text box is not empty and after Enter key is pressed
+			if (args.Key == Windows.System.VirtualKey.Enter && !String.IsNullOrWhiteSpace(uri))
+			{
+				// Mark event as handled to prevent duplicate event to re-triggered
+				args.Handled = true;
 
-                        // Close control panel after file open
-                        Splitter.IsPaneOpen = false;
-                    }
-                    else
-                    {
-                        DisplayErrorMessage("Cannot open media");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    DisplayErrorMessage(ex.Message);
-                }
-            }
-        }
+				OpenUri(uri);
+			}
+		}
 
-        private void URIBoxKeyUp(object sender, KeyRoutedEventArgs e)
-        {
-            var textBox = sender as TextBox;
-            String uri = textBox.Text;
+		private void OpenUri(String uri)
+		{
+			OpenMedia(mss =>
+			{
+				FFmpegInteropMSS.CreateFromUri(uri, mss);
+			});
+		}
 
-            // Only respond when the text box is not empty and after Enter key is pressed
-            if (e.Key == Windows.System.VirtualKey.Enter && !String.IsNullOrWhiteSpace(uri))
-            {
-                // Mark event as handled to prevent duplicate event to re-triggered
-                e.Handled = true;
+		private void OpenMedia(Action<MediaStreamSource> createFunc)
+		{
+			// Stop any media currently playing
+			mediaElement.Stop();
 
-                try
-                {
-                    // Read toggle switches states and use them to setup FFmpeg MSS
-                    bool forceDecodeAudio = toggleSwitchAudioDecode.IsOn;
-                    bool forceDecodeVideo = toggleSwitchVideoDecode.IsOn;
+			try
+			{
+				// Create the media source
+				IActivationFactory mssFactory = WindowsRuntimeMarshal.GetActivationFactory(typeof(MediaStreamSource));
+				MediaStreamSource mss = mssFactory.ActivateInstance() as MediaStreamSource;
+				createFunc(mss);
 
-                    // Set FFmpeg specific options. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-                    PropertySet options = new PropertySet();
+				// Set the MSS as the media element's source
+				mediaElement.SetMediaStreamSource(mss);
 
-                    // Below are some sample options that you can set to configure RTSP streaming
-                    // options.Add("rtsp_flags", "prefer_tcp");
-                    // options.Add("stimeout", 100000);
+				// Close the control panel
+				splitter.IsPaneOpen = false;
+			}
+			catch (Exception)
+			{
+				OnError("Failed to open media");
+			}
+		}
 
-                    // Instantiate FFmpegInteropMSS using the URI
-                    mediaElement.Stop();
-                    FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(uri, forceDecodeAudio, forceDecodeVideo, options);
-                    if (FFmpegMSS != null)
-                    {
-                        MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
+		private void OnMediaFailed(object sender, ExceptionRoutedEventArgs args)
+		{
+			OnError(args.ErrorMessage);
+		}
 
-                        if (mss != null)
-                        {
-                            // Pass MediaStreamSource to Media Element
-                            mediaElement.SetMediaStreamSource(mss);
+		private async void OnError(string errMsg)
+		{
+			// Display error message
+			var dialog = new MessageDialog(errMsg);
+			await dialog.ShowAsync();
 
-                            // Close control panel after opening media
-                            Splitter.IsPaneOpen = false;
-                        }
-                        else
-                        {
-                            DisplayErrorMessage("Cannot open media");
-                        }
-                    }
-                    else
-                    {
-                        DisplayErrorMessage("Cannot open media");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    DisplayErrorMessage(ex.Message);
-                }
-            }
-        }
-
-        private void MediaFailed(object sender, ExceptionRoutedEventArgs e)
-        {
-            DisplayErrorMessage(e.ErrorMessage);
-        }
-
-        private async void DisplayErrorMessage(string message)
-        {
-            // Display error message
-            var errorDialog = new MessageDialog(message);
-            var x = await errorDialog.ShowAsync();
-        }
-    }
+			// Open the control panel
+			splitter.IsPaneOpen = true;
+		}
+	}
 }

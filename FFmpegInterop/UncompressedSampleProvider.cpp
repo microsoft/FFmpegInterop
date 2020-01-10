@@ -32,7 +32,7 @@ UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVStream* stre
 
 	m_codecContext.reset(avcodec_alloc_context3(codec));
 	THROW_IF_NULL_ALLOC(m_codecContext);
-	THROW_IF_FFMPEG_FAILED(avcodec_parameters_to_context(m_codecContext.get(), stream->codecpar));
+	THROW_HR_IF_FFMPEG_FAILED(avcodec_parameters_to_context(m_codecContext.get(), stream->codecpar));
 
 	unsigned int threadCount = std::thread::hardware_concurrency();
 	if (threadCount > 0)
@@ -41,7 +41,7 @@ UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVStream* stre
 		m_codecContext->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
 	}
 
-	THROW_IF_FFMPEG_FAILED(avcodec_open2(m_codecContext.get(), codec, nullptr));
+	THROW_HR_IF_FFMPEG_FAILED(avcodec_open2(m_codecContext.get(), codec, nullptr));
 }
 
 void UncompressedSampleProvider::Flush() noexcept
@@ -62,7 +62,7 @@ AVFrame_ptr UncompressedSampleProvider::GetFrame()
 		// Send a packet to the decoder and see if it can produce a frame
 		AVPacket_ptr packet{ GetPacket() };
 
-		THROW_IF_FFMPEG_FAILED(avcodec_send_packet(m_codecContext.get(), packet.get()));
+		THROW_HR_IF_FFMPEG_FAILED(avcodec_send_packet(m_codecContext.get(), packet.get()));
 
 		int decodeResult = avcodec_receive_frame(m_codecContext.get(), frame.get());
 		if (decodeResult == AVERROR(EAGAIN))
@@ -70,7 +70,7 @@ AVFrame_ptr UncompressedSampleProvider::GetFrame()
 			// The decoder needs more data to produce a frame
 			continue;
 		}
-		THROW_IF_FFMPEG_FAILED(decodeResult);
+		THROW_HR_IF_FFMPEG_FAILED(decodeResult);
 
 		return frame;
 	}

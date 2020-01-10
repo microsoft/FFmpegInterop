@@ -33,8 +33,8 @@ namespace
 	// Function to read from file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
 	int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
 	{
-		IStream* fileStream = reinterpret_cast<IStream*>(ptr);
-		ULONG bytesRead = 0;
+		IStream* fileStream{ reinterpret_cast<IStream*>(ptr) };
+		ULONG bytesRead{ 0 };
 
 		if (FAILED(fileStream->Read(buf, bufSize, &bytesRead)))
 		{
@@ -53,7 +53,7 @@ namespace
 	// Function to seek in file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
 	int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
 	{
-		IStream* fileStream = reinterpret_cast<IStream*>(ptr);
+		IStream* fileStream{ reinterpret_cast<IStream*>(ptr) };
 		LARGE_INTEGER in{ 0 };
 		in.QuadPart = pos;
 		ULARGE_INTEGER out{ 0 };
@@ -67,27 +67,25 @@ namespace
 	}
 }
 
-FFmpegInterop::FFmpegInteropMSS FFmpegInteropMSS::CreateFromStream(const IRandomAccessStream& fileStream, const MediaStreamSource& mss)
+void FFmpegInteropMSS::CreateFromStream(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss)
 {
 	auto logger{ CreateFromStreamActivity::Start() };
 
-	FFmpegInterop::FFmpegInteropMSS ffmpegInteropMSS{ make<FFmpegInteropMSS>(fileStream, mss) };
+	make<FFmpegInteropMSS>(fileStream, mss);
 
 	logger.Stop();
-	return ffmpegInteropMSS;
 }
 
-FFmpegInterop::FFmpegInteropMSS FFmpegInteropMSS::CreateFromUri(const hstring& uri, const MediaStreamSource& mss)
+void FFmpegInteropMSS::CreateFromUri(_In_ const hstring& uri, _In_ const MediaStreamSource& mss)
 {
 	auto logger{ CreateFromUriActivity::Start() };
 
-	FFmpegInterop::FFmpegInteropMSS ffmpegInteropMSS{ make<FFmpegInteropMSS>(uri, mss) };
+	make<FFmpegInteropMSS>(uri, mss);
 
 	logger.Stop();
-	return ffmpegInteropMSS;
 }
 
-FFmpegInteropMSS::FFmpegInteropMSS(const MediaStreamSource& mss) :
+FFmpegInteropMSS::FFmpegInteropMSS(_In_ const MediaStreamSource& mss) :
 	m_mss(mss),
 	m_formatContext(avformat_alloc_context()),
 	m_reader(m_formatContext.get(), m_streamIdMap)
@@ -96,7 +94,7 @@ FFmpegInteropMSS::FFmpegInteropMSS(const MediaStreamSource& mss) :
 	THROW_IF_NULL_ALLOC(m_formatContext);
 }
 
-FFmpegInteropMSS::FFmpegInteropMSS(const IRandomAccessStream& fileStream, const MediaStreamSource& mss) :
+FFmpegInteropMSS::FFmpegInteropMSS(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss) :
 	FFmpegInteropMSS(mss)
 {
 	try
@@ -112,7 +110,7 @@ FFmpegInteropMSS::FFmpegInteropMSS(const IRandomAccessStream& fileStream, const 
 	}
 }
 
-FFmpegInteropMSS::FFmpegInteropMSS(const hstring& uri, const MediaStreamSource& mss) :
+FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_ const MediaStreamSource& mss) :
 	FFmpegInteropMSS(mss)
 {
 	try
@@ -131,7 +129,7 @@ FFmpegInteropMSS::FFmpegInteropMSS(const hstring& uri, const MediaStreamSource& 
 	}
 }
 
-void FFmpegInteropMSS::OpenFile(const IRandomAccessStream& fileStream)
+void FFmpegInteropMSS::OpenFile(_In_ const IRandomAccessStream& fileStream)
 {
 	// Convert async IRandomAccessStream to sync IStream
 	THROW_HR_IF_NULL(E_INVALIDARG, fileStream);
@@ -152,19 +150,19 @@ void FFmpegInteropMSS::OpenFile(const IRandomAccessStream& fileStream)
 	OpenFile(nullptr);
 }
 
-void FFmpegInteropMSS::OpenFile(const char* uri)
+void FFmpegInteropMSS::OpenFile(_In_opt_z_ const char* uri)
 {
 	// TODO: Add ffmpeg config options
 
 	// Open the format context for the stream
 	AVFormatContext* formatContext = m_formatContext.release();
-	THROW_IF_FFMPEG_FAILED(avformat_open_input(&formatContext, uri, nullptr, nullptr)); // The format context is freed on failure
+	THROW_HR_IF_FFMPEG_FAILED(avformat_open_input(&formatContext, uri, nullptr, nullptr)); // The format context is freed on failure
 	m_formatContext.reset(exchange(formatContext, nullptr));
 }
 
 void FFmpegInteropMSS::InitFFmpegContext()
 {
-	THROW_IF_FFMPEG_FAILED(avformat_find_stream_info(m_formatContext.get(), nullptr));
+	THROW_HR_IF_FFMPEG_FAILED(avformat_find_stream_info(m_formatContext.get(), nullptr));
 
 	bool hasVideo{ false };
 	bool hasAudio{ false };
@@ -253,7 +251,7 @@ void FFmpegInteropMSS::InitFFmpegContext()
 	m_closedEventToken = m_mss.Closed({ get_strong(), &FFmpegInteropMSS::OnClosed });
 }
 
-void FFmpegInteropMSS::OnStarting(const MediaStreamSource& sender, const MediaStreamSourceStartingEventArgs& args)
+void FFmpegInteropMSS::OnStarting(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceStartingEventArgs& args)
 {
 	auto logger{ OnStartingActivity::Start() };
 
@@ -279,7 +277,7 @@ void FFmpegInteropMSS::OnStarting(const MediaStreamSource& sender, const MediaSt
 			}
 
 			THROW_HR_IF(MF_E_INVALID_TIMESTAMP, avSeekTime > m_formatContext->duration);
-			THROW_IF_FFMPEG_FAILED(avformat_seek_file(m_formatContext.get(), -1, numeric_limits<int64_t>::min(), avSeekTime, avSeekTime, 0));
+			THROW_HR_IF_FFMPEG_FAILED(avformat_seek_file(m_formatContext.get(), -1, numeric_limits<int64_t>::min(), avSeekTime, avSeekTime, 0));
 
 			for (auto& [streamId, stream] : m_streamIdMap)
 			{
@@ -302,7 +300,7 @@ void FFmpegInteropMSS::OnStarting(const MediaStreamSource& sender, const MediaSt
 	}
 }
 
-void FFmpegInteropMSS::OnSampleRequested(const MediaStreamSource& sender, const MediaStreamSourceSampleRequestedEventArgs& args)
+void FFmpegInteropMSS::OnSampleRequested(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceSampleRequestedEventArgs& args)
 {
 	auto logger{ OnSampleRequestedActivity::Start() };
 
@@ -327,7 +325,7 @@ void FFmpegInteropMSS::OnSampleRequested(const MediaStreamSource& sender, const 
 	}
 }
 
-void FFmpegInteropMSS::OnSwitchStreamsRequested(const MediaStreamSource& sender, const MediaStreamSourceSwitchStreamsRequestedEventArgs& args)
+void FFmpegInteropMSS::OnSwitchStreamsRequested(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceSwitchStreamsRequestedEventArgs& args)
 {
 	auto logger{ OnSwitchStreamsRequestedActivity::Start() };
 
@@ -361,25 +359,27 @@ void FFmpegInteropMSS::OnSwitchStreamsRequested(const MediaStreamSource& sender,
 	}
 }
 
-void FFmpegInteropMSS::OnClosed(const MediaStreamSource& sender, const MediaStreamSourceClosedEventArgs& args)
+void FFmpegInteropMSS::OnClosed(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceClosedEventArgs& args)
 {
 	auto logger{ OnClosedActivity::Start() };
 
 	lock_guard<mutex> lock{ m_lock };
 
 	// Unregister event handlers
+	// This is critcally important to do for the media source app service scenario! If we don't unregister these event handlers, then
+	// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
+	// the media source app being suspended. If the app is suspended first, then COM may cause a hang in host until the app is terminated.
 	m_mss.Starting(m_startingEventToken);
 	m_mss.SampleRequested(m_sampleRequestedEventToken);
 	m_mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
 	m_mss.Closed(m_closedEventToken);
 
-	// Release all references and clear all data structures
+	// Release the MSS and file stream
+	// This is critcally important to do for the media source app service scenario! A media source app may be suspended anytime after this
+	// Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could cause
+	// system issues until the app is terminated.
 	m_mss = nullptr;
 	m_fileStream = nullptr;
-	m_ioContext.reset();
-	m_formatContext.reset();
-	m_streamDescriptorMap.clear();
-	m_streamIdMap.clear();
 
 	logger.Stop();
 }

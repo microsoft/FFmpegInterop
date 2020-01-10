@@ -22,7 +22,6 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	// TODO: Minimize resource usage when stream is deselected
 	class UncompressedSampleProvider :
 		public SampleProvider
 	{

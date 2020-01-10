@@ -27,24 +27,24 @@ namespace winrt::FFmpegInterop::implementation
 		public FFmpegInteropMSST<FFmpegInteropMSS>
 	{
 	public:
-		static FFmpegInterop::FFmpegInteropMSS CreateFromStream(const Windows::Storage::Streams::IRandomAccessStream& fileStream, const Windows::Media::Core::MediaStreamSource& mss);
-		static FFmpegInterop::FFmpegInteropMSS CreateFromUri(const hstring& uri, const Windows::Media::Core::MediaStreamSource& mss);
+		static void CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss);
+		static void CreateFromUri(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss);
 
-		FFmpegInteropMSS(const Windows::Storage::Streams::IRandomAccessStream& fileStream, const Windows::Media::Core::MediaStreamSource& mss);
-		FFmpegInteropMSS(const hstring& uri, const Windows::Media::Core::MediaStreamSource& mss);
+		FFmpegInteropMSS(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss);
+		FFmpegInteropMSS(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss);
 
 	private:
-		FFmpegInteropMSS(const Windows::Media::Core::MediaStreamSource& mss);
+		FFmpegInteropMSS(_In_ const Windows::Media::Core::MediaStreamSource& mss);
 
-		void OpenFile(const Windows::Storage::Streams::IRandomAccessStream& fileStream);
-		void OpenFile(const char* uri);
+		void OpenFile(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream);
+		void OpenFile(_In_opt_z_ const char* uri);
 
 		void InitFFmpegContext();
 
-		void OnStarting(const Windows::Media::Core::MediaStreamSource& sender, const Windows::Media::Core::MediaStreamSourceStartingEventArgs& args);
-		void OnSampleRequested(const Windows::Media::Core::MediaStreamSource& sender, const Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs& args);
-		void OnSwitchStreamsRequested(const Windows::Media::Core::MediaStreamSource& sender, const Windows::Media::Core::MediaStreamSourceSwitchStreamsRequestedEventArgs& args);
-		void OnClosed(const Windows::Media::Core::MediaStreamSource& sender, const Windows::Media::Core::MediaStreamSourceClosedEventArgs& args);
+		void OnStarting(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceStartingEventArgs& args);
+		void OnSampleRequested(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs& args);
+		void OnSwitchStreamsRequested(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceSwitchStreamsRequestedEventArgs& args);
+		void OnClosed(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceClosedEventArgs& args);
 
 		std::mutex m_lock;
 		Windows::Media::Core::MediaStreamSource m_mss; // We hold a circular reference to the provided MSS which we break when the Closed event is fired

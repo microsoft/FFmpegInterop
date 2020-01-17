@@ -26,7 +26,7 @@ namespace winrt::FFmpegInterop::implementation
 		public SampleProvider
 	{
 	public:
-		SubtitleSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader, _In_ bool usesInitCue);
+		SubtitleSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader, _In_ bool usesInitCue);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp) override;
 

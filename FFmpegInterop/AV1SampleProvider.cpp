@@ -24,7 +24,7 @@ using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
 
-AV1SampleProvider::AV1SampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader) :
+AV1SampleProvider::AV1SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
 	SampleProvider(stream, reader)
 {
 

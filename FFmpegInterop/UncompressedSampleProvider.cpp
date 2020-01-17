@@ -23,7 +23,7 @@ using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
 
-UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader) :
+UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
 	SampleProvider(stream, reader)
 {
 	// Create a new decoding context

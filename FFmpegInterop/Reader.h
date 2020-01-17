@@ -22,10 +22,10 @@ namespace winrt::FFmpegInterop::implementation
 {
 	class SampleProvider;
 
-	class FFmpegReader
+	class Reader
 	{
 	public:
-		FFmpegReader(_In_ AVFormatContext* formatContext, _In_ const std::map<int, SampleProvider*>& streamMap);
+		Reader(_In_ AVFormatContext* formatContext, _In_ const std::map<int, SampleProvider*>& streamMap);
 
 		void ReadPacket();
 

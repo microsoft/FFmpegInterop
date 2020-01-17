@@ -18,7 +18,7 @@
 
 #include "pch.h"
 #include "SampleProvider.h"
-#include "FFmpegReader.h"
+#include "Reader.h"
 
 using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Foundation;
@@ -27,7 +27,7 @@ using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Media::MediaProperties;
 using namespace std;
 
-SampleProvider::SampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader) :
+SampleProvider::SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
 	m_stream(stream),
 	m_reader(reader)
 {
@@ -149,8 +149,8 @@ void SampleProvider::GetSample(_Inout_ const MediaStreamSourceSampleRequest& req
 	m_nextSamplePts = pts + dur;
 
 	// Convert time base from FFmpeg to MF
-	pts = static_cast<int64_t>(av_q2d(m_stream->time_base) * 10000000 * (pts - m_startOffset));
-	dur = static_cast<int64_t>(av_q2d(m_stream->time_base) * 10000000 * dur);
+	pts = static_cast<int64_t>(av_q2d(m_stream->time_base) * HNS_PER_SEC * (pts - m_startOffset));
+	dur = static_cast<int64_t>(av_q2d(m_stream->time_base) * HNS_PER_SEC * dur);
 
 	// Create the sample
 	MediaStreamSample sample{ MediaStreamSample::CreateFromBuffer(buf, static_cast<TimeSpan>(pts)) };

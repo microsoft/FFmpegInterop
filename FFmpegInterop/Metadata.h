@@ -18,20 +18,8 @@
 
 #pragma once
 
-#include "SampleProvider.h"
-
 namespace winrt::FFmpegInterop::implementation
 {
-	class AV1SampleProvider :
-		public SampleProvider
-	{
-	public:
-		AV1SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
-
-	protected:
-		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
-
-	private:
-		Windows::Storage::Streams::IBuffer TransformSample(_Inout_ AVPacket_ptr packet);
-	};
+	void PopulateMSSMetadata(_In_ const Windows::Media::Core::MediaStreamSource& mss, _In_ const AVDictionary* metadata);
+	void SetMSSThumbnail(_In_ const Windows::Media::Core::MediaStreamSource& mss, _In_ const AVStream* thumbnailStream);
 }

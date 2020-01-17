@@ -41,12 +41,14 @@ namespace MediaPlayerCS
 			splitter.IsPaneOpen = true;
 		}
 
-		private async void OpenFileAsync(object sender, RoutedEventArgs args)
+		private async void OpenFilePicker(object _1, RoutedEventArgs _2)
 		{
 			// Open the file picker
-			FileOpenPicker filePicker = new FileOpenPicker();
-			filePicker.ViewMode = PickerViewMode.Thumbnail;
-			filePicker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
+			var filePicker = new FileOpenPicker
+			{
+				ViewMode = PickerViewMode.Thumbnail,
+				SuggestedStartLocation = PickerLocationId.VideosLibrary
+			};
 			filePicker.FileTypeFilter.Add("*");
 
 			StorageFile file = await filePicker.PickSingleFileAsync();
@@ -54,26 +56,24 @@ namespace MediaPlayerCS
 			// Check if the user selected a file
 			if (file != null)
 			{
-				// Populate the URI box with the path of the file selected
-				uriBox.Text = file.Path;
-
-				OpenStream(await file.OpenReadAsync());
+				OpenFile(file);
 			}
 		}
-		public async void OnFileActivated(StorageFile file)
+		public void OnFileActivated(StorageFile file)
+		{
+			OpenFile(file);
+		}
+
+		private async void OpenFile(StorageFile file)
 		{
 			// Populate the URI box with the path of the file selected
 			uriBox.Text = file.Path;
 
-			OpenStream(await file.OpenReadAsync());
-		}
+			IRandomAccessStream stream = await file.OpenReadAsync();
 
-		private void OpenStream(IRandomAccessStream stream)
-		{
-			// TODO: Validate this code path with full FFmpeg build
-			OpenMedia(mss =>
+			OpenMedia((mss, config) =>
 			{
-				FFmpegInteropMSS.CreateFromStream(stream, mss);
+				FFmpegInteropMSS.CreateFromStream(stream, mss, config);
 			});
 		}
 
@@ -93,13 +93,14 @@ namespace MediaPlayerCS
 
 		private void OpenUri(String uri)
 		{
-			OpenMedia(mss =>
+			// TODO: Validate this code path with full FFmpeg build
+			OpenMedia((mss, config) =>
 			{
-				FFmpegInteropMSS.CreateFromUri(uri, mss);
+				FFmpegInteropMSS.CreateFromUri(uri, mss, config);
 			});
 		}
 
-		private void OpenMedia(Action<MediaStreamSource> createFunc)
+		private void OpenMedia(Action<MediaStreamSource, FFmpegInteropMSSConfig> createFunc)
 		{
 			// Stop any media currently playing
 			mediaElement.Stop();
@@ -109,7 +110,14 @@ namespace MediaPlayerCS
 				// Create the media source
 				IActivationFactory mssFactory = WindowsRuntimeMarshal.GetActivationFactory(typeof(MediaStreamSource));
 				MediaStreamSource mss = mssFactory.ActivateInstance() as MediaStreamSource;
-				createFunc(mss);
+
+				var config = new FFmpegInteropMSSConfig
+				{
+					ForceAudioDecode = toggleSwitchAudioDecode.IsOn,
+					ForceVideoDecode = toggleSwitchVideoDecode.IsOn
+				};
+
+				createFunc(mss, config);
 
 				// Set the MSS as the media element's source
 				mediaElement.SetMediaStreamSource(mss);
@@ -123,7 +131,7 @@ namespace MediaPlayerCS
 			}
 		}
 
-		private void OnMediaFailed(object sender, ExceptionRoutedEventArgs args)
+		private void OnMediaFailed(object _1, ExceptionRoutedEventArgs args)
 		{
 			OnError(args.ErrorMessage);
 		}

@@ -16,28 +16,33 @@
 //
 //*****************************************************************************
 
-#pragma once
+#include "pch.h"
+#include "Reader.h"
+#include "SampleProvider.h"
 
-#include "UncompressedSampleProvider.h"
+using namespace std;
 
-namespace winrt::FFmpegInterop::implementation
+using namespace winrt::FFmpegInterop::implementation;
+
+Reader::Reader(_In_ AVFormatContext* formatContext, _In_ const map<int, SampleProvider*>& streamMap) :
+	m_formatContext(formatContext),
+	m_streamIdMap(streamMap)
 {
-	class UncompressedVideoSampleProvider :
-		public UncompressedSampleProvider
+
+}
+
+void Reader::ReadPacket()
+{
+	AVPacket_ptr packet{ av_packet_alloc() };
+	THROW_IF_NULL_ALLOC(packet);
+
+	// Read the next packet and push it into the appropriate sample provider.
+	// Drop the packet if the stream is not being used.
+	THROW_HR_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
+
+	auto iter = m_streamIdMap.find(packet->stream_index);
+	if (iter != m_streamIdMap.end())
 	{
-	public:
-		UncompressedVideoSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
-
-		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp) override;
-
-	protected:
-		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
-
-	private:
-		std::map<GUID, Windows::Foundation::IInspectable> GetSampleProperties(_In_ const AVFrame* frame);
-
-		SwsContext_ptr m_swsContext;
-		int m_lineSizes[4]{ 0, 0, 0, 0};
-		AVBufferPool_ptr m_bufferPool;
-	};
+		iter->second->QueuePacket(move(packet));
+	}
 }

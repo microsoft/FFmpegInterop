@@ -23,7 +23,7 @@ namespace MediaPlayerCPP
     {
         MainPage();
 
-        void OpenFileAsync(Object sender, Windows.UI.Xaml.RoutedEventArgs args);
+        void OpenFilePicker(Object sender, Windows.UI.Xaml.RoutedEventArgs args);
         void OnFileActivated(Windows.Storage.StorageFile file);
         void OnUriBoxKeyUp(Object sender, Windows.UI.Xaml.Input.KeyRoutedEventArgs args);
         void OnMediaFailed(Object sender, Windows.UI.Xaml.ExceptionRoutedEventArgs args);

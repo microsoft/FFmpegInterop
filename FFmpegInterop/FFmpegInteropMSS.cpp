@@ -20,10 +20,13 @@
 #include "FFmpegInteropMSS.h"
 #include "FFmpegInteropMSS.g.cpp"
 #include "StreamFactory.h"
+#include "SampleProvider.h"
+#include "Metadata.h"
 
 using namespace winrt;
 using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Foundation::Collections;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
@@ -67,20 +70,20 @@ namespace
 	}
 }
 
-void FFmpegInteropMSS::CreateFromStream(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss)
+void FFmpegInteropMSS::CreateFromStream(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
 	auto logger{ CreateFromStreamActivity::Start() };
 
-	make<FFmpegInteropMSS>(fileStream, mss);
+	(void) make<FFmpegInteropMSS>(fileStream, mss, config);
 
 	logger.Stop();
 }
 
-void FFmpegInteropMSS::CreateFromUri(_In_ const hstring& uri, _In_ const MediaStreamSource& mss)
+void FFmpegInteropMSS::CreateFromUri(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
 	auto logger{ CreateFromUriActivity::Start() };
 
-	make<FFmpegInteropMSS>(uri, mss);
+	(void) make<FFmpegInteropMSS>(uri, mss, config);
 
 	logger.Stop();
 }
@@ -94,13 +97,13 @@ FFmpegInteropMSS::FFmpegInteropMSS(_In_ const MediaStreamSource& mss) :
 	THROW_IF_NULL_ALLOC(m_formatContext);
 }
 
-FFmpegInteropMSS::FFmpegInteropMSS(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss) :
+FFmpegInteropMSS::FFmpegInteropMSS(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
 	FFmpegInteropMSS(mss)
 {
 	try
 	{
-		OpenFile(fileStream);
-		InitFFmpegContext();
+		OpenFile(fileStream, config);
+		InitFFmpegContext(config);
 	}
 	catch (...)
 	{
@@ -110,7 +113,7 @@ FFmpegInteropMSS::FFmpegInteropMSS(_In_ const IRandomAccessStream& fileStream, _
 	}
 }
 
-FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_ const MediaStreamSource& mss) :
+FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
 	FFmpegInteropMSS(mss)
 {
 	try
@@ -118,8 +121,8 @@ FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_ const MediaStre
 		wstring_convert<codecvt_utf8<wchar_t>> conv;
 		string uriA{ conv.to_bytes(uri.c_str()) };
 
-		OpenFile(uriA.c_str());
-		InitFFmpegContext();
+		OpenFile(uriA.c_str(), config);
+		InitFFmpegContext(config);
 	}
 	catch (...)
 	{
@@ -129,11 +132,11 @@ FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_ const MediaStre
 	}
 }
 
-void FFmpegInteropMSS::OpenFile(_In_ const IRandomAccessStream& fileStream)
+void FFmpegInteropMSS::OpenFile(_In_ const IRandomAccessStream& fileStream, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
 	// Convert async IRandomAccessStream to sync IStream
 	THROW_HR_IF_NULL(E_INVALIDARG, fileStream);
-	THROW_IF_FAILED(CreateStreamOverRandomAccessStream(reinterpret_cast<::IUnknown*>(get_abi(fileStream)), __uuidof(m_fileStream), m_fileStream.put_void()));
+	THROW_IF_FAILED(CreateStreamOverRandomAccessStream(static_cast<::IUnknown*>(get_abi(fileStream)), __uuidof(m_fileStream), m_fileStream.put_void()));
 
 	// Setup FFmpeg custom IO to access file as stream. This is necessary when accessing any file outside of app installation directory and appdata folder.
 	// Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
@@ -147,20 +150,49 @@ void FFmpegInteropMSS::OpenFile(_In_ const IRandomAccessStream& fileStream)
 
 	m_formatContext->pb = m_ioContext.get();
 
-	OpenFile(nullptr);
+	OpenFile("", config);
 }
 
-void FFmpegInteropMSS::OpenFile(_In_opt_z_ const char* uri)
+void FFmpegInteropMSS::OpenFile(_In_z_ const char* uri, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
-	// TODO: Add ffmpeg config options
+	// Parse the FFmpeg options in config if present
+	AVDictionary_ptr options;
+	if (config != nullptr)
+	{
+		wstring_convert<codecvt_utf8<wchar_t>> conv;
+		StringMap ffmpegOptions{ config.FFmpegOptions() };
+		for (const auto& iter : ffmpegOptions)
+		{
+			hstring key{ iter.Key() };
+			string keyA{ conv.to_bytes(key.c_str()) };
+
+			hstring value{ iter.Value() };
+			string valueA{ conv.to_bytes(value.c_str()) };
+
+			AVDictionary* optionsRaw{ options.release() };
+			int result{ av_dict_set(&optionsRaw, keyA.c_str(), valueA.c_str(), 0) };
+			options.reset(exchange(optionsRaw, nullptr));
+			THROW_HR_IF_FFMPEG_FAILED(result);
+		}
+	}
 
 	// Open the format context for the stream
-	AVFormatContext* formatContext = m_formatContext.release();
-	THROW_HR_IF_FFMPEG_FAILED(avformat_open_input(&formatContext, uri, nullptr, nullptr)); // The format context is freed on failure
-	m_formatContext.reset(exchange(formatContext, nullptr));
+	AVFormatContext* formatContextRaw{ m_formatContext.release() };
+	AVDictionary* optionsRaw{ options.release() };
+	int result{ avformat_open_input(&formatContextRaw, uri, nullptr, &optionsRaw) }; // The format context is freed on failure
+	options.reset(exchange(optionsRaw, nullptr));
+	THROW_HR_IF_FFMPEG_FAILED(result);
+	m_formatContext.reset(exchange(formatContextRaw, nullptr));
+
+	if (options != nullptr)
+	{
+		// Options is not null if there was an issue with the provided FFmpeg options such as an invalid key or value.
+		WINRT_ASSERT(options == nullptr);
+		// TODO: Log options that weren't found
+	}
 }
 
-void FFmpegInteropMSS::InitFFmpegContext()
+void FFmpegInteropMSS::InitFFmpegContext(_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
 	THROW_HR_IF_FFMPEG_FAILED(avformat_find_stream_info(m_formatContext.get(), nullptr));
 
@@ -178,7 +210,7 @@ void FFmpegInteropMSS::InitFFmpegContext()
 		switch (stream->codecpar->codec_type)
 		{
 		case AVMEDIA_TYPE_AUDIO:
-			tie(sampleProvider, streamDescriptor) = StreamFactory::CreateAudioStream(stream, m_reader);
+			tie(sampleProvider, streamDescriptor) = StreamFactory::CreateAudioStream(stream, m_reader, config);
 
 			if (!hasAudio)
 			{
@@ -190,13 +222,13 @@ void FFmpegInteropMSS::InitFFmpegContext()
 
 		case AVMEDIA_TYPE_VIDEO:
 			// FFmpeg identifies album/cover art from a music file as a video stream
-			// Avoid creating unnecessarily video stream from this album/cover art
 			if (stream->disposition == AV_DISPOSITION_ATTACHED_PIC)
 			{
+				SetMSSThumbnail(m_mss, stream);
 				continue;
 			}
 
-			tie(sampleProvider, streamDescriptor) = StreamFactory::CreateVideoStream(stream, m_reader);
+			tie(sampleProvider, streamDescriptor) = StreamFactory::CreateVideoStream(stream, m_reader, config);
 
 			if (!hasVideo)
 			{
@@ -242,6 +274,12 @@ void FFmpegInteropMSS::InitFFmpegContext()
 	{
 		// Set buffer time to 0 for realtime streaming to reduce latency
 		m_mss.BufferTime(TimeSpan{ 0 });
+	}
+
+	// Populate metadata
+	if (m_formatContext->metadata != nullptr)
+	{
+		PopulateMSSMetadata(m_mss, m_formatContext->metadata);
 	}
 
 	// Register event handlers. The delegates hold strong references to tie the lifetime of this object to the MSS.
@@ -316,7 +354,7 @@ void FFmpegInteropMSS::OnSampleRequested(_In_ const MediaStreamSource&, _In_ con
 	}
 	catch (...)
 	{
-		const HRESULT hr{ to_hresult() };
+		const hresult hr{ to_hresult() };
 		if (hr != MF_E_END_OF_STREAM)
 		{
 			// Notify the MSS that an error occurred
@@ -368,113 +406,19 @@ void FFmpegInteropMSS::OnClosed(_In_ const MediaStreamSource&, _In_ const MediaS
 	// Unregister event handlers
 	// This is critcally important to do for the media source app service scenario! If we don't unregister these event handlers, then
 	// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
-	// the media source app being suspended. If the app is suspended first, then COM may cause a hang in host until the app is terminated.
+	// the remote app process being suspended. If the remote app process is suspended first, then COM may cause a hang until the 
+	// remote app process is terminated.
 	m_mss.Starting(m_startingEventToken);
 	m_mss.SampleRequested(m_sampleRequestedEventToken);
 	m_mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
 	m_mss.Closed(m_closedEventToken);
 
 	// Release the MSS and file stream
-	// This is critcally important to do for the media source app service scenario! A media source app may be suspended anytime after this
-	// Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could cause
-	// system issues until the app is terminated.
+	// This is critcally important to do for the media source app service scenario! The remote app process may be suspended anytime after 
+	// this Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could 
+	// cause file related issues until the remote app process is terminated.
 	m_mss = nullptr;
 	m_fileStream = nullptr;
 
 	logger.Stop();
 }
-
-/*
-HRESULT FFmpegInteropMSS::ParseOptions(PropertySet^ ffmpegOptions)
-{
-	HRESULT hr = S_OK;
-
-	// Convert FFmpeg options given in PropertySet to AVDictionary. List of options can be found in https://www.ffmpeg.org/ffmpeg-protocols.html
-	if (ffmpegOptions != nullptr)
-	{
-		auto options = ffmpegOptions->First();
-
-		while (options->HasCurrent)
-		{
-			String^ key = options->Current->Key;
-			std::wstring keyW(key->Begin());
-			std::string keyA(keyW.begin(), keyW.end());
-			const char* keyChar = keyA.c_str();
-
-			// Convert value from Object^ to const char*. avformat_open_input will internally convert value from const char* to the correct type
-			String^ value = options->Current->Value->ToString();
-			std::wstring valueW(value->Begin());
-			std::string valueA(valueW.begin(), valueW.end());
-			const char* valueChar = valueA.c_str();
-
-			// Add key and value pair entry
-			if (av_dict_set(&m_ffmpegOptions, keyChar, valueChar, 0) < 0)
-			{
-				hr = E_INVALIDARG;
-				break;
-			}
-
-			options->MoveNext();
-		}
-	}
-
-	return hr;
-}
-
-MediaThumbnailData ^ FFmpegInteropMSS::ExtractThumbnail()
-{
-	if (thumbnailStreamIndex != AVERROR_STREAM_NOT_FOUND)
-	{
-		// FFmpeg identifies album/cover art from a music file as a video stream
-		// Avoid creating unnecessarily video stream from this album/cover art
-		if (m_formatContext->streams[thumbnailStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
-		{
-			auto imageStream = m_formatContext->streams[thumbnailStreamIndex];
-			//save album art to file.
-			String^ extension = ".jpeg";
-			switch (imageStream->codecpar->codec_id)
-			{
-			case AV_CODEC_ID_MJPEG:
-			case AV_CODEC_ID_MJPEGB:
-			case AV_CODEC_ID_JPEG2000:
-			case AV_CODEC_ID_JPEGLS: extension = ".jpeg"; break;
-			case AV_CODEC_ID_PNG: extension = ".png"; break;
-			case AV_CODEC_ID_BMP: extension = ".bmp"; break;
-			}
-
-
-			auto vector = ref new Array<uint8_t>(imageStream->attached_pic.data, imageStream->attached_pic.size);
-			DataWriter^ writer = ref new DataWriter();
-			writer->WriteBytes(vector);
-
-			return (ref new MediaThumbnailData(writer->DetachBuffer(), extension));
-		}
-	}
-
-	return nullptr;
-}
-
-HRESULT FFmpegInteropMSS::ConvertCodecName(const char* codecName, String^ *outputCodecName)
-{
-	HRESULT hr = S_OK;
-
-	// Convert codec name from const char* to Platform::String
-	auto codecNameChars = codecName;
-	size_t newsize = strlen(codecNameChars) + 1;
-	wchar_t * wcstring = new(std::nothrow) wchar_t[newsize];
-	if (wcstring == nullptr)
-	{
-		hr = E_OUTOFMEMORY;
-	}
-
-	if (SUCCEEDED(hr))
-	{
-		size_t convertedChars = 0;
-		mbstowcs_s(&convertedChars, wcstring, newsize, codecNameChars, _TRUNCATE);
-		*outputCodecName = ref new Platform::String(wcstring);
-		delete[] wcstring;
-	}
-
-	return hr;
-}
-*/

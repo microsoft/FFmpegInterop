@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2015 Microsoft Corporation
+//	Copyright 2019 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -17,32 +17,33 @@
 //*****************************************************************************
 
 #include "pch.h"
-#include "FFmpegReader.h"
-#include "SampleProvider.h"
-
-using namespace std;
+#include "FFmpegInteropMSSConfig.h"
+#include "FFmpegInteropMSSConfig.g.cpp"
 
 using namespace winrt::FFmpegInterop::implementation;
+using namespace winrt::Windows::Foundation::Collections;
 
-FFmpegReader::FFmpegReader(_In_ AVFormatContext* formatContext, _In_ const map<int, SampleProvider*>& streamMap) :
-	m_formatContext(formatContext),
-	m_streamIdMap(streamMap)
+bool FFmpegInteropMSSConfig::ForceAudioDecode()
 {
-
+    return m_forceAudioDecode;
 }
 
-void FFmpegReader::ReadPacket()
+void FFmpegInteropMSSConfig::ForceAudioDecode(_In_ bool forceAudioDecode)
 {
-	AVPacket_ptr packet{ av_packet_alloc() };
-	THROW_IF_NULL_ALLOC(packet);
+    m_forceAudioDecode = forceAudioDecode;
+}
 
-	// Read the next packet and push it into the appropriate sample provider.
-	// Drop the packet if the stream is not being used.
-	THROW_HR_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
+bool FFmpegInteropMSSConfig::ForceVideoDecode()
+{
+    return m_forceVideoDecode;
+}
 
-	auto iter = m_streamIdMap.find(packet->stream_index);
-	if (iter != m_streamIdMap.end())
-	{
-		iter->second->QueuePacket(move(packet));
-	}
+void FFmpegInteropMSSConfig::ForceVideoDecode(_In_ bool forceVideoDecode)
+{
+    m_forceVideoDecode = forceVideoDecode;
+}
+
+StringMap FFmpegInteropMSSConfig::FFmpegOptions()
+{
+    return m_ffmpegOptions;
 }

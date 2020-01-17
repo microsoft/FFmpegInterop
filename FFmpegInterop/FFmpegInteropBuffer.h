@@ -31,6 +31,7 @@ namespace winrt::FFmpegInterop::implementation
 		FFmpegInteropBuffer(_In_ AVBufferRef* bufRef);
 		FFmpegInteropBuffer(_In_ AVBufferRef_ptr bufRef) noexcept;
 		FFmpegInteropBuffer(_In_ AVPacket_ptr packet);
+		FFmpegInteropBuffer(_In_reads_(bufSize) AVBlob_ptr buf, _In_ size_t bufSize);
 		FFmpegInteropBuffer(_In_ std::vector<uint8_t>&& buf) noexcept;
 
 		// IBuffer
@@ -68,7 +69,7 @@ namespace winrt::FFmpegInterop::implementation
 		STDMETHODIMP DisconnectObject(_Reserved_ DWORD dwReserved) noexcept;
 
 	private:
-		HRESULT InitMarshalerIfNeeded() noexcept;
+		HRESULT InitMarshaler() noexcept;
 
 		uint32_t m_length;
 		std::unique_ptr<uint8_t, std::function<void(uint8_t*)>> m_buf;

@@ -35,7 +35,7 @@
                 <StackPanel VerticalAlignment="Stretch" Margin="10, 50, 0, 0">
                     <TextBlock Text="Open local file or URI"/>
                     <StackPanel Orientation="Horizontal">
-                        <AppBarButton Content="Open local file" Icon="OpenFile" Margin="0, 10, 10, 0" Click="{x:Bind OpenFileAsync}"/>
+                        <AppBarButton Content="Open local file" Icon="OpenFile" Margin="0, 10, 10, 0" Click="{x:Bind OpenFilePicker}"/>
                         <TextBox x:Name="uriBox" PlaceholderText="Enter URI and press Enter" InputScope="Url" Width="210" Height="30" KeyUp="{x:Bind OnUriBoxKeyUp}"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="toggleSwitchAudioDecode" Header="Force audio decode" OffContent="Off" OnContent="On" IsOn="False"/>

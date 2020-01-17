@@ -18,7 +18,8 @@
 
 using FFmpegInterop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Windows.Foundation.Collections;
+using System;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Media.Core;
 
 namespace UnitTest.Windows
@@ -26,169 +27,154 @@ namespace UnitTest.Windows
     [TestClass]
     public class CreateFFmpegInteropMSSFromUri
     {
+        private MediaStreamSource CreateMSSFromUri(string uri, FFmpegInteropMSSConfig config)
+        {
+            // Create the MSS
+            IActivationFactory mssFactory = WindowsRuntimeMarshal.GetActivationFactory(typeof(MediaStreamSource));
+            MediaStreamSource mss = mssFactory.ActivateInstance() as MediaStreamSource;
+
+            // Create the FFmpegInteropMSS from the provided URI
+            FFmpegInteropMSS.CreateFromUri(uri, mss, config);
+
+            return mss;
+        }
+
         [TestMethod]
         public void CreateFromUri_Null()
         {
-            // CreateFFmpegInteropMSSFromUri should return null if uri is blank with default parameter
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(string.Empty, false, false);
-            Assert.IsNull(FFmpegMSS);
+            // CreateFFmpegInteropMSSFromUri should throw if uri is blank with default parameter
+            try
+            {
+                CreateMSSFromUri(string.Empty, null);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                // Call threw as expected
+            }
 
-            // CreateFFmpegInteropMSSFromUri should return null if uri is blank with non default parameter
-            FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(string.Empty, true, true);
-            Assert.IsNull(FFmpegMSS);
+            // CreateFFmpegInteropMSSFromUri should throw if uri is blank with non default parameter
+            try
+            {
+                var config = new FFmpegInteropMSSConfig
+                {
+                    ForceAudioDecode = true,
+                    ForceVideoDecode = true
+                };
+
+                CreateMSSFromUri(string.Empty, config);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                // Call threw as expected
+            }
         }
 
         [TestMethod]
         public void CreateFromUri_Bad_Input()
         {
-            // CreateFFmpegInteropMSSFromUri should return null when given bad uri
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri("http://This.is.a.bad.uri", false, false);
-            Assert.IsNull(FFmpegMSS);
+            // CreateFFmpegInteropMSSFromUri should throw when given bad uri
+            try
+            {
+                CreateMSSFromUri("http://This.is.a.bad.uri", null);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                // Call threw as expected
+            }
         }
 
         [TestMethod]
         public void CreateFromUri_Default()
         {
-            // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, false, false);
-            Assert.IsNotNull(FFmpegMSS);
-
-            // Validate the metadata
-            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
-            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
-
-            MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-            Assert.IsNotNull(mss);
+            // Create the MSS
+            MediaStreamSource mss = CreateMSSFromUri(Constants.StreamingUriSource, null);
 
             // Based on the provided media, check if the following properties are set correctly
-            Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.IsTrue(mss.CanSeek);
+            Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
+
+            // TODO: Verify expected stream types (aac, h264)
         }
 
         [TestMethod]
         public void CreateFromUri_Force_Audio()
         {
-            // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, true, false);
-            Assert.IsNotNull(FFmpegMSS);
+            // Create the MSS with forced audio decode
+            var config = new FFmpegInteropMSSConfig
+            {
+                ForceAudioDecode = true
+            };
 
-            // Validate the metadata
-            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
-            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
-
-            MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-            Assert.IsNotNull(mss);
+            MediaStreamSource mss = CreateMSSFromUri(Constants.StreamingUriSource, config);
 
             // Based on the provided media, check if the following properties are set correctly
-            Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.IsTrue(mss.CanSeek);
+            Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
+
+            // TODO: Verify expected stream types (pcm, h264)
         }
 
         [TestMethod]
         public void CreateFromUri_Force_Video()
         {
-            // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, false, true);
-            Assert.IsNotNull(FFmpegMSS);
+            // Create the MSS with forced video decode
+            var config = new FFmpegInteropMSSConfig
+            {
+                ForceVideoDecode = true
+            };
 
-            // Validate the metadata
-            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
-            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
-
-            MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-            Assert.IsNotNull(mss);
+            MediaStreamSource mss = CreateMSSFromUri(Constants.StreamingUriSource, config);
 
             // Based on the provided media, check if the following properties are set correctly
-            Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.IsTrue(mss.CanSeek);
+            Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
+
+            // TODO: Verify expected stream types (aac, NV12)
         }
 
         [TestMethod]
         public void CreateFromUri_Force_Audio_Video()
         {
-            // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, true, true);
-            Assert.IsNotNull(FFmpegMSS);
+            // Create the MSS with forced audio and video decode
+            var config = new FFmpegInteropMSSConfig
+            {
+                ForceAudioDecode = true,
+                ForceVideoDecode = true
+            };
 
-            // Validate the metadata
-            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
-            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
-
-            MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-            Assert.IsNotNull(mss);
+            MediaStreamSource mss = CreateMSSFromUri(Constants.StreamingUriSource, config);
 
             // Based on the provided media, check if the following properties are set correctly
-            Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.IsTrue(mss.CanSeek);
+            Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
+
+            // TODO: Verify expected stream types (pcm, NV12)
         }
 
         [TestMethod]
         public void CreateFromUri_Options()
         {
-            // Setup options PropertySet to configure FFmpeg
-            PropertySet options = new PropertySet();
+            // Create the MSS with the set FFmpeg options
+            var config = new FFmpegInteropMSSConfig();
+            var options = config.FFmpegOptions;
             options.Add("rtsp_flags", "prefer_tcp");
-            options.Add("stimeout", 100000);
-            Assert.IsNotNull(options);
+            options.Add("stimeout", "100000");
 
-            // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, false, false, options);
-            Assert.IsNotNull(FFmpegMSS);
-
-            // Validate the metadata
-            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
-            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
-
-            MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-            Assert.IsNotNull(mss);
+            MediaStreamSource mss = CreateMSSFromUri(Constants.StreamingUriSource, config);
 
             // Based on the provided media, check if the following properties are set correctly
-            Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
-            Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
-        }
-
-        [TestMethod]
-        public void CreateFromUri_Destructor()
-        {
-            // CreateFFmpegInteropMSSFromUri should return valid FFmpegInteropMSS object which generates valid MediaStreamSource object
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri(Constants.StreamingUriSource, false, false);
-            Assert.IsNotNull(FFmpegMSS);
-
-            // Validate the metadata
-            Assert.AreEqual(FFmpegMSS.AudioCodecName.ToLowerInvariant(), "aac");
-            Assert.AreEqual(FFmpegMSS.VideoCodecName.ToLowerInvariant(), "h264");
-
-            MediaStreamSource mss = FFmpegMSS.GetMediaStreamSource();
-            Assert.IsNotNull(mss);
-
-            // Based on the provided media, check if the following properties are set correctly
-            Assert.AreEqual(true, mss.CanSeek);
-            Assert.AreNotEqual(0, mss.BufferTime.TotalMilliseconds);
+            Assert.IsTrue(mss.CanSeek);
+            Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.StreamingUriLength, mss.Duration.TotalMilliseconds);
 
-            // Keep original reference and ensure object are not destroyed until each reference is released by setting it to nullptr
-            FFmpegInteropMSS OriginalFFmpegMSS = FFmpegMSS;
-            MediaStreamSource Originalmss = mss;
-
-            FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromUri("", false, false);
-            Assert.IsNull(FFmpegMSS);
-            Assert.IsNotNull(OriginalFFmpegMSS);
-            Assert.IsNotNull(Originalmss);
-
-            mss = null;
-            Assert.IsNull(mss);
-            Assert.IsNotNull(Originalmss);
-
-            OriginalFFmpegMSS = null;
-            Originalmss = null;
-            Assert.IsNull(OriginalFFmpegMSS);
-            Assert.IsNull(Originalmss);
-
+            // TODO: Verify expected stream types (aac, h264)
         }
     }
 }

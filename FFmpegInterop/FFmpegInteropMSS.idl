@@ -18,10 +18,19 @@
 
 namespace FFmpegInterop
 {
+	runtimeclass FFmpegInteropMSSConfig
+	{
+		FFmpegInteropMSSConfig();
+		
+		Boolean ForceAudioDecode;
+		Boolean ForceVideoDecode;
+		Windows.Foundation.Collections.StringMap FFmpegOptions{ get; };
+	}
+
 	[default_interface]
 	runtimeclass FFmpegInteropMSS
 	{
-		static void CreateFromStream(Windows.Storage.Streams.IRandomAccessStream fileStream, Windows.Media.Core.MediaStreamSource mss);
-		static void CreateFromUri(String uri, Windows.Media.Core.MediaStreamSource mss);
+		static void CreateFromStream(Windows.Storage.Streams.IRandomAccessStream fileStream, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
+		static void CreateFromUri(String uri, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
 	}
 }

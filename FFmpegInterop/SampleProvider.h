@@ -20,12 +20,12 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	class FFmpegReader;
+	class Reader;
 
 	class SampleProvider
 	{
 	public:
-		SampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
+		SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
 
 		virtual ~SampleProvider() = default;
 
@@ -49,7 +49,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	private:
 		bool m_isSelected{ false };
-		FFmpegReader& m_reader;
+		Reader& m_reader;
 		bool m_isDiscontinuous{ true };
 		std::deque<AVPacket_ptr> m_packetQueue;
 		int64_t m_startOffset;

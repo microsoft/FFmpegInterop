@@ -25,7 +25,7 @@ namespace winrt::FFmpegInterop::implementation
 		public UncompressedSampleProvider
 	{
 	public:
-		UncompressedAudioSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
+		UncompressedAudioSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp) override;
 
@@ -33,9 +33,11 @@ namespace winrt::FFmpegInterop::implementation
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
 
 	private:
-		void InitResamplerIfNeeded(_In_ const AVFrame* frame);
+		// Minimum duration (in ms) for uncompressed audio samples. 
+		// We'll compact shorter decoded audio samples until this threshold is reached.
+		static constexpr int64_t MIN_AUDIO_SAMPLE_DUR_MS{ 200 };
 
+		int64_t m_minAudioSampleDur;
 		SwrContext_ptr m_swrContext;
-		AVFrame_ptr m_resampledFrame;
 	};
 }

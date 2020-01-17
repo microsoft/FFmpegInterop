@@ -26,7 +26,7 @@ using namespace winrt::Windows::Media::MediaProperties;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
 
-UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader) :
+UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
 	UncompressedSampleProvider(stream, reader)
 {
 	if (m_codecContext->pix_fmt != AV_PIX_FMT_NV12)
@@ -79,20 +79,11 @@ tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> UncompressedVideoSampl
 	AVFrame_ptr frame{ GetFrame() };
 
 	// Get the sample buffer
-	IBuffer buf{ GetSampleBuffer(frame.get()) };
-
-	// Get the sample properties
-	map<GUID, IInspectable> properties{ GetSampleProperties(frame.get()) };
-
-	return { move(buf), frame->best_effort_timestamp, frame->pkt_duration, move(properties) };
-}
-
-IBuffer UncompressedVideoSampleProvider::GetSampleBuffer(_In_ const AVFrame* frame)
-{
+	IBuffer sampleBuf{ nullptr };
 	if (m_swsContext == nullptr)
 	{
 		// Image is already in the desired output format
-		return make<FFmpegInteropBuffer>(frame->buf[0]);
+		sampleBuf = make<FFmpegInteropBuffer>(frame->buf[0]);
 	}
 	else
 	{
@@ -101,14 +92,19 @@ IBuffer UncompressedVideoSampleProvider::GetSampleBuffer(_In_ const AVFrame* fra
 		THROW_IF_NULL_ALLOC(bufferRef);
 
 		uint8_t* data[4]{ };
-		const int requiredBufferSize = av_image_fill_pointers(data, AV_PIX_FMT_NV12, m_codecContext->height, bufferRef->data, m_lineSizes);
+		const int requiredBufferSize{ av_image_fill_pointers(data, AV_PIX_FMT_NV12, m_codecContext->height, bufferRef->data, m_lineSizes) };
 		THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
 		THROW_HR_IF(MF_E_UNEXPECTED, requiredBufferSize != bufferRef->size);
 
 		THROW_HR_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), frame->data, frame->linesize, 0, m_codecContext->height, data, m_lineSizes));
 
-		return make<FFmpegInteropBuffer>(move(bufferRef));
+		sampleBuf = make<FFmpegInteropBuffer>(move(bufferRef));
 	}
+
+	// Get the sample properties
+	map<GUID, IInspectable> properties{ GetSampleProperties(frame.get()) };
+
+	return { move(sampleBuf), frame->best_effort_timestamp, frame->pkt_duration, move(properties) };
 }
 
 map<GUID, IInspectable> UncompressedVideoSampleProvider::GetSampleProperties(_In_ const AVFrame* frame)

@@ -54,6 +54,7 @@ namespace std
 
 namespace winrt::FFmpegInterop::implementation
 {
+	constexpr int64_t MS_PER_SEC{ 1000 };
 	constexpr int64_t HNS_PER_SEC{ 10000000 };
 
 	// Map of AVERROR -> HRESULT
@@ -102,6 +103,15 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	};
 	typedef std::unique_ptr<AVBufferRef, AVBufferRefDeleter> AVBufferRef_ptr;
+
+	struct AVDictionaryDeleter
+	{
+		void operator()(_In_opt_ AVDictionary* dict)
+		{
+			av_dict_free(&dict);
+		}
+	};
+	typedef std::unique_ptr<AVDictionary, AVDictionaryDeleter> AVDictionary_ptr;
 
 	struct AVIOContextDeleter
 	{
@@ -160,84 +170,6 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	};
 	typedef std::unique_ptr<AVFrame, AVFrameDeleter> AVFrame_ptr;
-
-	struct AVImage
-	{
-		AVImage() :
-			data{ nullptr, nullptr, nullptr, nullptr },
-			lineSizes{ -1, -1, -1, -1 }
-		{
-
-		}
-
-		AVImage(_Inout_ AVImage&& other) noexcept
-		{
-			std::copy(std::begin(other.data), std::end(other.data), data);
-			std::copy(std::begin(other.lineSizes), std::end(other.lineSizes), lineSizes);
-
-			std::fill(std::begin(other.data), std::end(other.data), nullptr);
-		}
-
-		~AVImage()
-		{
-			av_freep(&data[0]);
-		}
-
-		AVImage& operator=(_Inout_ AVImage&& other) noexcept
-		{
-			if (this != &other)
-			{
-				std::swap(data, other.data);
-				std::copy(std::begin(other.lineSizes), std::end(other.lineSizes), lineSizes);
-			}
-		}
-
-		void Reset()
-		{
-			av_freep(&data[0]);
-			std::fill(std::begin(data), std::end(data), nullptr);
-			std::fill(std::begin(lineSizes), std::end(lineSizes), -1);
-		}
-
-		// These variables should always be set together and only by av_image_alloc()
-		uint8_t* data[4];
-		int lineSizes[4];
-	};
-
-	struct AVSamples
-	{
-		AVSamples() = default;
-
-		AVSamples(_Inout_ AVSamples&& other) noexcept :
-			data(std::exchange(other.data, nullptr)),
-			size(other.size)
-		{
-
-		}
-
-		~AVSamples()
-		{
-			av_freep(&data);
-		}
-
-		AVSamples& operator=(_Inout_ AVSamples&& other) noexcept
-		{
-			if (this != &other)
-			{
-				std::swap(data, other.data);
-			}
-		}
-
-		void Reset()
-		{
-			av_freep(&data);
-			size = -1;
-		}
-
-		// These variables should always be set together and only by av_samples_alloc()
-		std::byte* data{ nullptr };
-		int size{ -1 };
-	};
 
 	struct SwrContextDeleter
 	{

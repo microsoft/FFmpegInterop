@@ -18,16 +18,22 @@
 
 #pragma once
 
-#include "SampleProvider.h"
+namespace winrt::FFmpegInterop
+{
+	struct FFmpegInteropMSSConfig;
+}
 
 namespace winrt::FFmpegInterop::implementation
 {
+	class Reader;
+	class SampleProvider;
+
 	class StreamFactory
 	{
 	public:
-		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::AudioStreamDescriptor> CreateAudioStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
-		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::VideoStreamDescriptor> CreateVideoStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
-		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::TimedMetadataStreamDescriptor> CreateSubtitleStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader);
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::AudioStreamDescriptor> CreateAudioStream(_In_ const AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::VideoStreamDescriptor> CreateVideoStream(_In_ const AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::TimedMetadataStreamDescriptor> CreateSubtitleStream(_In_ const AVStream* stream, _In_ Reader& reader);
 
 	private:
 		StreamFactory() = delete;

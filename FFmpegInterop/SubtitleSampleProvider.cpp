@@ -23,7 +23,7 @@ using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Media::MediaProperties;
 
-SubtitleSampleProvider::SubtitleSampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader, _In_ bool usesInitCue) :
+SubtitleSampleProvider::SubtitleSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader, _In_ bool usesInitCue) :
 	SampleProvider(stream, reader),
 	m_usesInitCue(usesInitCue)
 {

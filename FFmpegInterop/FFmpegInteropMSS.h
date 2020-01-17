@@ -19,7 +19,7 @@
 #pragma once
 
 #include "FFmpegInteropMSS.g.h"
-#include "FFmpegReader.h"
+#include "Reader.h"
 
 namespace winrt::FFmpegInterop::implementation
 {
@@ -27,19 +27,19 @@ namespace winrt::FFmpegInterop::implementation
 		public FFmpegInteropMSST<FFmpegInteropMSS>
 	{
 	public:
-		static void CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss);
-		static void CreateFromUri(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss);
+		static void CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static void CreateFromUri(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
-		FFmpegInteropMSS(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss);
-		FFmpegInteropMSS(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss);
+		FFmpegInteropMSS(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		FFmpegInteropMSS(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
 	private:
 		FFmpegInteropMSS(_In_ const Windows::Media::Core::MediaStreamSource& mss);
 
-		void OpenFile(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream);
-		void OpenFile(_In_opt_z_ const char* uri);
+		void OpenFile(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		void OpenFile(_In_z_ const char* uri, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
-		void InitFFmpegContext();
+		void InitFFmpegContext(_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
 		void OnStarting(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceStartingEventArgs& args);
 		void OnSampleRequested(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs& args);
@@ -51,7 +51,7 @@ namespace winrt::FFmpegInterop::implementation
 		com_ptr<IStream> m_fileStream;
 		AVIOContext_ptr m_ioContext;
 		AVFormatContext_ptr m_formatContext;
-		FFmpegReader m_reader;
+		Reader m_reader;
 		std::map<Windows::Media::Core::IMediaStreamDescriptor, std::unique_ptr<SampleProvider>> m_streamDescriptorMap;
 		std::map<int, SampleProvider*> m_streamIdMap;
 

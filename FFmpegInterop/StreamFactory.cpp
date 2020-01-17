@@ -18,6 +18,8 @@
 
 #include "pch.h"
 #include "StreamFactory.h"
+#include "FFmpegInteropMSSConfig.h"
+#include "SampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
 #include "H264SampleProvider.h"
@@ -25,18 +27,30 @@
 #include "SubtitleSampleProvider.h"
 
 using namespace winrt::FFmpegInterop::implementation;
+using namespace winrt;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Media::MediaProperties;
 using namespace std;
 
-tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAudioStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader)
+// TODO: Add support for the following audio stream types:
+// - AV_CODEC_ID_ALAC -> MFAudioFormat_ALAC  
+// - AV_CODEC_ID_VORBIS -> MFAudioFormat_Vorbis    
+// - AV_CODEC_ID_FLAC -> MFAudioFormat_FLAC  
+tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAudioStream(_In_ const AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
 	// Create the sample provider and encoding properties
 	unique_ptr<SampleProvider> audioSampleProvider;
 	AudioEncodingProperties audioEncProp{ nullptr };
 
-	switch (stream->codecpar->codec_id)
+	AVCodecID codecId{ stream->codecpar->codec_id };
+
+	if (config != nullptr && config.ForceAudioDecode())
+	{
+		codecId = AV_CODEC_ID_NONE;
+	}
+
+	switch (codecId)
 	{
 	case AV_CODEC_ID_AAC:
 		if (stream->codecpar->extradata_size == 0)
@@ -128,13 +142,26 @@ tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAu
 	return { move(audioSampleProvider), move(audioStreamDescriptor) };
 }
 
-tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVideoStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader)
+// TODO: Add support for the following video stream types:
+// - AV_CODEC_ID_MPEG1VIDEO -> MFVideoFormat_MPG1  
+// - AV_CODEC_ID_MPEG2VIDEO -> MFVideoFormat_MPEG2 
+// - AV_CODEC_ID_MPEG4 -> MFVideoFormat_MP4V 
+// - AV_CODEC_ID_HEVC -> MFVideoFormat_HEVC  
+// - AV_CODEC_ID_MJPEG -> MFVideoFormat_MJPG  
+tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVideoStream(_In_ const AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
 	// Create the sample provider and encoding properties
 	unique_ptr<SampleProvider> videoSampleProvider;
 	VideoEncodingProperties videoEncProp{ nullptr };
 
-	switch (stream->codecpar->codec_id)
+	AVCodecID codecId{ stream->codecpar->codec_id };
+
+	if (config != nullptr && config.ForceVideoDecode())
+	{
+		codecId = AV_CODEC_ID_NONE;
+	}
+
+	switch (codecId)
 	{
 	case AV_CODEC_ID_AV1:
 		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
@@ -181,7 +208,7 @@ tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVi
 	return { move(videoSampleProvider), move(videoStreamDescriptor) };
 }
 
-tuple<unique_ptr<SampleProvider>, TimedMetadataStreamDescriptor> StreamFactory::CreateSubtitleStream(_In_ const AVStream* stream, _In_ FFmpegReader& reader)
+tuple<unique_ptr<SampleProvider>, TimedMetadataStreamDescriptor> StreamFactory::CreateSubtitleStream(_In_ const AVStream* stream, _In_ Reader& reader)
 {
 	// Create the sample provider and encoding properties
 	unique_ptr<SubtitleSampleProvider> subtitleSampleProvider;

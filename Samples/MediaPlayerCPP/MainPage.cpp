@@ -44,7 +44,7 @@ MainPage::MainPage()
 	splitter().IsPaneOpen(true);
 }
 
-fire_and_forget MainPage::OpenFileAsync(_In_ const IInspectable&, _In_ const RoutedEventArgs&)
+fire_and_forget MainPage::OpenFilePicker(_In_ const IInspectable&, _In_ const RoutedEventArgs&)
 {
 	// Open the file picker
 	FileOpenPicker filePicker;
@@ -57,27 +57,25 @@ fire_and_forget MainPage::OpenFileAsync(_In_ const IInspectable&, _In_ const Rou
 	// Check if the user selected a file
 	if (file != nullptr)
 	{
-		// Populate the URI box with the path of the file selected
-		uriBox().Text(file.Path());
-
-		OpenStream(co_await file.OpenReadAsync());
+		OpenFile(file);
 	}
 }
 
-fire_and_forget MainPage::OnFileActivated(_In_ const StorageFile& file)
+void MainPage::OnFileActivated(_In_ const StorageFile& file)
+{
+	OpenFile(file);
+}
+
+fire_and_forget MainPage::OpenFile(_In_ const StorageFile& file)
 {
 	// Populate the URI box with the path of the file selected
 	uriBox().Text(file.Path());
 
-	OpenStream(co_await file.OpenReadAsync());
-}
+	IRandomAccessStream stream{ co_await file.OpenReadAsync() };
 
-void MainPage::OpenStream(_In_ const IRandomAccessStream& stream)
-{
-	// TODO: Validate this code path with full FFmpeg build
-	OpenMedia([&stream](const MediaStreamSource& mss)
+	OpenMedia([&stream](const MediaStreamSource& mss, const FFmpegInteropMSSConfig& config)
 	{
-		FFmpegInteropMSS::CreateFromStream(stream, mss);
+		FFmpegInteropMSS::CreateFromStream(stream, mss, config);
 	});
 }
 
@@ -97,13 +95,14 @@ void MainPage::OnUriBoxKeyUp(_In_ const IInspectable& sender, _In_ const KeyRout
 
 void MainPage::OpenUri(_In_ const hstring& uri)
 {
-	OpenMedia([&uri](const MediaStreamSource& mss)
+	// TODO: Validate this code path with full FFmpeg build
+	OpenMedia([&uri](const MediaStreamSource& mss, const FFmpegInteropMSSConfig& config)
 	{
-		FFmpegInteropMSS::CreateFromUri(uri, mss);
+		FFmpegInteropMSS::CreateFromUri(uri, mss, config);
 	});
 }
 
-void MainPage::OpenMedia(_In_ function<void(const MediaStreamSource&)> createFunc)
+void MainPage::OpenMedia(_In_ function<void(const MediaStreamSource&, const FFmpegInteropMSSConfig&)> createFunc)
 {
 	// Stop any media currently playing
 	mediaElement().Stop();
@@ -113,7 +112,12 @@ void MainPage::OpenMedia(_In_ function<void(const MediaStreamSource&)> createFun
 		// Create the media source
 		IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
 		MediaStreamSource mss{ mssFactory.ActivateInstance<MediaStreamSource>() };
-		createFunc(mss);
+		
+		FFmpegInteropMSSConfig config;
+		config.ForceAudioDecode(toggleSwitchAudioDecode().IsOn());
+		config.ForceVideoDecode(toggleSwitchVideoDecode().IsOn());
+		
+		createFunc(mss, config);
 
 		// Set the MSS as the media element's source
 		mediaElement().SetMediaStreamSource(move(mss));
@@ -132,11 +136,11 @@ void MainPage::OnMediaFailed(_In_ const IInspectable&, _In_ const ExceptionRoute
 	OnError(args.ErrorMessage());
 }
 
-void MainPage::OnError(_In_ const hstring& errMsg)
+fire_and_forget MainPage::OnError(_In_ const hstring& errMsg)
 {
 	// Display an error message
 	MessageDialog dialog{ errMsg };
-	(void) dialog.ShowAsync();
+	co_await dialog.ShowAsync();
 
 	// Open the control panel
 	splitter().IsPaneOpen(true);

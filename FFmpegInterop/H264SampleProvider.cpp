@@ -51,7 +51,7 @@ namespace
 	}
 }
 
-H264SampleProvider::H264SampleProvider(_In_ const AVStream* stream, _In_ FFmpegReader& reader) :
+H264SampleProvider::H264SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
 	SampleProvider(stream, reader),
 	m_avcCodecPrivate(m_stream->codecpar->extradata, m_stream->codecpar->extradata_size)
 {

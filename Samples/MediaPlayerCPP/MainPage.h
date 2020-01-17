@@ -28,16 +28,16 @@ namespace winrt::MediaPlayerCPP::implementation
 	public:
 		MainPage();
 
-		fire_and_forget OpenFileAsync(_In_ const Windows::Foundation::IInspectable& sender, _In_ const Windows::UI::Xaml::RoutedEventArgs& args);
-		fire_and_forget OnFileActivated(_In_ const Windows::Storage::StorageFile& file);
+		fire_and_forget OpenFilePicker(_In_ const Windows::Foundation::IInspectable& sender, _In_ const Windows::UI::Xaml::RoutedEventArgs& args);
+		void OnFileActivated(_In_ const Windows::Storage::StorageFile& file);
 		void OnUriBoxKeyUp(_In_ const Windows::Foundation::IInspectable& sender, _In_ const Windows::UI::Xaml::Input::KeyRoutedEventArgs& args);
 		void OnMediaFailed(_In_ const Windows::Foundation::IInspectable& sender, _In_ const Windows::UI::Xaml::ExceptionRoutedEventArgs& args);
 
 	private:
-		void OpenStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& stream);
+		fire_and_forget OpenFile(_In_ const Windows::Storage::StorageFile& file);
 		void OpenUri(_In_ const hstring& uri);
-		void OpenMedia(_In_ std::function<void(const Windows::Media::Core::MediaStreamSource&)> createFunc);
-		void OnError(_In_ const hstring& errMsg);
+		void OpenMedia(_In_ std::function<void(const Windows::Media::Core::MediaStreamSource&, const FFmpegInterop::FFmpegInteropMSSConfig&)> createFunc);
+		fire_and_forget OnError(_In_ const hstring& errMsg);
 	};
 }
 

@@ -22,20 +22,12 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	class SubtitleSampleProvider :
+	class MPEGSampleProvider :
 		public SampleProvider
 	{
 	public:
-		SubtitleSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
+		MPEGSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
 
-		void GetSample(_Inout_ const Windows::Media::Core::MediaStreamSourceSampleRequest& request) override;
-		void QueuePacket(_In_ AVPacket_ptr packet) override;
-
-	protected:
-		void Flush() noexcept override;
-
-	private:
-		Windows::Media::Core::MediaStreamSourceSampleRequest m_sampleRequest{ nullptr };
-		Windows::Media::Core::MediaStreamSourceSampleRequestDeferral m_sampleRequestDeferral{ nullptr };
+		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 	};
 }

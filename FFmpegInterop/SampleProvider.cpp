@@ -43,7 +43,7 @@ SampleProvider::SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader)
 	}
 }
 
-void SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp)
+void SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 {
 	const AVCodecParameters* codecPar{ m_stream->codecpar };
 
@@ -55,7 +55,14 @@ void SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingPropertie
 		audioEncProp.SampleRate(codecPar->sample_rate);
 		audioEncProp.ChannelCount(codecPar->channels);
 		audioEncProp.Bitrate(static_cast<uint32_t>(codecPar->bit_rate));
-		audioEncProp.BitsPerSample(static_cast<uint32_t>(codecPar->bits_per_coded_sample));
+		audioEncProp.BitsPerSample(static_cast<uint32_t>(max(codecPar->bits_per_coded_sample, codecPar->bits_per_raw_sample)));
+
+		if (setFormatUserData && codecPar->extradata != nullptr && codecPar->extradata_size > 0)
+		{
+			// Set the format user data
+			IAudioEncodingPropertiesWithFormatUserData audioEncPropWithFormatUserData{ encProp.as<IAudioEncodingPropertiesWithFormatUserData>() };
+			audioEncPropWithFormatUserData.SetFormatUserData({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size });
+		}
 
 		break;
 	}
@@ -87,6 +94,25 @@ void SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingPropertie
 		if (rotateTag != nullptr)
 		{
 			videoProp.Insert(MF_MT_VIDEO_ROTATION, PropertyValue::CreateUInt32(atoi(rotateTag->value)));
+		}
+
+		if (setFormatUserData && codecPar->extradata != nullptr && codecPar->extradata_size > 0)
+		{
+			// Set the format user data
+			IVideoEncodingProperties2 videoEncProp2{ encProp.as<IVideoEncodingProperties2>() };
+			videoEncProp2.SetFormatUserData({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size });
+		}
+
+		break;
+	}
+
+	case AVMEDIA_TYPE_SUBTITLE:
+	{
+		if (setFormatUserData && codecPar->extradata != nullptr && codecPar->extradata_size > 0)
+		{
+			// Set the format user data
+			ITimedMetadataEncodingProperties subtitleEncProp{ encProp.as<ITimedMetadataEncodingProperties>() };
+			subtitleEncProp.SetFormatUserData({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size });
 		}
 
 		break;

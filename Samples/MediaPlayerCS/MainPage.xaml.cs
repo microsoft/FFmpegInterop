@@ -93,7 +93,6 @@ namespace MediaPlayerCS
 
 		private void OpenUri(String uri)
 		{
-			// TODO: Validate this code path with full FFmpeg build
 			OpenMedia((mss, config) =>
 			{
 				FFmpegInteropMSS.CreateFromUri(uri, mss, config);

@@ -125,7 +125,6 @@ namespace MediaPlayerCS
         private void OnSuspending(object sender, SuspendingEventArgs args)
         {
             var deferral = args.SuspendingOperation.GetDeferral();
-            //TODO: Save application state and stop any background activity
             deferral.Complete();
         }
     }

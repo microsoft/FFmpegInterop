@@ -58,11 +58,11 @@ H264SampleProvider::H264SampleProvider(_In_ const AVStream* stream, _In_ Reader&
 	// TODO: We currently only support the AVC bitstream format. Add support for Annex B
 }
 
-void H264SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp)
+void H264SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 {
 	const AVCodecParameters* codecPar{ m_stream->codecpar };
 
-	SampleProvider::SetEncodingProperties(encProp);
+	SampleProvider::SetEncodingProperties(encProp, setFormatUserData);
 
 	VideoEncodingProperties videoEncProp{ encProp.as<VideoEncodingProperties>() };
 	videoEncProp.ProfileId(codecPar->profile);

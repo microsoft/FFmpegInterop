@@ -25,6 +25,8 @@
     <ClCompile Include="FFmpegInteropMSSConfig.cpp" />
     <ClCompile Include="Reader.cpp" />
     <ClCompile Include="Metadata.cpp" />
+    <ClCompile Include="FLACSampleProvider.cpp" />
+    <ClCompile Include="MPEGSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -44,6 +46,8 @@
     <ClInclude Include="FFmpegInteropMSSConfig.h" />
     <ClInclude Include="Reader.h" />
     <ClInclude Include="Metadata.h" />
+    <ClInclude Include="FLACSampleProvider.h" />
+    <ClInclude Include="MPEGSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FFmpegInterop.def" />

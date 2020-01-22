@@ -306,7 +306,7 @@ void FFmpegInteropMSS::OnStarting(_In_ const MediaStreamSource&, _In_ const Medi
 		try
 		{
 			// Convert the seek time from HNS to AV_TIME_BASE
-			int64_t avSeekTime = static_cast<int64_t>(static_cast<double>(mfSeekTime.count())* AV_TIME_BASE / HNS_PER_SEC);
+			int64_t avSeekTime{ static_cast<int64_t>(static_cast<double>(mfSeekTime.count()) * AV_TIME_BASE / HNS_PER_SEC) };
 
 			if (m_formatContext->start_time != AV_NOPTS_VALUE)
 			{

@@ -29,7 +29,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		virtual ~SampleProvider() = default;
 
-		virtual void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp);
+		virtual void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData);
 		
 		void Select() noexcept;
 		void Deselect() noexcept;
@@ -46,10 +46,8 @@ namespace winrt::FFmpegInterop::implementation
 		virtual std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData();
 
 		const AVStream* m_stream;
-
-	private:
-		bool m_isSelected{ false };
 		Reader& m_reader;
+		bool m_isSelected{ false };
 		bool m_isDiscontinuous{ true };
 		std::deque<AVPacket_ptr> m_packetQueue;
 		int64_t m_startOffset;

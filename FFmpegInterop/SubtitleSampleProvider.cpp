@@ -23,27 +23,10 @@ using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Media::MediaProperties;
 
-SubtitleSampleProvider::SubtitleSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader, _In_ bool usesInitCue) :
-	SampleProvider(stream, reader),
-	m_usesInitCue(usesInitCue)
+SubtitleSampleProvider::SubtitleSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	SampleProvider(stream, reader)
 {
 
-}
-
-void SubtitleSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp)
-{
-	// Check if this subtitle stream uses an initialization cue
-	if (m_usesInitCue)
-	{
-		const AVCodecParameters* codecPar{ m_stream->codecpar };
-
-		// Make sure this stream has codec private data
-		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, codecPar->extradata == nullptr || codecPar->extradata_size <= 0);
-
-		// Set the format user data
-		ITimedMetadataEncodingProperties subtitleEncProp{ encProp.as<ITimedMetadataEncodingProperties>() };
-		subtitleEncProp.SetFormatUserData({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size });
-	}
 }
 
 void SubtitleSampleProvider::Flush() noexcept

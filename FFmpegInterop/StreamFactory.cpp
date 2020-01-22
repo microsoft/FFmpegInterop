@@ -20,11 +20,13 @@
 #include "StreamFactory.h"
 #include "FFmpegInteropMSSConfig.h"
 #include "SampleProvider.h"
+#include "AV1SampleProvider.h"
+#include "FLACSampleProvider.h"
+#include "H264SampleProvider.h"
+#include "MPEGSampleProvider.h"
+#include "SubtitleSampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
-#include "H264SampleProvider.h"
-#include "AV1SampleProvider.h"
-#include "SubtitleSampleProvider.h"
 
 using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt;
@@ -33,15 +35,12 @@ using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Media::MediaProperties;
 using namespace std;
 
-// TODO: Add support for the following audio stream types:
-// - AV_CODEC_ID_ALAC -> MFAudioFormat_ALAC  
-// - AV_CODEC_ID_VORBIS -> MFAudioFormat_Vorbis    
-// - AV_CODEC_ID_FLAC -> MFAudioFormat_FLAC  
 tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAudioStream(_In_ const AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
 	// Create the sample provider and encoding properties
 	unique_ptr<SampleProvider> audioSampleProvider;
 	AudioEncodingProperties audioEncProp{ nullptr };
+	bool setFormatUserData{ false };
 
 	AVCodecID codecId{ stream->codecpar->codec_id };
 
@@ -71,6 +70,13 @@ tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAu
 		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
 		break;
 
+	case AV_CODEC_ID_ALAC:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_ALAC));
+		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		setFormatUserData = true;
+		break;
+
 	case AV_CODEC_ID_DTS:
 		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
 		audioEncProp.Subtype(to_hstring(MFAudioFormat_DTS_HD));
@@ -81,6 +87,12 @@ tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAu
 		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
 		audioEncProp.Subtype(to_hstring(MFAudioFormat_Dolby_DDPlus));
 		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_FLAC:
+		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+		audioEncProp.Subtype(to_hstring(MFAudioFormat_FLAC));
+		audioSampleProvider = make_unique<FLACSampleProvider>(stream, reader);
 		break;
 
 	case AV_CODEC_ID_MP1:
@@ -99,6 +111,7 @@ tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAu
 		audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
 		audioEncProp.Subtype(to_hstring(MFAudioFormat_Opus));
 		audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+		setFormatUserData = true;
 		break;
 
 	case AV_CODEC_ID_PCM_F32LE:
@@ -133,7 +146,7 @@ tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAu
 		break;
 	}
 
-	audioSampleProvider->SetEncodingProperties(audioEncProp);
+	audioSampleProvider->SetEncodingProperties(audioEncProp, setFormatUserData);
 
 	// Create the stream descriptor
 	AudioStreamDescriptor audioStreamDescriptor{ audioEncProp };
@@ -142,17 +155,12 @@ tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAu
 	return { move(audioSampleProvider), move(audioStreamDescriptor) };
 }
 
-// TODO: Add support for the following video stream types:
-// - AV_CODEC_ID_MPEG1VIDEO -> MFVideoFormat_MPG1  
-// - AV_CODEC_ID_MPEG2VIDEO -> MFVideoFormat_MPEG2 
-// - AV_CODEC_ID_MPEG4 -> MFVideoFormat_MP4V 
-// - AV_CODEC_ID_HEVC -> MFVideoFormat_HEVC  
-// - AV_CODEC_ID_MJPEG -> MFVideoFormat_MJPG  
 tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVideoStream(_In_ const AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 {
 	// Create the sample provider and encoding properties
 	unique_ptr<SampleProvider> videoSampleProvider;
 	VideoEncodingProperties videoEncProp{ nullptr };
+	bool setFormatUserData{ false };
 
 	AVCodecID codecId{ stream->codecpar->codec_id };
 
@@ -169,16 +177,41 @@ tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVi
 		videoSampleProvider = make_unique<AV1SampleProvider>(stream, reader);
 		break;
 
-	case AV_CODEC_ID_MSMPEG4V3:
-		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
-		videoEncProp.Subtype(to_hstring(MFVideoFormat_MP43));
-		videoSampleProvider = make_unique<SampleProvider>(stream, reader);
-		break;
-
 	case AV_CODEC_ID_H264:
 		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
 		videoEncProp.Subtype(to_hstring(MFVideoFormat_H264));
 		videoSampleProvider = make_unique<H264SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_MJPEG:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_MJPG));
+		videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_MPEG1VIDEO:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_MPG1));
+		videoSampleProvider = make_unique<MPEGSampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_MPEG2VIDEO:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_MPEG2));
+		videoSampleProvider = make_unique<MPEGSampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_MPEG4:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_MP4V));
+		videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+		setFormatUserData = true;
+		break;
+
+	case AV_CODEC_ID_MSMPEG4V3:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_MP43));
+		videoSampleProvider = make_unique<SampleProvider>(stream, reader);
 		break;
 
 	case AV_CODEC_ID_VP8:
@@ -199,7 +232,7 @@ tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVi
 		break;
 	}
 
-	videoSampleProvider->SetEncodingProperties(videoEncProp);
+	videoSampleProvider->SetEncodingProperties(videoEncProp, setFormatUserData);
 
 	// Create the stream descriptor
 	VideoStreamDescriptor videoStreamDescriptor{ videoEncProp };
@@ -213,28 +246,31 @@ tuple<unique_ptr<SampleProvider>, TimedMetadataStreamDescriptor> StreamFactory::
 	// Create the sample provider and encoding properties
 	unique_ptr<SubtitleSampleProvider> subtitleSampleProvider;
 	TimedMetadataEncodingProperties subtitleEncProp;
+	bool setFormatUserData{ false };
 
 	switch (stream->codecpar->codec_id)
 	{
 	case AV_CODEC_ID_ASS:
 	case AV_CODEC_ID_SSA:
-		subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader, true);
+		subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader);
 		subtitleEncProp.Subtype(L"SSA");
+		setFormatUserData = true;
 		break;
 
 	case AV_CODEC_ID_DVD_SUBTITLE:
-		subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader, true);
+		subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader);
 		subtitleEncProp.Subtype(L"VobSub");
+		setFormatUserData = true;
 		break;
 
 	case AV_CODEC_ID_HDMV_PGS_SUBTITLE:
-		subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader, false);
+		subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader);
 		subtitleEncProp.Subtype(L"PGS");
 		break;
 
 	case AV_CODEC_ID_SUBRIP:
 	case AV_CODEC_ID_TEXT:
-		subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader, false);
+		subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader);
 		subtitleEncProp.Subtype(L"SRT");
 		break;
 
@@ -242,6 +278,8 @@ tuple<unique_ptr<SampleProvider>, TimedMetadataStreamDescriptor> StreamFactory::
 		// We don't support this subtitle codec
 		THROW_HR(MF_E_INVALIDMEDIATYPE);
 	}
+
+	subtitleSampleProvider->SetEncodingProperties(subtitleEncProp, setFormatUserData);
 
 	// Create the stream descriptor
 	TimedMetadataStreamDescriptor subtitleStreamDescriptor{ subtitleEncProp };

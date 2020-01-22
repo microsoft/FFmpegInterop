@@ -50,7 +50,7 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVSt
 	}
 }
 
-void UncompressedAudioSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp)
+void UncompressedAudioSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 {
 	// We intentially don't call SampleProvider::SetEncodingProperties() here as
 	// it would set encoding properties with values for the compressed audio type.
@@ -78,7 +78,7 @@ tuple<IBuffer, int64_t, int64_t, std::map<GUID, IInspectable>> UncompressedAudio
 			const hresult hr{ to_hresult() };
 			if (hr != MF_E_END_OF_STREAM)
 			{
-				// Unexpected error. Rethrow
+				// Unexpected error. Rethrow.
 				throw;
 			}
 			else if (firstDecodedSample)

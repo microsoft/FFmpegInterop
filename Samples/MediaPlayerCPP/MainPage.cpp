@@ -95,7 +95,6 @@ void MainPage::OnUriBoxKeyUp(_In_ const IInspectable& sender, _In_ const KeyRout
 
 void MainPage::OpenUri(_In_ const hstring& uri)
 {
-	// TODO: Validate this code path with full FFmpeg build
 	OpenMedia([&uri](const MediaStreamSource& mss, const FFmpegInteropMSSConfig& config)
 	{
 		FFmpegInteropMSS::CreateFromUri(uri, mss, config);

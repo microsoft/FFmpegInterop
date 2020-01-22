@@ -56,9 +56,9 @@ UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVSt
 	}
 }
 
-void UncompressedVideoSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp)
+void UncompressedVideoSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 {
-	SampleProvider::SetEncodingProperties(encProp);
+	SampleProvider::SetEncodingProperties(encProp, setFormatUserData);
 
 	VideoEncodingProperties videoEncProp{ encProp.as<VideoEncodingProperties>() };
 

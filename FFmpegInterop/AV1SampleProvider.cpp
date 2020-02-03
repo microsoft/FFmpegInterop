@@ -48,12 +48,12 @@ IBuffer AV1SampleProvider::TransformSample(_Inout_ AVPacket_ptr packet)
 {
 	// FFmpeg strips out the AV1CodecConfigurationRecord, so extradata only contains config OBUs.
 	const uint8_t* configOBUs{ m_stream->codecpar->extradata };
-	uint32_t configOBUsSize{ static_cast<uint32_t>(m_stream->codecpar->extradata_size) };
+	size_t configOBUsSize{ static_cast<size_t>(m_stream->codecpar->extradata_size) };
 
 	// Prepend any config OBUs to key frames
 	if ((packet->flags & AV_PKT_FLAG_KEY) != 0 && configOBUs != nullptr && configOBUsSize != 0)
 	{
-		const size_t sampleSize{ configOBUsSize + packet->size};
+		const size_t sampleSize{ configOBUsSize + packet->size };
 
 		vector<uint8_t> buf;
 		buf.reserve(sampleSize);

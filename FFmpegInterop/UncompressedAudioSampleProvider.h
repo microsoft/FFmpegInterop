@@ -37,7 +37,7 @@ namespace winrt::FFmpegInterop::implementation
 		// We'll compact shorter decoded audio samples until this threshold is reached.
 		static constexpr int64_t MIN_AUDIO_SAMPLE_DUR_MS{ 200 };
 
-		int64_t m_minAudioSampleDur;
+		int64_t m_minAudioSampleDur{ 0 };
 		SwrContext_ptr m_swrContext;
 	};
 }

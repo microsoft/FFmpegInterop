@@ -23,6 +23,7 @@
 #include "AV1SampleProvider.h"
 #include "FLACSampleProvider.h"
 #include "H264SampleProvider.h"
+#include "HEVCSampleProvider.h"
 #include "MPEGSampleProvider.h"
 #include "SubtitleSampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
@@ -181,6 +182,12 @@ tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVi
 		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
 		videoEncProp.Subtype(to_hstring(MFVideoFormat_H264));
 		videoSampleProvider = make_unique<H264SampleProvider>(stream, reader);
+		break;
+
+	case AV_CODEC_ID_HEVC:
+		videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+		videoEncProp.Subtype(to_hstring(MFVideoFormat_HEVC));
+		videoSampleProvider = make_unique<HEVCSampleProvider>(stream, reader);
 		break;
 
 	case AV_CODEC_ID_MJPEG:

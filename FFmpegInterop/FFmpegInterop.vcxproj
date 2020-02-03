@@ -108,8 +108,10 @@
     <ClInclude Include="FFmpegInteropMSS.h" />
     <ClInclude Include="FFmpegInteropMSSConfig.h" />
     <ClInclude Include="FLACSampleProvider.h" />
+    <ClInclude Include="HEVCSampleProvider.h" />
     <ClInclude Include="Metadata.h" />
     <ClInclude Include="MPEGSampleProvider.h" />
+    <ClInclude Include="NALUSampleProvider.h" />
     <ClInclude Include="Reader.h" />
     <ClInclude Include="H264SampleProvider.h" />
     <ClInclude Include="SampleProvider.h" />
@@ -130,8 +132,10 @@
     <ClCompile Include="FFmpegInteropMSS.cpp" />
     <ClCompile Include="FFmpegInteropMSSConfig.cpp" />
     <ClCompile Include="FLACSampleProvider.cpp" />
+    <ClCompile Include="HEVCSampleProvider.cpp" />
     <ClCompile Include="Metadata.cpp" />
     <ClCompile Include="MPEGSampleProvider.cpp" />
+    <ClCompile Include="NALUSampleProvider.cpp" />
     <ClCompile Include="Reader.cpp" />
     <ClCompile Include="H264SampleProvider.cpp" />
     <ClCompile Include="SampleProvider.cpp" />

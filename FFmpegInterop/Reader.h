@@ -30,7 +30,7 @@ namespace winrt::FFmpegInterop::implementation
 		void ReadPacket();
 
 	private:
-		AVFormatContext* m_formatContext;
+		AVFormatContext* m_formatContext{ nullptr };
 		const std::map<int, SampleProvider*>& m_streamIdMap;
 	};
 }

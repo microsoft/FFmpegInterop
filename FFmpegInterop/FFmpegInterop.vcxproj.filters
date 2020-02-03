@@ -27,6 +27,8 @@
     <ClCompile Include="Metadata.cpp" />
     <ClCompile Include="FLACSampleProvider.cpp" />
     <ClCompile Include="MPEGSampleProvider.cpp" />
+    <ClCompile Include="NALUSampleProvider.cpp" />
+    <ClCompile Include="HEVCSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -48,6 +50,8 @@
     <ClInclude Include="Metadata.h" />
     <ClInclude Include="FLACSampleProvider.h" />
     <ClInclude Include="MPEGSampleProvider.h" />
+    <ClInclude Include="NALUSampleProvider.h" />
+    <ClInclude Include="HEVCSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FFmpegInterop.def" />

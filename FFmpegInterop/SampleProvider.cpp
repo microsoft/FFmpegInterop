@@ -36,11 +36,6 @@ SampleProvider::SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader)
 		m_startOffset = m_stream->start_time;
 		m_nextSamplePts = m_stream->start_time;
 	}
-	else
-	{
-		m_startOffset = 0;
-		m_nextSamplePts = 0;
-	}
 }
 
 void SampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)

@@ -50,7 +50,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool m_isSelected{ false };
 		bool m_isDiscontinuous{ true };
 		std::deque<AVPacket_ptr> m_packetQueue;
-		int64_t m_startOffset;
-		int64_t m_nextSamplePts;
+		int64_t m_startOffset{ 0 };
+		int64_t m_nextSamplePts{ 0 };
 	};
 }

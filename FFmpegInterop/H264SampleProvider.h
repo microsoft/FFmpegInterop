@@ -18,77 +18,62 @@
 
 #pragma once
 
-#include "SampleProvider.h"
+#include "NALUSampleProvider.h"
 
 namespace winrt::FFmpegInterop::implementation
 {
 	class H264SampleProvider :
-		public SampleProvider
+		public NALUSampleProvider
 	{
 	public:
 		H264SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
+	};
 
-	protected:
-		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
+	class AVCConfigParser
+	{
+	public:
+		AVCConfigParser(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize);
+
+		uint8_t GetNaluLengthSize() const noexcept;
+		std::tuple<std::vector<uint8_t>, std::vector<uint32_t>> GetSpsPpsData() const;
 
 	private:
-		static constexpr uint8_t NALU_START_CODE[]{ 0x00, 0x00, 0x00, 0x01 };
-		static constexpr uint8_t NALU_TYPE_AUD{ 0x1F };
+		static constexpr size_t MIN_SIZE{ 7 };
 
-		class AVCCodecPrivate
-		{
-		public:
-			AVCCodecPrivate(_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData, _In_ int codecPrivateDataSize);
+		uint32_t ParseParameterSets(
+			_In_ uint8_t parameterSetCount,
+			_In_reads_(dataSize) const uint8_t* data,
+			_In_ uint32_t dataSize,
+			_Inout_ std::vector<uint8_t>& spsPpsData,
+			_Inout_ std::vector<uint32_t>& spsPpsNaluLengths) const;
 
-			uint8_t GetProfile() const { return m_profile; }
-			uint8_t GetLevel() const { return m_level; }
-			uint8_t GetNaluLengthSize() const { return m_naluLengthSize; }
-			const std::vector<uint8_t>& GetSpsPpsData() const { return m_spsPpsData; }
-			const std::vector<uint32_t>& GetSpsPpsNaluLengths() const { return m_spsPpsNaluLengths; }
+		const uint8_t* m_data{ nullptr };
+		const uint32_t m_dataSize{ 0 };
+	};
 
-		private:
-			static constexpr size_t MIN_SIZE{ 7 };
+	class AVCSequenceParameterSetParser
+	{
+	public:
+		AVCSequenceParameterSetParser(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize);
 
-			uint32_t ParseParameterSets(
-				_In_ uint8_t parameterSetCount,
-				_In_reads_(codecPrivateDataSize) const uint8_t* codecPrivateData,
-				_In_ uint32_t codecPrivateDataSize);
+		uint8_t GetProfile() const { return m_profile; }
+		bool GetConstraintSet1() const { return m_constraintSet1; }
 
-			uint8_t m_profile;
-			uint8_t m_level;
-			uint8_t m_naluLengthSize;
-			std::vector<uint8_t> m_spsPpsData;
-			std::vector<uint32_t> m_spsPpsNaluLengths;
-		};
+	private:
+		uint8_t m_profile{ 0 };
+		bool m_constraintSet1{ false };
+	};
 
-		class AVCSequenceParameterSet
-		{
-		public:
-			AVCSequenceParameterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize);
+	class AVCPictureParamterSetParser
+	{
+	public:
+		AVCPictureParamterSetParser(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize);
 
-			uint8_t GetProfile() const { return m_profile; }
-			bool GetConstraintSet1() const { return m_constraintSet1; }
+		uint32_t GetNumSliceGroups() const { return m_numSliceGroups; }
 
-		private:
-			uint8_t m_profile;
-			bool m_constraintSet1;
-		};
-
-		class AVCPictureParamterSet
-		{
-		public:
-			AVCPictureParamterSet(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize);
-
-			uint32_t GetNumSliceGroups() const { return m_numSliceGroups; }
-
-		private:
-			uint32_t m_numSliceGroups;
-		};
-
-		std::tuple<Windows::Storage::Streams::IBuffer, std::vector<uint32_t>> TransformSample(_Inout_ AVPacket_ptr packet);
-
-		AVCCodecPrivate m_avcCodecPrivate;
+	private:
+		uint32_t m_numSliceGroups{ 0 };
 	};
 }

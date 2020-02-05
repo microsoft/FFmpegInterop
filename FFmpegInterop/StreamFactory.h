@@ -37,7 +37,5 @@ namespace winrt::FFmpegInterop::implementation
 
 	private:
 		StreamFactory() = delete;
-
-		static void SetStreamDescriptorProperties(_In_ const AVStream* stream, _Inout_ const Windows::Media::Core::IMediaStreamDescriptor& streamDescriptor);
 	};
 }

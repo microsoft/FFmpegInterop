@@ -22,39 +22,41 @@
 #include "FFmpegInteropLogging.g.cpp"
 
 using namespace winrt;
-using namespace winrt::FFmpegInterop::implementation;
 
-FFmpegInterop::ILogProvider FFmpegInteropLogging::s_LogProvider{ nullptr };
-
-void FFmpegInteropLogging::SetLogLevel(_In_ const FFmpegInterop::LogLevel& level)
+namespace winrt::FFmpegInterop::implementation
 {
-	av_log_set_level(static_cast<int>(level));
-}
+	FFmpegInterop::ILogProvider FFmpegInteropLogging::s_LogProvider{ nullptr };
 
-void FFmpegInteropLogging::SetLogProvider(_In_ const FFmpegInterop::ILogProvider& logProvider)
-{
-	s_LogProvider = logProvider;
-	av_log_set_callback([](void* avcl, int level, const char* fmt, va_list vl)->void
+	void FFmpegInteropLogging::SetLogLevel(_In_ const FFmpegInterop::LogLevel& level)
 	{
-		if (level <= av_log_get_level())
-		{
-			if (s_LogProvider != nullptr)
-			{
-				char pLine[1000];
-				int printPrefix = 1;
-				av_log_format_line(avcl, level, fmt, vl, pLine, sizeof(pLine), &printPrefix);
+		av_log_set_level(static_cast<int>(level));
+	}
 
-				wchar_t wLine[sizeof(pLine)];
-				if (MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine)) != 0)
+	void FFmpegInteropLogging::SetLogProvider(_In_ const FFmpegInterop::ILogProvider& logProvider)
+	{
+		s_LogProvider = logProvider;
+		av_log_set_callback([](void* avcl, int level, const char* fmt, va_list vl)->void
+		{
+			if (level <= av_log_get_level())
+			{
+				if (s_LogProvider != nullptr)
 				{
-					s_LogProvider.Log((FFmpegInterop::LogLevel)level, hstring(wLine));
+					char pLine[1000];
+					int printPrefix = 1;
+					av_log_format_line(avcl, level, fmt, vl, pLine, sizeof(pLine), &printPrefix);
+
+					wchar_t wLine[sizeof(pLine)];
+					if (MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine)) != 0)
+					{
+						s_LogProvider.Log((FFmpegInterop::LogLevel)level, hstring(wLine));
+					}
 				}
 			}
-		}
-	});
-}
+		});
+	}
 
-void FFmpegInteropLogging::SetDefaultLogProvider()
-{
-	av_log_set_callback(av_log_default_callback);
+	void FFmpegInteropLogging::SetDefaultLogProvider()
+	{
+		av_log_set_callback(av_log_default_callback);
+	}
 }

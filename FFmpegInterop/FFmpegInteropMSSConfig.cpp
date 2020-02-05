@@ -20,30 +20,32 @@
 #include "FFmpegInteropMSSConfig.h"
 #include "FFmpegInteropMSSConfig.g.cpp"
 
-using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Foundation::Collections;
 
-bool FFmpegInteropMSSConfig::ForceAudioDecode()
+namespace winrt::FFmpegInterop::implementation
 {
-    return m_forceAudioDecode;
-}
+    bool FFmpegInteropMSSConfig::ForceAudioDecode()
+    {
+        return m_forceAudioDecode;
+    }
 
-void FFmpegInteropMSSConfig::ForceAudioDecode(_In_ bool forceAudioDecode)
-{
-    m_forceAudioDecode = forceAudioDecode;
-}
+    void FFmpegInteropMSSConfig::ForceAudioDecode(_In_ bool forceAudioDecode)
+    {
+        m_forceAudioDecode = forceAudioDecode;
+    }
 
-bool FFmpegInteropMSSConfig::ForceVideoDecode()
-{
-    return m_forceVideoDecode;
-}
+    bool FFmpegInteropMSSConfig::ForceVideoDecode()
+    {
+        return m_forceVideoDecode;
+    }
 
-void FFmpegInteropMSSConfig::ForceVideoDecode(_In_ bool forceVideoDecode)
-{
-    m_forceVideoDecode = forceVideoDecode;
-}
+    void FFmpegInteropMSSConfig::ForceVideoDecode(_In_ bool forceVideoDecode)
+    {
+        m_forceVideoDecode = forceVideoDecode;
+    }
 
-StringMap FFmpegInteropMSSConfig::FFmpegOptions()
-{
-    return m_ffmpegOptions;
+    StringMap FFmpegInteropMSSConfig::FFmpegOptions()
+    {
+        return m_ffmpegOptions;
+    }
 }

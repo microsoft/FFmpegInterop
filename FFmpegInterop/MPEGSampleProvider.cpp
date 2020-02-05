@@ -19,26 +19,28 @@
 #include "pch.h"
 #include "MPEGSampleProvider.h"
 
-using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Media::MediaProperties;
 using namespace std;
 
-MPEGSampleProvider::MPEGSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
-	SampleProvider(stream, reader)
+namespace winrt::FFmpegInterop::implementation
 {
-
-}
-
-void MPEGSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
-{
-	SampleProvider::SetEncodingProperties(encProp, setFormatUserData);
-
-	const AVCodecParameters* codecPar{ m_stream->codecpar };
-
-	if (codecPar->extradata != nullptr && codecPar->extradata_size > 0)
+	MPEGSampleProvider::MPEGSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+		SampleProvider(stream, reader)
 	{
-		MediaPropertySet videoProp{ encProp.Properties() };
-		videoProp.Insert(MF_MT_MPEG_SEQUENCE_HEADER, PropertyValue::CreateUInt8Array({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size }));
+
+	}
+
+	void MPEGSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
+	{
+		SampleProvider::SetEncodingProperties(encProp, setFormatUserData);
+
+		const AVCodecParameters* codecPar{ m_stream->codecpar };
+
+		if (codecPar->extradata != nullptr && codecPar->extradata_size > 0)
+		{
+			MediaPropertySet videoProp{ encProp.Properties() };
+			videoProp.Insert(MF_MT_MPEG_SEQUENCE_HEADER, PropertyValue::CreateUInt8Array({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size }));
+		}
 	}
 }

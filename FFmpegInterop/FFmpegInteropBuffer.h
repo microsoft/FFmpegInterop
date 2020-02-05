@@ -31,7 +31,7 @@ namespace winrt::FFmpegInterop::implementation
 		FFmpegInteropBuffer(_In_ AVBufferRef* bufRef);
 		FFmpegInteropBuffer(_In_ AVBufferRef_ptr bufRef) noexcept;
 		FFmpegInteropBuffer(_In_ AVPacket_ptr packet);
-		FFmpegInteropBuffer(_In_reads_(bufSize) AVBlob_ptr buf, _In_ size_t bufSize);
+		FFmpegInteropBuffer(_In_reads_(bufSize) AVBlob_ptr buf, _In_ uint32_t bufSize);
 		FFmpegInteropBuffer(_In_ std::vector<uint8_t>&& buf) noexcept;
 
 		// IBuffer

@@ -20,6 +20,7 @@
 #include "App.h"
 #include "MainPage.h"
 
+using namespace winrt;
 using namespace winrt::MediaPlayerCPP::implementation;
 using namespace winrt::Windows::ApplicationModel;
 using namespace winrt::Windows::ApplicationModel::Activation;
@@ -38,8 +39,8 @@ App::App()
 	InitializeComponent();
 	Suspending({ this, &App::OnSuspending });
 
-	// FFmpegInterop::FFmpegInteropLogging::SetLogLevel(FFmpegInterop::LogLevel::Info);
-	// FFmpegInterop::FFmpegInteropLogging::SetLogProvider(this);
+	FFmpegInterop::FFmpegInteropLogging::SetLogLevel(FFmpegInterop::LogLevel::Info);
+	FFmpegInterop::FFmpegInteropLogging::SetLogProvider(*this);
 
 #if defined _DEBUG && !defined DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION
 	UnhandledException([this](IInspectable const&, UnhandledExceptionEventArgs const& e)
@@ -53,12 +54,10 @@ App::App()
 #endif
 }
 
-/*
-void App::Log(FFmpegInterop::LogLevel level, String^ message)
+void App::Log(FFmpegInterop::LogLevel level, const hstring& message)
 {
-	OutputDebugString(message->Data());
+	OutputDebugString(message.c_str());
 }
-*/
 
 /// <summary>
 /// Invoked when the application is launched normally by the end user.  Other entry points

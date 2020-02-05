@@ -22,27 +22,34 @@
 
 using namespace std;
 
-using namespace winrt::FFmpegInterop::implementation;
-
-Reader::Reader(_In_ AVFormatContext* formatContext, _In_ const map<int, SampleProvider*>& streamMap) :
-	m_formatContext(formatContext),
-	m_streamIdMap(streamMap)
+namespace winrt::FFmpegInterop::implementation
 {
-
-}
-
-void Reader::ReadPacket()
-{
-	AVPacket_ptr packet{ av_packet_alloc() };
-	THROW_IF_NULL_ALLOC(packet);
-
-	// Read the next packet and push it into the appropriate sample provider.
-	// Drop the packet if the stream is not being used.
-	THROW_HR_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
-
-	auto iter = m_streamIdMap.find(packet->stream_index);
-	if (iter != m_streamIdMap.end())
+	Reader::Reader(_In_ AVFormatContext* formatContext, _In_ const map<int, SampleProvider*>& streamMap) :
+		m_formatContext(formatContext),
+		m_streamIdMap(streamMap)
 	{
-		iter->second->QueuePacket(move(packet));
+
+	}
+
+	void Reader::ReadPacket()
+	{
+		AVPacket_ptr packet{ av_packet_alloc() };
+		THROW_IF_NULL_ALLOC(packet);
+
+		// Read the next packet and push it into the appropriate sample provider.
+		// Drop the packet if the stream is not being used.
+		THROW_HR_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
+
+		TraceLoggingWrite(g_FFmpegInteropProvider, "ReadPacket", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingValue(packet->stream_index, "StreamId"),
+			TraceLoggingValue(packet->pts, "PTS"),
+			TraceLoggingValue(packet->duration, "Dur"),
+			TraceLoggingValue(packet->pos, "Pos"));
+
+		auto iter = m_streamIdMap.find(packet->stream_index);
+		if (iter != m_streamIdMap.end())
+		{
+			iter->second->QueuePacket(move(packet));
+		}
 	}
 }

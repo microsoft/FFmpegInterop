@@ -34,7 +34,7 @@ namespace winrt::FFmpegInterop::implementation
 		void Select() noexcept;
 		void Deselect() noexcept;
 		void OnSeek(_In_ int64_t seekTime) noexcept;
-
+		virtual void NotifyEOF() noexcept;
 		virtual void GetSample(_Inout_ const Windows::Media::Core::MediaStreamSourceSampleRequest& request);
 		virtual void QueuePacket(_In_ AVPacket_ptr packet);
 
@@ -48,6 +48,7 @@ namespace winrt::FFmpegInterop::implementation
 		const AVStream* m_stream;
 		Reader& m_reader;
 		bool m_isSelected{ false };
+		bool m_isEOS{ false };
 		bool m_isDiscontinuous{ true };
 		std::deque<AVPacket_ptr> m_packetQueue;
 		int64_t m_startOffset{ 0 };

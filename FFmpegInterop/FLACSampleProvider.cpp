@@ -19,37 +19,39 @@
 #include "pch.h"
 #include "FLACSampleProvider.h"
 
-using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
 
-FLACSampleProvider::FLACSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
-	SampleProvider(stream, reader)
+namespace winrt::FFmpegInterop::implementation
 {
-
-}
-
-tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> FLACSampleProvider::GetSampleData()
-{
-	if (m_isDiscontinuous)
+	FLACSampleProvider::FLACSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+		SampleProvider(stream, reader)
 	{
-		// On discontinuity send the codec private data containing the FLAC STREAMINFO block as the first sample to the decoder.
-		// We need to prepend the FLAC STREAMINFO block header as FFmpeg strips this out.
-		constexpr uint32_t FLAC_STREAMINFO_SIZE{ 34 };
-		constexpr uint8_t FLAC_STREAMINFO_HEADER[]{ 'f', 'L', 'a', 'C', 0x80, 0x00, 0x00, 0x22 };
 
-		THROW_HR_IF(E_UNEXPECTED, m_stream->codecpar->extradata_size < FLAC_STREAMINFO_SIZE);
-
-		vector<uint8_t> buf;
-		buf.reserve(sizeof(FLAC_STREAMINFO_HEADER) + FLAC_STREAMINFO_SIZE);
-		buf.insert(buf.end(), FLAC_STREAMINFO_HEADER, FLAC_STREAMINFO_HEADER + sizeof(FLAC_STREAMINFO_HEADER));
-		buf.insert(buf.end(), m_stream->codecpar->extradata, m_stream->codecpar->extradata + FLAC_STREAMINFO_SIZE);
-
-		return { make<FFmpegInteropBuffer>(move(buf)), m_startOffset, 0, { } };
 	}
-	else
+
+	tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> FLACSampleProvider::GetSampleData()
 	{
-		return SampleProvider::GetSampleData();
+		if (m_isDiscontinuous)
+		{
+			// On discontinuity send the codec private data containing the FLAC STREAMINFO block as the first sample to the decoder.
+			// We need to prepend the FLAC STREAMINFO block header as FFmpeg strips this out.
+			constexpr uint32_t FLAC_STREAMINFO_SIZE{ 34 };
+			constexpr uint8_t FLAC_STREAMINFO_HEADER[]{ 'f', 'L', 'a', 'C', 0x80, 0x00, 0x00, 0x22 };
+
+			THROW_HR_IF(E_UNEXPECTED, m_stream->codecpar->extradata_size < FLAC_STREAMINFO_SIZE);
+
+			vector<uint8_t> buf;
+			buf.reserve(sizeof(FLAC_STREAMINFO_HEADER) + FLAC_STREAMINFO_SIZE);
+			buf.insert(buf.end(), FLAC_STREAMINFO_HEADER, FLAC_STREAMINFO_HEADER + sizeof(FLAC_STREAMINFO_HEADER));
+			buf.insert(buf.end(), m_stream->codecpar->extradata, m_stream->codecpar->extradata + FLAC_STREAMINFO_SIZE);
+
+			return { make<FFmpegInteropBuffer>(move(buf)), m_startOffset, 0, { } };
+		}
+		else
+		{
+			return SampleProvider::GetSampleData();
+		}
 	}
 }

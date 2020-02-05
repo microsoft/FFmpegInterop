@@ -40,6 +40,7 @@ namespace MediaPlayerCS
         {
             InitializeComponent();
             Suspending += OnSuspending;
+
             FFmpegInteropLogging.SetLogLevel(LogLevel.Info);
             FFmpegInteropLogging.SetLogProvider(this);
         }

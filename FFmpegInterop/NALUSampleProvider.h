@@ -47,7 +47,7 @@ namespace winrt::FFmpegInterop::implementation
 	private:
 		static constexpr size_t MAX_NALU_NUM_SUPPORTED{ 512 };
 
-		std::tuple<Windows::Storage::Streams::IBuffer, std::vector<uint32_t>> TransformSample(_Inout_ AVPacket_ptr packet);
+		std::tuple<Windows::Storage::Streams::IBuffer, std::vector<uint32_t>> TransformSample(_Inout_ AVPacket_ptr packet, _In_ bool isKeyFrame);
 	};
 
 	class AnnexBParser

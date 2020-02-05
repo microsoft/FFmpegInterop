@@ -19,59 +19,65 @@
 #include "pch.h"
 #include "UncompressedSampleProvider.h"
 
-using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
 
-UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
-	SampleProvider(stream, reader)
+namespace winrt::FFmpegInterop::implementation
 {
-	// Create a new decoding context
-	AVCodec* codec = avcodec_find_decoder(stream->codecpar->codec_id);
-	THROW_HR_IF_NULL(MF_E_INVALIDMEDIATYPE, codec);
-
-	m_codecContext.reset(avcodec_alloc_context3(codec));
-	THROW_IF_NULL_ALLOC(m_codecContext);
-	THROW_HR_IF_FFMPEG_FAILED(avcodec_parameters_to_context(m_codecContext.get(), stream->codecpar));
-
-	unsigned int threadCount = std::thread::hardware_concurrency();
-	if (threadCount > 0)
+	UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+		SampleProvider(stream, reader)
 	{
-		m_codecContext->thread_count = threadCount;
-		m_codecContext->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+		// Create a new decoding context
+		AVCodec* codec{ avcodec_find_decoder(stream->codecpar->codec_id) };
+		THROW_HR_IF_NULL(MF_E_INVALIDMEDIATYPE, codec);
+
+		m_codecContext.reset(avcodec_alloc_context3(codec));
+		THROW_IF_NULL_ALLOC(m_codecContext);
+		THROW_HR_IF_FFMPEG_FAILED(avcodec_parameters_to_context(m_codecContext.get(), stream->codecpar));
+
+		const unsigned int threadCount{ std::thread::hardware_concurrency() };
+		if (threadCount > 0)
+		{
+			m_codecContext->thread_count = threadCount;
+			m_codecContext->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
+		}
+
+		THROW_HR_IF_FFMPEG_FAILED(avcodec_open2(m_codecContext.get(), codec, nullptr));
 	}
 
-	THROW_HR_IF_FFMPEG_FAILED(avcodec_open2(m_codecContext.get(), codec, nullptr));
-}
-
-void UncompressedSampleProvider::Flush() noexcept
-{
-	SampleProvider::Flush();
-
-	avcodec_flush_buffers(m_codecContext.get());
-}
-
-AVFrame_ptr UncompressedSampleProvider::GetFrame()
-{
-	// Allocate a frame
-	AVFrame_ptr frame{ av_frame_alloc() };
-	THROW_IF_NULL_ALLOC(frame);
-
-	while (true)
+	void UncompressedSampleProvider::Flush() noexcept
 	{
-		// Send a packet to the decoder and see if it can produce a frame
-		AVPacket_ptr packet{ GetPacket() };
+		SampleProvider::Flush();
 
-		THROW_HR_IF_FFMPEG_FAILED(avcodec_send_packet(m_codecContext.get(), packet.get()));
+		avcodec_flush_buffers(m_codecContext.get());
+	}
 
-		int decodeResult = avcodec_receive_frame(m_codecContext.get(), frame.get());
-		if (decodeResult == AVERROR(EAGAIN))
+	AVFrame_ptr UncompressedSampleProvider::GetFrame()
+	{
+		// Allocate a frame
+		AVFrame_ptr frame{ av_frame_alloc() };
+		THROW_IF_NULL_ALLOC(frame);
+
+		while (true)
 		{
-			// The decoder needs more data to produce a frame
-			continue;
-		}
-		THROW_HR_IF_FFMPEG_FAILED(decodeResult);
+			// Send a packet to the decoder and see if it can produce a frame
+			AVPacket_ptr packet{ GetPacket() };
 
-		return frame;
+			THROW_HR_IF_FFMPEG_FAILED(avcodec_send_packet(m_codecContext.get(), packet.get()));
+
+			int decodeResult{ avcodec_receive_frame(m_codecContext.get(), frame.get()) };
+			if (decodeResult == AVERROR(EAGAIN))
+			{
+				// The decoder needs more data to produce a frame
+				TraceLoggingWrite(g_FFmpegInteropProvider, "DecoderNeedsMoreInput", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+					TraceLoggingValue(m_stream->index, "StreamId"));
+				continue;
+			}
+			THROW_HR_IF_FFMPEG_FAILED(decodeResult);
+
+			TraceLoggingWrite(g_FFmpegInteropProvider, "FrameDecoded", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingValue(m_stream->index, "StreamId"));
+			return frame;
+		}
 	}
 }

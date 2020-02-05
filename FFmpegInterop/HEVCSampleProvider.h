@@ -31,8 +31,6 @@ namespace winrt::FFmpegInterop::implementation
 	{
 	public:
 		HEVCSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
-
-		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 	};
 
 	class HEVCConfigParser

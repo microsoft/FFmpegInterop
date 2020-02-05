@@ -32,6 +32,6 @@ namespace winrt::FFmpegInterop::implementation
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
 
 	private:
-		Windows::Storage::Streams::IBuffer TransformSample(_Inout_ AVPacket_ptr packet);
+		Windows::Storage::Streams::IBuffer TransformSample(_Inout_ AVPacket_ptr packet, _In_ bool isKeyFrame);
 	};
 }

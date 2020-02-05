@@ -57,6 +57,18 @@ namespace winrt::FFmpegInterop::implementation
 	constexpr int64_t MS_PER_SEC{ 1000 };
 	constexpr int64_t HNS_PER_SEC{ 10000000 };
 
+	// Convert arbitrary units "to AV time"
+	inline int64_t ToAVTime(_In_ int64_t units, _In_ int64_t unitsPerSec, _In_ AVRational avTimeBase)
+	{
+		return static_cast<int64_t>(units / (av_q2d(avTimeBase) * unitsPerSec));
+	}
+
+	// Convert to arbitrary units "from AV time"
+	inline int64_t FromAVTime(_In_ int64_t avTime, _In_ AVRational avTimeBase, _In_ int64_t unitsPerSec)
+	{
+		return static_cast<int64_t>(avTime *  av_q2d(avTimeBase) * unitsPerSec);
+	}
+
 	// Map of AVERROR -> HRESULT
 	const std::map<int, HRESULT> c_errorCodeMap
 	{

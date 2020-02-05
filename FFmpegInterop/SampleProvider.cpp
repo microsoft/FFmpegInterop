@@ -197,8 +197,8 @@ namespace winrt::FFmpegInterop::implementation
 		m_nextSamplePts = pts + dur;
 
 		// Convert time base from FFmpeg to MF
-		pts = FromAVTime(pts - m_startOffset, m_stream->time_base, HNS_PER_SEC);
-		dur = FromAVTime(dur, m_stream->time_base, HNS_PER_SEC);
+		pts = ConvertFromAVTime(pts - m_startOffset, m_stream->time_base, HNS_PER_SEC);
+		dur = ConvertFromAVTime(dur, m_stream->time_base, HNS_PER_SEC);
 
 		// Create the sample
 		MediaStreamSample sample{ MediaStreamSample::CreateFromBuffer(buf, static_cast<TimeSpan>(pts)) };

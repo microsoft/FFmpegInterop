@@ -54,17 +54,18 @@ namespace std
 
 namespace winrt::FFmpegInterop::implementation
 {
+	constexpr uint8_t BITS_PER_BYTE{ 8 };
 	constexpr int64_t MS_PER_SEC{ 1000 };
 	constexpr int64_t HNS_PER_SEC{ 10000000 };
 
-	// Convert arbitrary units "to AV time"
-	inline int64_t ToAVTime(_In_ int64_t units, _In_ int64_t unitsPerSec, _In_ AVRational avTimeBase)
+	// Convert arbitrary units to AV time
+	inline int64_t ConvertToAVTime(_In_ int64_t units, _In_ int64_t unitsPerSec, _In_ AVRational avTimeBase)
 	{
 		return static_cast<int64_t>(units / (av_q2d(avTimeBase) * unitsPerSec));
 	}
 
-	// Convert to arbitrary units "from AV time"
-	inline int64_t FromAVTime(_In_ int64_t avTime, _In_ AVRational avTimeBase, _In_ int64_t unitsPerSec)
+	// Convert to arbitrary units from AV time
+	inline int64_t ConvertFromAVTime(_In_ int64_t avTime, _In_ AVRational avTimeBase, _In_ int64_t unitsPerSec)
 	{
 		return static_cast<int64_t>(avTime *  av_q2d(avTimeBase) * unitsPerSec);
 	}
@@ -87,6 +88,9 @@ namespace winrt::FFmpegInterop::implementation
 
 	// Macro to check the result of FFmpeg calls
 	#define THROW_HR_IF_FFMPEG_FAILED(result) if ((result) < 0) { THROW_HR(averror_to_hresult(result)); }
+
+	// Helper function to create a PropertyValue from an MF attribute
+	extern winrt::Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propVar);
 
 	// Smart classes for managing FFmpeg objects
 	struct AVBlobDeleter

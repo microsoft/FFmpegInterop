@@ -20,6 +20,7 @@
 #include "StreamFactory.h"
 #include "FFmpegInteropMSSConfig.h"
 #include "SampleProvider.h"
+#include "ACMSampleProvider.h"
 #include "AV1SampleProvider.h"
 #include "FLACSampleProvider.h"
 #include "H264SampleProvider.h"
@@ -182,6 +183,16 @@ namespace winrt::FFmpegInterop::implementation
 		case AV_CODEC_ID_TRUEHD:
 			audioEncProp = CreateAudioEncProp(MEDIASUBTYPE_DOLBY_TRUEHD);
 			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			break;
+
+		case AV_CODEC_ID_PCM_MULAW:
+		case AV_CODEC_ID_WMALOSSLESS:
+		case AV_CODEC_ID_WMAPRO:
+		case AV_CODEC_ID_WMAV1:
+		case AV_CODEC_ID_WMAV2:
+		case AV_CODEC_ID_WMAVOICE:
+			audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
+			audioSampleProvider = make_unique<ACMSampleProvider>(stream, reader);
 			break;
 
 		default:

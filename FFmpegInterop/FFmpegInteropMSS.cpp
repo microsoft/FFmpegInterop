@@ -275,7 +275,7 @@ namespace winrt::FFmpegInterop::implementation
 		if (m_formatContext->duration > 0)
 		{
 			// Set the duration
-			m_mss.Duration(TimeSpan{ FromAVTime(m_formatContext->duration, { 1, AV_TIME_BASE }, HNS_PER_SEC) });
+			m_mss.Duration(TimeSpan{ ConvertFromAVTime(m_formatContext->duration, { 1, AV_TIME_BASE }, HNS_PER_SEC) });
 			m_mss.CanSeek(true);
 		}
 		else
@@ -316,7 +316,7 @@ namespace winrt::FFmpegInterop::implementation
 			try
 			{
 				// Convert the seek time from HNS to AV_TIME_BASE
-				int64_t avSeekTime{ ToAVTime(hnsSeekTime.count(), HNS_PER_SEC, { 1, AV_TIME_BASE }) };
+				int64_t avSeekTime{ ConvertToAVTime(hnsSeekTime.count(), HNS_PER_SEC, { 1, AV_TIME_BASE }) };
 
 				if (m_formatContext->start_time != AV_NOPTS_VALUE)
 				{

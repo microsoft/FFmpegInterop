@@ -29,6 +29,8 @@
     <ClCompile Include="MPEGSampleProvider.cpp" />
     <ClCompile Include="NALUSampleProvider.cpp" />
     <ClCompile Include="HEVCSampleProvider.cpp" />
+    <ClCompile Include="ACMSampleProvider.cpp" />
+    <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -52,6 +54,7 @@
     <ClInclude Include="MPEGSampleProvider.h" />
     <ClInclude Include="NALUSampleProvider.h" />
     <ClInclude Include="HEVCSampleProvider.h" />
+    <ClInclude Include="ACMSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FFmpegInterop.def" />

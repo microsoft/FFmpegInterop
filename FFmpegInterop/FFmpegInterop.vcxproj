@@ -102,6 +102,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ACMSampleProvider.h" />
     <ClInclude Include="AV1SampleProvider.h" />
     <ClInclude Include="FFmpegInteropBuffer.h" />
     <ClInclude Include="FFmpegInteropLogging.h" />
@@ -125,6 +126,7 @@
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ACMSampleProvider.cpp" />
     <ClCompile Include="AV1SampleProvider.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="FFmpegInteropBuffer.cpp" />
@@ -149,6 +151,7 @@
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FFmpegInterop.def" />

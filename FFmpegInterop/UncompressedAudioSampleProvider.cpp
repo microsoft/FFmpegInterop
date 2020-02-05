@@ -28,7 +28,7 @@ namespace winrt::FFmpegInterop::implementation
 {
 	UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
 		UncompressedSampleProvider(stream, reader),
-		m_minAudioSampleDur(ToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base))
+		m_minAudioSampleDur(ConvertToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base))
 	{
 		if (m_codecContext->sample_fmt != AV_SAMPLE_FMT_S16)
 		{
@@ -53,7 +53,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void UncompressedAudioSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 	{
-		// We intentially don't call SampleProvider::SetEncodingProperties() here as
+		// We intentionally don't call SampleProvider::SetEncodingProperties() here as
 		// it would set encoding properties with values for the compressed audio type.
 	}
 
@@ -128,7 +128,7 @@ namespace winrt::FFmpegInterop::implementation
 				pts = frame->pts;
 			}
 
-			dur += ToAVTime(curSampleCount, m_codecContext->sample_rate, m_stream->time_base);
+			dur += ConvertToAVTime(curSampleCount, m_codecContext->sample_rate, m_stream->time_base);
 
 			const bool minSampleDurMet{ dur >= m_minAudioSampleDur };
 

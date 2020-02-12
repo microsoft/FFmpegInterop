@@ -52,8 +52,5 @@ namespace winrt::FFmpegInterop::implementation
 
 		// Set the thumbnail property on the MSS
 		mss.Thumbnail(RandomAccessStreamReference::CreateFromStream(randomAccessStream));
-
-		// TODO: Windows bug - Setting the MSS thumbnail through MediaStreamSource::Thumbnail() will set PKEY_ThumbnailStream in the property handler.
-		// However, if the MSS thumbnail is set via the property handler the thumbnail is not retrievable by MediaStreamSource::Thumbnail().
 	}
 }

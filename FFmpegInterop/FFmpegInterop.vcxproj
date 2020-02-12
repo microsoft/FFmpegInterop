@@ -83,7 +83,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
-      <AdditionalDependencies>avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;mfuuid.lib;wmcodecdspuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;mfplat.lib;mfuuid.lib;wmcodecdspuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\ffmpeg\Build\$(PlatformTarget)\bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>FFmpegInterop.def</ModuleDefinitionFile>
     </Link>
@@ -124,6 +124,7 @@
     <ClInclude Include="UncompressedVideoSampleProvider.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="VFWSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ACMSampleProvider.cpp" />
@@ -152,6 +153,7 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="VFWSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FFmpegInterop.def" />

@@ -31,6 +31,7 @@
     <ClCompile Include="HEVCSampleProvider.cpp" />
     <ClCompile Include="ACMSampleProvider.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="VFWSampleProvider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -55,6 +56,7 @@
     <ClInclude Include="NALUSampleProvider.h" />
     <ClInclude Include="HEVCSampleProvider.h" />
     <ClInclude Include="ACMSampleProvider.h" />
+    <ClInclude Include="VFWSampleProvider.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FFmpegInterop.def" />

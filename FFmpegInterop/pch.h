@@ -50,6 +50,7 @@
 #include <mferror.h>
 #include <codecapi.h>
 #include <wmcodecdsp.h>
+#include <amvideo.h>
 
 // FFmpeg
 extern "C"
@@ -57,6 +58,7 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavutil/log.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/mastering_display_metadata.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 }

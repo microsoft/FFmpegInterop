@@ -115,7 +115,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		if (isKeyFrame)
 		{
-			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateBoolean(true);
+			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateUInt32(true);
 		}
 
 		const uint8_t* naluLengthsBuf{ reinterpret_cast<const uint8_t*>(naluLengths.data()) };

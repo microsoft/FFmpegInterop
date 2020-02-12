@@ -60,6 +60,19 @@ namespace winrt::FFmpegInterop::implementation
 				audioEncPropWithFormatUserData.SetFormatUserData({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size });
 			}
 
+			MediaPropertySet properties{ audioEncProp.Properties() };
+
+			if (GUID subtype{ unbox_value<GUID>(properties.Lookup(MF_MT_SUBTYPE)) }; subtype == MFAudioFormat_PCM || subtype == MFAudioFormat_Float)
+			{
+				properties.Insert(MF_MT_ALL_SAMPLES_INDEPENDENT, PropertyValue::CreateUInt32(true));
+				properties.Insert(MF_MT_COMPRESSED, PropertyValue::CreateUInt32(false));
+			}
+			else
+			{
+				properties.Insert(MF_MT_ALL_SAMPLES_INDEPENDENT, PropertyValue::CreateUInt32(false));
+				properties.Insert(MF_MT_COMPRESSED, PropertyValue::CreateUInt32(true));
+			}
+			
 			break;
 		}
 
@@ -84,14 +97,6 @@ namespace winrt::FFmpegInterop::implementation
 				frameRate.Denominator(m_stream->avg_frame_rate.den);
 			}
 
-			MediaPropertySet videoProp{ videoEncProp.Properties() };
-
-			const AVDictionaryEntry* rotateTag = av_dict_get(m_stream->metadata, "rotate", nullptr, 0);
-			if (rotateTag != nullptr)
-			{
-				videoProp.Insert(MF_MT_VIDEO_ROTATION, PropertyValue::CreateUInt32(atoi(rotateTag->value)));
-			}
-
 			if (setFormatUserData && codecPar->extradata != nullptr && codecPar->extradata_size > 0)
 			{
 				// Set the format user data
@@ -99,17 +104,172 @@ namespace winrt::FFmpegInterop::implementation
 				videoEncProp2.SetFormatUserData({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size });
 			}
 
+			MediaPropertySet properties{ videoEncProp.Properties() };
+
+			properties.Insert(MF_MT_ALL_SAMPLES_INDEPENDENT, PropertyValue::CreateUInt32(false));
+			properties.Insert(MF_MT_COMPRESSED, PropertyValue::CreateUInt32(true));
+			properties.Insert(MF_MT_PIXEL_ASPECT_RATIO, PropertyValue::CreateUInt64(Pack2UINT32AsUINT64(1, 1)));
+
+			if (const AVDictionaryEntry* rotateTag{ av_dict_get(m_stream->metadata, "rotate", nullptr, 0) }; rotateTag != nullptr)
+			{
+				properties.Insert(MF_MT_VIDEO_ROTATION, PropertyValue::CreateUInt32(atoi(rotateTag->value)));
+			}
+
+			if (codecPar->color_primaries != AVCOL_PRI_UNSPECIFIED)
+			{
+				MFVideoPrimaries videoPrimaries{ MFVideoPrimaries_Unknown };
+				switch (codecPar->color_primaries)
+				{
+				case AVCOL_PRI_RESERVED0:
+				case AVCOL_PRI_RESERVED:
+					videoPrimaries = MFVideoPrimaries_reserved;
+					break;
+
+				case AVCOL_PRI_BT709:
+					videoPrimaries = MFVideoPrimaries_BT709;
+					break;
+
+				case  AVCOL_PRI_BT470M:
+					videoPrimaries = MFVideoPrimaries_BT470_2_SysM;
+					break;
+
+				case AVCOL_PRI_BT470BG:
+					videoPrimaries = MFVideoPrimaries_BT470_2_SysBG;
+					break;
+
+				case AVCOL_PRI_SMPTE170M:
+					videoPrimaries = MFVideoPrimaries_SMPTE170M;
+					break;
+
+				case AVCOL_PRI_SMPTE240M:
+					videoPrimaries = MFVideoPrimaries_SMPTE240M;
+					break;
+
+				case AVCOL_PRI_FILM:
+					videoPrimaries = MFVideoPrimaries_SMPTE_C;
+					break;
+
+				case AVCOL_PRI_BT2020:
+					videoPrimaries = MFVideoPrimaries_BT2020;
+					break;
+
+				default:
+					break;
+				}
+
+				properties.Insert(MF_MT_VIDEO_PRIMARIES, PropertyValue::CreateUInt32(videoPrimaries));
+			}
+
+			if (codecPar->color_trc != AVCOL_TRC_UNSPECIFIED)
+			{
+				MFVideoTransferFunction videoTransferFunc{ MFVideoTransFunc_Unknown };
+				switch (codecPar->color_trc)
+				{
+				case AVCOL_TRC_BT709:
+				case AVCOL_TRC_GAMMA22:
+				case AVCOL_TRC_SMPTE170M:
+					videoTransferFunc = MFVideoTransFunc_22;
+					break;
+
+				case AVCOL_TRC_GAMMA28:
+					videoTransferFunc = MFVideoTransFunc_28;
+					break;
+
+				case AVCOL_TRC_SMPTE240M:
+					videoTransferFunc = MFVideoTransFunc_240M;
+					break;
+
+				case AVCOL_TRC_LINEAR:
+					videoTransferFunc = MFVideoTransFunc_10;
+					break;
+
+				case AVCOL_TRC_LOG:
+					videoTransferFunc = MFVideoTransFunc_Log_100;
+					break;
+
+				case AVCOL_TRC_LOG_SQRT:
+					videoTransferFunc = MFVideoTransFunc_Log_316;
+					break;
+
+				case AVCOL_TRC_BT1361_ECG:
+					videoTransferFunc = MFVideoTransFunc_709;
+					break;
+
+				case AVCOL_TRC_BT2020_10:
+				case AVCOL_TRC_BT2020_12:
+					videoTransferFunc = MFVideoTransFunc_2020;
+					break;
+
+				case AVCOL_TRC_SMPTEST2084:
+					videoTransferFunc = MFVideoTransFunc_2084;
+					break;
+
+				case AVCOL_TRC_ARIB_STD_B67:
+					videoTransferFunc = MFVideoTransFunc_HLG;
+					break;
+
+				default:
+					break;  
+				}
+
+				properties.Insert(MF_MT_TRANSFER_FUNCTION, PropertyValue::CreateUInt32(videoTransferFunc));
+			}
+
+			if (codecPar->color_range != AVCOL_RANGE_UNSPECIFIED)
+			{
+				MFNominalRange nominalRange{ codecPar->color_range == AVCOL_RANGE_JPEG ? MFNominalRange_0_255 : MFNominalRange_16_235 };
+				properties.Insert(MF_MT_VIDEO_NOMINAL_RANGE, PropertyValue::CreateUInt32(nominalRange));
+			}
+
+			if (AVContentLightMetadata* contentLightMetadata{ reinterpret_cast<AVContentLightMetadata*>(av_stream_get_side_data(m_stream, AV_PKT_DATA_CONTENT_LIGHT_LEVEL, nullptr)) }; contentLightMetadata != nullptr)
+			{
+				properties.Insert(MF_MT_MAX_LUMINANCE_LEVEL, PropertyValue::CreateUInt32(contentLightMetadata->MaxCLL));
+				properties.Insert(MF_MT_MAX_FRAME_AVERAGE_LUMINANCE_LEVEL, PropertyValue::CreateUInt32(contentLightMetadata->MaxFALL));
+			}
+
+			if (AVMasteringDisplayMetadata* masteringDisplayMetadata{ reinterpret_cast<AVMasteringDisplayMetadata*>(av_stream_get_side_data(m_stream, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, nullptr)) }; masteringDisplayMetadata != nullptr)
+			{
+				if (masteringDisplayMetadata->has_luminance)
+				{
+					constexpr uint32_t MASTERING_DISP_LUMINANCE_SCALE{ 10000 };
+					properties.Insert(MF_MT_MIN_MASTERING_LUMINANCE, PropertyValue::CreateUInt32(static_cast<uint32_t>(MASTERING_DISP_LUMINANCE_SCALE * av_q2d(masteringDisplayMetadata->min_luminance))));
+					properties.Insert(MF_MT_MAX_MASTERING_LUMINANCE, PropertyValue::CreateUInt32(static_cast<uint32_t>(av_q2d(masteringDisplayMetadata->max_luminance))));
+				}
+
+				if (masteringDisplayMetadata->has_primaries)
+				{
+					MT_CUSTOM_VIDEO_PRIMARIES customVideoPrimaries
+					{
+						static_cast<float>(av_q2d(masteringDisplayMetadata->display_primaries[0][0])),
+						static_cast<float>(av_q2d(masteringDisplayMetadata->display_primaries[0][1])),
+						static_cast<float>(av_q2d(masteringDisplayMetadata->display_primaries[1][0])),
+						static_cast<float>(av_q2d(masteringDisplayMetadata->display_primaries[1][1])),
+						static_cast<float>(av_q2d(masteringDisplayMetadata->display_primaries[2][0])),
+						static_cast<float>(av_q2d(masteringDisplayMetadata->display_primaries[2][1])),
+						static_cast<float>(av_q2d(masteringDisplayMetadata->white_point[0])),
+						static_cast<float>(av_q2d(masteringDisplayMetadata->white_point[1]))
+					};
+					properties.Insert(MF_MT_CUSTOM_VIDEO_PRIMARIES, PropertyValue::CreateUInt8Array({ reinterpret_cast<uint8_t*>(&customVideoPrimaries), reinterpret_cast<uint8_t*>(&customVideoPrimaries) + sizeof(customVideoPrimaries) }));
+				}
+			}
+
 			break;
 		}
 
 		case AVMEDIA_TYPE_SUBTITLE:
 		{
+			ITimedMetadataEncodingProperties subtitleEncProp{ encProp.as<ITimedMetadataEncodingProperties>() };
+
 			if (setFormatUserData && codecPar->extradata != nullptr && codecPar->extradata_size > 0)
 			{
 				// Set the format user data
-				ITimedMetadataEncodingProperties subtitleEncProp{ encProp.as<ITimedMetadataEncodingProperties>() };
 				subtitleEncProp.SetFormatUserData({ codecPar->extradata, codecPar->extradata + codecPar->extradata_size });
 			}
+
+			MediaPropertySet properties{ encProp.Properties() };
+
+			properties.Insert(MF_MT_ALL_SAMPLES_INDEPENDENT, PropertyValue::CreateUInt32(true));
+			properties.Insert(MF_MT_COMPRESSED, PropertyValue::CreateUInt32(false));
 
 			break;
 		}
@@ -233,10 +393,10 @@ namespace winrt::FFmpegInterop::implementation
 
 		if ((packet->flags & AV_PKT_FLAG_KEY) != 0)
 		{
-			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateBoolean(true);
+			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateUInt32(true);
 		}
 
-		return { make<FFmpegInteropBuffer>(move(packet)), pts, dur, properties };
+		return { make<FFmpegInteropBuffer>(move(packet)), pts, dur, move(properties) };
 	}
 
 	AVPacket_ptr SampleProvider::GetPacket()

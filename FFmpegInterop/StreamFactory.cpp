@@ -29,6 +29,7 @@
 #include "SubtitleSampleProvider.h"
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
+#include "VFWSampleProvider.h"
 
 using namespace winrt;
 using namespace winrt::Windows::Foundation;
@@ -280,6 +281,20 @@ namespace winrt::FFmpegInterop::implementation
 		case AV_CODEC_ID_VP9:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_VP90);
 			videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+			break;
+
+		case AV_CODEC_ID_AYUV:
+		case AV_CODEC_ID_DVVIDEO:
+		case AV_CODEC_ID_H263:
+		case AV_CODEC_ID_MSMPEG4V1:
+		case AV_CODEC_ID_MSMPEG4V2:
+		case AV_CODEC_ID_VC1:
+		case AV_CODEC_ID_WMV1:
+		case AV_CODEC_ID_WMV2:
+		case AV_CODEC_ID_WMV3:
+			videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
+			videoSampleProvider = make_unique<VFWSampleProvider>(stream, reader);
+			setFormatUserData = true;
 			break;
 
 		default:

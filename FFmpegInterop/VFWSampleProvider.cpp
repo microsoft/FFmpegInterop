@@ -17,7 +17,7 @@
 //*****************************************************************************
 
 #include "pch.h"
-#include "ACMSampleProvider.h"
+#include "VFWSampleProvider.h"
 
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Storage::Streams;
@@ -27,42 +27,34 @@ using namespace wil;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	ACMSampleProvider::ACMSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	VFWSampleProvider::VFWSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
 		SampleProvider(stream, reader)
 	{
-
+		
 	}
 
-	void ACMSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
+	void VFWSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 	{
 		// We intentionally don't call SampleProvider::SetEncodingProperties() here. We'll set all of the encoding properties we need.
 
-		// FFmpeg strips the wave format header from the codec private data. Recreate it.
+		// FFmpeg strips the bitmap info header from the codec private data. Recreate it.
 		const AVCodecParameters* codecPar{ m_stream->codecpar };
-		vector<uint8_t> waveFormatBuf(sizeof(WAVEFORMATEXTENSIBLE) + codecPar->extradata_size);
-		const bool setValidBitsPerSample{ codecPar->bits_per_coded_sample % BITS_PER_BYTE != 0 };
+		vector<uint8_t> vihBuf(sizeof(VIDEOINFOHEADER) + codecPar->extradata_size);
 
-		WAVEFORMATEXTENSIBLE* waveFormatExtensible{ reinterpret_cast<WAVEFORMATEXTENSIBLE*>(waveFormatBuf.data()) };
-		waveFormatExtensible->SubFormat = MFAudioFormat_Base;
-		waveFormatExtensible->SubFormat.Data1 = codecPar->codec_tag;
-		waveFormatExtensible->Samples.wValidBitsPerSample = setValidBitsPerSample ? codecPar->bits_per_coded_sample : 0;
-		waveFormatExtensible->dwChannelMask = static_cast<uint32_t>(codecPar->channel_layout);
+		BITMAPINFOHEADER& bih{ reinterpret_cast<VIDEOINFOHEADER*>(vihBuf.data())->bmiHeader };
+		bih.biSize = sizeof(BITMAPINFOHEADER) + codecPar->extradata_size;
+		bih.biWidth = codecPar->width;
+		bih.biHeight = codecPar->height;
+		bih.biPlanes = 1; // Must be 1
+		bih.biBitCount = codecPar->bits_per_coded_sample;
+		bih.biCompression = codecPar->codec_tag;
 
-		WAVEFORMATEX& waveFormatEx{ waveFormatExtensible->Format };
-		waveFormatEx.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-		waveFormatEx.nChannels = codecPar->channels;
-		waveFormatEx.nSamplesPerSec = codecPar->sample_rate;
-		waveFormatEx.nAvgBytesPerSec = static_cast<uint32_t>(codecPar->bit_rate / BITS_PER_BYTE);
-		waveFormatEx.nBlockAlign = codecPar->block_align;
-		waveFormatEx.wBitsPerSample = setValidBitsPerSample ? (codecPar->bits_per_coded_sample + BITS_PER_BYTE - codecPar->bits_per_coded_sample % BITS_PER_BYTE) : codecPar->bits_per_coded_sample;
-		waveFormatEx.cbSize = static_cast<uint16_t>(codecPar->extradata_size) + sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+		copy(codecPar->extradata, codecPar->extradata + codecPar->extradata_size, vihBuf.begin() + sizeof(VIDEOINFOHEADER));
 
-		copy(codecPar->extradata, codecPar->extradata + codecPar->extradata_size, waveFormatBuf.begin() + sizeof(WAVEFORMATEXTENSIBLE));
-
-		// Initialize a media type from the wave format
+		// Initialize a media type from the video info header
 		com_ptr<IMFMediaType> mediaType;
 		THROW_IF_FAILED(MFCreateMediaType(mediaType.put()));
-		THROW_IF_FAILED(MFInitMediaTypeFromWaveFormatEx(mediaType.get(), reinterpret_cast<WAVEFORMATEX*>(waveFormatBuf.data()), static_cast<uint32_t>(waveFormatBuf.size())));
+		THROW_IF_FAILED(MFInitMediaTypeFromVideoInfoHeader(mediaType.get(), reinterpret_cast<VIDEOINFOHEADER*>(vihBuf.data()), static_cast<uint32_t>(vihBuf.size()), nullptr));
 
 		// Initialize the encoding properties from the media type
 		MediaPropertySet encPropSet{ encProp.Properties() };
@@ -77,7 +69,7 @@ namespace winrt::FFmpegInterop::implementation
 			GUID propGuid{ GUID_NULL };
 			unique_prop_variant propValue;
 			THROW_IF_FAILED(mediaTypeAttributes->GetItemByIndex(i, &propGuid, &propValue));
-			
+
 			// Add the property to the encoding property set
 			encPropSet.Insert(propGuid, CreatePropValueFromMFAttribute(propValue));
 		}

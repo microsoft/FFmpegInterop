@@ -47,10 +47,10 @@ namespace winrt::FFmpegInterop::implementation
 		map<GUID, IInspectable> properties;
 		if (isKeyFrame)
 		{
-			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateBoolean(true);
+			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateUInt32(true);
 		}
 
-		return { move(buf), pts, dur, properties };
+		return { move(buf), pts, dur, move(properties) };
 	}
 
 	IBuffer AV1SampleProvider::TransformSample(_Inout_ AVPacket_ptr packet, _In_ bool isKeyFrame)

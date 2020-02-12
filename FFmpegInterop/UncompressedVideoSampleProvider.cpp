@@ -114,13 +114,13 @@ namespace winrt::FFmpegInterop::implementation
 
 		if (frame->interlaced_frame)
 		{
-			properties[MFSampleExtension_Interlaced] = PropertyValue::CreateBoolean(true);
-			properties[MFSampleExtension_BottomFieldFirst] = PropertyValue::CreateBoolean(!frame->top_field_first);
-			properties[MFSampleExtension_RepeatFirstField] = PropertyValue::CreateBoolean(false);
+			properties[MFSampleExtension_Interlaced] = PropertyValue::CreateUInt32(true);
+			properties[MFSampleExtension_BottomFieldFirst] = PropertyValue::CreateUInt32(!frame->top_field_first);
+			properties[MFSampleExtension_RepeatFirstField] = PropertyValue::CreateUInt32(false);
 		}
 		else
 		{
-			properties[MFSampleExtension_Interlaced] = PropertyValue::CreateBoolean(false);
+			properties[MFSampleExtension_Interlaced] = PropertyValue::CreateUInt32(false);
 		}
 
 		return properties;

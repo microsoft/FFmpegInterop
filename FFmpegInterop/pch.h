@@ -73,6 +73,7 @@ extern "C"
 #include <tuple>
 #include <limits>
 #include <codecvt> // TODO: Deprecated in C++17. Replace when an alternative is available.
+#include <cstdlib>
 
 // FFmpegInterop
 #include "Tracing.h"

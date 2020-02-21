@@ -22,7 +22,6 @@ namespace winrt::FFmpegInterop::implementation
 {
 	TRACELOGGING_DECLARE_PROVIDER(g_FFmpegInteropProvider);
 
-	// TODO: Replace these macros with WIL TraceLogging macros if they're ever made public
 	#define TRACE_LOGGING_ACTIVITY_CLASS(FunctionName) _TRACE_LOGGING_ACTIVITY_CLASS(FunctionName ## Activity, FunctionName)
 	#define _TRACE_LOGGING_ACTIVITY_CLASS(ActivityClassName, FunctionName) \
 	class ActivityClassName \

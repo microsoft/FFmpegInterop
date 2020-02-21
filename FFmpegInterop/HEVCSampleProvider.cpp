@@ -33,7 +33,7 @@ namespace winrt::FFmpegInterop::implementation
 		if (m_stream->codecpar->extradata != nullptr && m_stream->codecpar->extradata_size > 0)
 		{
 			// Check the HEVC bitstream flavor
-			if (m_stream->codecpar->extradata[0] == 1)
+			if (m_stream->codecpar->extradata_size > 3 && (m_stream->codecpar->extradata[0] || m_stream->codecpar->extradata[1] || m_stream->codecpar->extradata[2] > 1))
 			{
 				// hvcC config format
 				TraceLoggingWrite(g_FFmpegInteropProvider, "HEVCCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
@@ -64,7 +64,6 @@ namespace winrt::FFmpegInterop::implementation
 		// Validate parameters
 		WINRT_ASSERT(m_data != nullptr);
 		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, m_dataSize < MIN_SIZE);
-		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, m_data[0] != 1);
 	}
 
 	uint8_t HEVCConfigParser::GetNaluLengthSize() const noexcept

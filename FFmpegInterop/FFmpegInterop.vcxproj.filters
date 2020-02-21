@@ -32,6 +32,7 @@
     <ClCompile Include="ACMSampleProvider.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="VFWSampleProvider.cpp" />
+    <ClCompile Include="BitstreamReader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -57,6 +58,7 @@
     <ClInclude Include="HEVCSampleProvider.h" />
     <ClInclude Include="ACMSampleProvider.h" />
     <ClInclude Include="VFWSampleProvider.h" />
+    <ClInclude Include="BitstreamReader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FFmpegInterop.def" />

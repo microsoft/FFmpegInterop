@@ -18,6 +18,7 @@
 
 #include "pch.h"
 #include "H264SampleProvider.h"
+#include "BitstreamReader.h"
 
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Media::MediaProperties;
@@ -69,7 +70,11 @@ namespace winrt::FFmpegInterop::implementation
 		if (!m_isBitstreamAnnexB)
 		{
 			AVCConfigParser parser{ m_stream->codecpar->extradata, static_cast<uint32_t>(m_stream->codecpar->extradata_size) };
-			// TODO: Set MF_MT_VIDEO_H264_NO_FMOASO
+			if (parser.HasNoFMOASO())
+			{
+				MediaPropertySet properties{ encProp.Properties() };
+				properties.Insert(MF_MT_VIDEO_H264_NO_FMOASO, PropertyValue::CreateUInt32(true));
+			}
 		}
 	}
 
@@ -136,19 +141,86 @@ namespace winrt::FFmpegInterop::implementation
 		return pos; // Return the number of bytes read
 	}
 
-	AVCSequenceParameterSetParser::AVCSequenceParameterSetParser(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
+	bool AVCConfigParser::HasNoFMOASO() const
 	{
-		THROW_HR_IF_NULL(MF_E_INVALID_FILE_FORMAT, data);
-		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, dataSize < 3);
+		uint32_t pos{ 5 };
 
-		m_profile = data[1];
+		// Scan the SPS NALUs and check if any have a non-constrained baseline
+		bool foundNonConstrainedBaselineSPS{ false };
+		uint8_t spsCount{ static_cast<uint8_t>(m_data[pos++] & 0x1F) };
 
-		uint8_t profileCompatibility{ data[2] };
-		m_constraintSet1 = (profileCompatibility & (1 << 6)) != 0;
+		for (uint8_t i{ 0 }; i < spsCount; i++)
+		{
+			// Get the SPS NALU length
+			uint32_t naluLength{ GetAVCNaluLength(m_data + pos, m_dataSize - pos, sizeof(uint16_t)) };
+			pos += sizeof(uint16_t);
+
+			if (!foundNonConstrainedBaselineSPS)
+			{
+				// Check if the SPS NALU has a non-constrained baseline
+				AVCSequenceParameterSet sps{ m_data + pos, naluLength };
+				if (sps.HasNonConstrainedBaseline())
+				{
+					foundNonConstrainedBaselineSPS = true;
+				}
+			}
+
+			pos += naluLength;
+		}
+
+		if (!foundNonConstrainedBaselineSPS)
+		{
+			return true;
+		}
+
+		// Even though the stream has a non-constrained baseline we can still safely use DXVA if none of the PPS have multiple slice groups.
+		// Scan the PPS NALUs and check if any have multiple slice groups
+		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos >= m_dataSize);
+		uint8_t ppsCount{ m_data[pos++] };
+
+		for (uint8_t i{ 0 }; i < ppsCount; i++)
+		{
+			// Get the PPS NALU length
+			uint32_t naluLength{ GetAVCNaluLength(m_data + pos, m_dataSize - pos, sizeof(uint16_t)) };
+			pos += sizeof(uint16_t);
+
+			// Check if the PPS NALU has multiple slice groups
+			AVCPictureParameterSet pps{ m_data + pos, naluLength };
+			if (pps.GetNumSliceGroups() > 1)
+			{
+				return false;
+			}
+
+			pos += naluLength;
+		}
+		
+		return true;
 	}
 
-	AVCPictureParamterSetParser::AVCPictureParamterSetParser(_In_reads_(dataSize) const uint8_t* data, _In_ int dataSize)
+	AVCSequenceParameterSet::AVCSequenceParameterSet(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize)
 	{
-		// TODO: Implement
+		BitstreamReader reader{ data, dataSize };
+
+		reader.SkipN(8); // NALU header fields
+		m_profile = reader.Read8();
+		m_profileCompatibility = reader.Read8();
+		m_level = reader.Read8();
+		m_spsId = reader.ReadUExpGolomb();
+
+		// Remaining fields left unparsed as they're unneeded at this time
+	}
+
+	AVCPictureParameterSet::AVCPictureParameterSet(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize)
+	{
+		BitstreamReader reader{ data, dataSize };
+
+		reader.SkipN(8); // NALU header fields
+		m_ppsId = reader.ReadUExpGolomb();
+		m_spsId = reader.ReadUExpGolomb();
+		m_entropyCodingModeFlag = reader.Read1();
+		m_picOrderPresentFlag = reader.Read1();
+		m_numSliceGroups = reader.ReadUExpGolomb() + 1;
+		
+		// Remaining fields left unparsed as they're unneeded at this time
 	}
 }

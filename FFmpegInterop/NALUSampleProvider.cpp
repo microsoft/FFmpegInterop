@@ -26,11 +26,11 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	uint32_t winrt::FFmpegInterop::implementation::GetAnnexBNaluLength(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize)
+	uint32_t GetAnnexBNaluLength(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize)
 	{
 		// Make sure data starts with a NALU start code
 		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, dataSize < sizeof(NALU_START_CODE));
-		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, equal(begin(NALU_START_CODE), end(NALU_START_CODE), data));
+		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, !equal(begin(NALU_START_CODE), end(NALU_START_CODE), data));
 
 		// Scan for the next NALU start code
 		for (uint32_t i{ 2 * sizeof(NALU_START_CODE) }; i < dataSize; i++)
@@ -38,15 +38,15 @@ namespace winrt::FFmpegInterop::implementation
 			if (equal(begin(NALU_START_CODE), end(NALU_START_CODE), data + i - sizeof(NALU_START_CODE)))
 			{
 				// Found next NALU start code
-				return i;
+				return i - 2 * sizeof(NALU_START_CODE);
 			}
 		}
 
 		// No more NALU start codes found
-		return dataSize;
+		return dataSize - sizeof(NALU_START_CODE);
 	}
 
-	uint32_t winrt::FFmpegInterop::implementation::GetAVCNaluLength(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize, _In_ uint8_t naluLengthSize)
+	uint32_t GetAVCNaluLength(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize, _In_ uint8_t naluLengthSize)
 	{
 		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, naluLengthSize > dataSize);
 

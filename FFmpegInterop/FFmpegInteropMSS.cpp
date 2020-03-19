@@ -109,7 +109,7 @@ namespace winrt::FFmpegInterop::implementation
 		catch (...)
 		{
 			// Notify the MSS that an error occurred
-			mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+			mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
 			throw;
 		}
 	}
@@ -128,7 +128,7 @@ namespace winrt::FFmpegInterop::implementation
 		catch (...)
 		{
 			// Notify the MSS that an error occurred
-			mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+			mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
 			throw;
 		}
 	}

@@ -54,7 +54,7 @@ App::App()
 #endif
 }
 
-void App::Log(FFmpegInterop::LogLevel level, const hstring& message)
+void App::Log(FFmpegInterop::LogLevel, const hstring& message)
 {
 	OutputDebugString(message.c_str());
 }

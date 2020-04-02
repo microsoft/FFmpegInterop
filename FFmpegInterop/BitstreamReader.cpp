@@ -51,10 +51,10 @@ namespace winrt::FFmpegInterop::implementation
 
 		m_byteIndex += numBytesToSkip;
 		m_bitIndex += numBitsToSkip;
-		if (m_bitIndex == BITS_PER_BYTE)
+		if (m_bitIndex >= BITS_PER_BYTE)
 		{
 			m_byteIndex++;
-			m_bitIndex = 0;
+			m_bitIndex -= BITS_PER_BYTE;
 		}
 	}
 

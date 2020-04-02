@@ -70,20 +70,22 @@ namespace winrt::FFmpegInterop::implementation
 		return static_cast<int64_t>(avTime *  av_q2d(avTimeBase) * unitsPerSec);
 	}
 
-	// Map of AVERROR -> HRESULT
-	const std::map<int, HRESULT> c_errorCodeMap
-	{
-		{ AVERROR(EINVAL), E_INVALIDARG },
-		{ AVERROR(ENOMEM), E_OUTOFMEMORY },
-		{ AVERROR_BUFFER_TOO_SMALL, MF_E_BUFFERTOOSMALL },
-		{ AVERROR_EOF, MF_E_END_OF_STREAM }
-	};
-
 	// Helper function to map AVERROR to HRESULT
 	inline HRESULT averror_to_hresult(_In_range_(< , 0) int result)
 	{
-		auto iter{ c_errorCodeMap.find(result) };
-		return (iter != c_errorCodeMap.end()) ? iter->second : E_FAIL;
+		switch (result)
+		{
+		case AVERROR(EINVAL):
+			return E_INVALIDARG;
+		case AVERROR(ENOMEM):
+			return E_OUTOFMEMORY;
+		case AVERROR_BUFFER_TOO_SMALL:
+			return MF_E_BUFFERTOOSMALL;
+		case AVERROR_EOF:
+			return MF_E_END_OF_STREAM;
+		default:
+			return E_FAIL;
+		}
 	}
 
 	// Macro to check the result of FFmpeg calls

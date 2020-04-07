@@ -25,7 +25,7 @@ namespace winrt::FFmpegInterop::implementation
 		public UncompressedSampleProvider
 	{
 	public:
-		UncompressedAudioSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
+		UncompressedAudioSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 

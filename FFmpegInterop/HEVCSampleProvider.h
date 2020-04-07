@@ -30,7 +30,7 @@ namespace winrt::FFmpegInterop::implementation
 		public NALUSampleProvider
 	{
 	public:
-		HEVCSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
+		HEVCSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
 	};
 
 	class HEVCConfigParser

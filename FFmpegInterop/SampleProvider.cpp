@@ -28,7 +28,7 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	SampleProvider::SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	SampleProvider::SampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
 		m_stream(stream),
 		m_reader(reader)
 	{
@@ -90,7 +90,7 @@ namespace winrt::FFmpegInterop::implementation
 				pixelAspectRatio.Denominator(codecPar->sample_aspect_ratio.den);
 			}
 
-			if (m_stream->avg_frame_rate.num != 0 || m_stream->avg_frame_rate.den != 0)
+			if (m_stream->avg_frame_rate.num != 0 && m_stream->avg_frame_rate.den != 0)
 			{
 				MediaRatio frameRate{ videoEncProp.FrameRate() };
 				frameRate.Numerator(m_stream->avg_frame_rate.num);
@@ -108,7 +108,6 @@ namespace winrt::FFmpegInterop::implementation
 
 			properties.Insert(MF_MT_ALL_SAMPLES_INDEPENDENT, PropertyValue::CreateUInt32(false));
 			properties.Insert(MF_MT_COMPRESSED, PropertyValue::CreateUInt32(true));
-			properties.Insert(MF_MT_PIXEL_ASPECT_RATIO, PropertyValue::CreateUInt64(Pack2UINT32AsUINT64(1, 1)));
 
 			if (const AVDictionaryEntry* rotateTag{ av_dict_get(m_stream->metadata, "rotate", nullptr, 0) }; rotateTag != nullptr)
 			{
@@ -287,6 +286,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		WINRT_ASSERT(!m_isSelected);
 		m_isSelected = true;
+		m_stream->discard = AVDISCARD_DEFAULT;
 	}
 
 	void SampleProvider::Deselect() noexcept
@@ -296,12 +296,13 @@ namespace winrt::FFmpegInterop::implementation
 
 		WINRT_ASSERT(m_isSelected);
 		m_isSelected = false;
+		m_stream->discard = AVDISCARD_ALL;
 		Flush();
 	}
 
-	void SampleProvider::OnSeek(_In_ int64_t seekTime) noexcept
+	void SampleProvider::OnSeek(_In_ int64_t hnsSeekTime) noexcept
 	{
-		m_nextSamplePts = seekTime;
+		m_nextSamplePts = ConvertToAVTime(hnsSeekTime, HNS_PER_SEC, m_stream->time_base) + m_startOffset;
 		m_isEOS = false;
 		Flush();
 	}
@@ -330,10 +331,8 @@ namespace winrt::FFmpegInterop::implementation
 
 	void SampleProvider::QueuePacket(_In_ AVPacket_ptr packet)
 	{
-		if (m_isSelected)
-		{
-			m_packetQueue.push_back(move(packet));
-		}
+		WINRT_ASSERT(m_isSelected);
+		m_packetQueue.push_back(move(packet));
 	}
 
 	void SampleProvider::GetSample(_Inout_ const MediaStreamSourceSampleRequest& request)

@@ -114,11 +114,13 @@ namespace winrt::FFmpegInterop::implementation
 		_Reserved_ void* pvDestContext,
 		_In_ DWORD mshlflags,
 		_Out_ CLSID* pclsid) noexcept
+	try
 	{
-		RETURN_IF_FAILED(InitMarshaler());
+		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);
 		RETURN_IF_FAILED(m_marshaler->GetUnmarshalClass(riid, pv, dwDestContext, pvDestContext, mshlflags, pclsid));
 		return S_OK;
 	}
+	CATCH_RETURN();
 
 	STDMETHODIMP FFmpegInteropBuffer::GetMarshalSizeMax(
 		_In_ REFIID riid,
@@ -127,11 +129,13 @@ namespace winrt::FFmpegInterop::implementation
 		_Reserved_ void* pvDestContext,
 		_In_ DWORD mshlflags,
 		_Out_ DWORD* pcbSize) noexcept
+	try
 	{
-		RETURN_IF_FAILED(InitMarshaler());
+		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);
 		RETURN_IF_FAILED(m_marshaler->GetMarshalSizeMax(riid, pv, dwDestContext, pvDestContext, mshlflags, pcbSize));
 		return S_OK;
 	}
+	CATCH_RETURN();
 
 	STDMETHODIMP FFmpegInteropBuffer::MarshalInterface(
 		_In_ IStream* pStm,
@@ -140,45 +144,43 @@ namespace winrt::FFmpegInterop::implementation
 		_In_ DWORD dwDestContext,
 		_Reserved_ void* pvDestContext,
 		_In_ DWORD mshlflags) noexcept
+	try
 	{
-		RETURN_IF_FAILED(InitMarshaler());
+		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);
 		RETURN_IF_FAILED(m_marshaler->MarshalInterface(pStm, riid, pv, dwDestContext, pvDestContext, mshlflags));
 		return S_OK;
 	}
+	CATCH_RETURN();
 
 	STDMETHODIMP FFmpegInteropBuffer::UnmarshalInterface(_In_ IStream* pStm, _In_ REFIID riid, _Outptr_ void** ppv) noexcept
+	try
 	{
-		RETURN_IF_FAILED(InitMarshaler());
+		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);
 		RETURN_IF_FAILED(m_marshaler->UnmarshalInterface(pStm, riid, ppv));
 		return S_OK;
 	}
+	CATCH_RETURN();
 
 	STDMETHODIMP FFmpegInteropBuffer::ReleaseMarshalData(_In_ IStream* pStm) noexcept
+	try
 	{
-		RETURN_IF_FAILED(InitMarshaler());
+		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);
 		RETURN_IF_FAILED(m_marshaler->ReleaseMarshalData(pStm));
 		return S_OK;
 	}
+	CATCH_RETURN();
 
 	STDMETHODIMP FFmpegInteropBuffer::DisconnectObject(_Reserved_ DWORD dwReserved) noexcept
+	try
 	{
-		RETURN_IF_FAILED(InitMarshaler());
+		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);
 		RETURN_IF_FAILED(m_marshaler->DisconnectObject(dwReserved));
 		return S_OK;
 	}
+	CATCH_RETURN();
 
-	HRESULT FFmpegInteropBuffer::InitMarshaler() noexcept
+	void FFmpegInteropBuffer::InitMarshaler()
 	{
-		if (m_marshaler == nullptr)
-		{
-			com_ptr<IMarshal> marshaler;
-			RETURN_IF_FAILED(RoGetBufferMarshaler(marshaler.put()));
-			if (InterlockedCompareExchangePointer(m_marshaler.put_void(), marshaler.get(), nullptr) == nullptr)
-			{
-				marshaler.detach(); // m_marshaler has taken ownership
-			}
-		}
-
-		return S_OK;
+		THROW_IF_FAILED(RoGetBufferMarshaler(m_marshaler.put()));
 	}
 }

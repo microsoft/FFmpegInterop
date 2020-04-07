@@ -25,7 +25,7 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	MPEGSampleProvider::MPEGSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	MPEGSampleProvider::MPEGSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
 		SampleProvider(stream, reader)
 	{
 

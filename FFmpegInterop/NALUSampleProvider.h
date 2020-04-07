@@ -32,7 +32,7 @@ namespace winrt::FFmpegInterop::implementation
 		public SampleProvider
 	{
 	public:
-		NALUSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
+		NALUSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 

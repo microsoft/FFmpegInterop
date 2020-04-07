@@ -24,7 +24,7 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	UncompressedSampleProvider::UncompressedSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
 		SampleProvider(stream, reader)
 	{
 		// Create a new decoding context
@@ -50,6 +50,7 @@ namespace winrt::FFmpegInterop::implementation
 		SampleProvider::Flush();
 
 		avcodec_flush_buffers(m_codecContext.get());
+		m_draining = false;
 	}
 
 	AVFrame_ptr UncompressedSampleProvider::GetFrame()
@@ -60,10 +61,31 @@ namespace winrt::FFmpegInterop::implementation
 
 		while (true)
 		{
-			// Send a packet to the decoder and see if it can produce a frame
-			AVPacket_ptr packet{ GetPacket() };
+			if (!m_draining)
+			{
+				// Send a packet to the decoder and see if it can produce a frame
+				AVPacket_ptr packet;
 
-			THROW_HR_IF_FFMPEG_FAILED(avcodec_send_packet(m_codecContext.get(), packet.get()));
+				try
+				{
+					packet = GetPacket();
+				}
+				catch (...)
+				{
+					HRESULT hr{ to_hresult() };
+					if (hr == MF_E_END_OF_STREAM)
+					{
+						// We're at EOF. Send a null packet to the decoder to enter draining mode.
+						m_draining = true;
+					}
+					else
+					{
+						throw;
+					}
+				}
+
+				THROW_HR_IF_FFMPEG_FAILED(avcodec_send_packet(m_codecContext.get(), packet.get()));
+			}
 
 			int decodeResult{ avcodec_receive_frame(m_codecContext.get(), frame.get()) };
 			if (decodeResult == AVERROR(EAGAIN))

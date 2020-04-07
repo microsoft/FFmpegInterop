@@ -145,7 +145,7 @@ namespace winrt::FFmpegInterop::implementation
 		AVBlob_ptr ioBuffer{ av_malloc(c_ioBufferSize) };
 		THROW_IF_NULL_ALLOC(ioBuffer);
 
-		m_ioContext.reset(avio_alloc_context(reinterpret_cast<unsigned char*>(ioBuffer.get()), c_ioBufferSize, 0, m_fileStream.get(), FileStreamRead, 0, FileStreamSeek));
+		m_ioContext.reset(avio_alloc_context(reinterpret_cast<unsigned char*>(ioBuffer.get()), c_ioBufferSize, 0, m_fileStream.get(), FileStreamRead, nullptr, FileStreamSeek));
 		THROW_IF_NULL_ALLOC(m_ioContext);
 		ioBuffer.release(); // The IO context has taken ownership of the buffer
 
@@ -197,12 +197,19 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		THROW_HR_IF_FFMPEG_FAILED(avformat_find_stream_info(m_formatContext.get(), nullptr));
 
-		bool hasVideo{ false };
+		int preferredAudioStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) };
+		int preferredVideoStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0) };
 		bool hasAudio{ false };
+		bool hasVideo{ false };
+		vector<IMediaStreamDescriptor> pendingAudioStreamDescriptors;
+		vector<IMediaStreamDescriptor> pendingVideoStreamDescriptors;
 
 		for (unsigned int i{ 0 }; i < m_formatContext->nb_streams; i++)
 		{
-			const AVStream* stream{ m_formatContext->streams[i] };
+			AVStream* stream{ m_formatContext->streams[i] };
+
+			// Discard all samples for this stream until it is selected
+			stream->discard = AVDISCARD_ALL;
 
 			// Create the sample provider and stream descriptor
 			unique_ptr<SampleProvider> sampleProvider;
@@ -213,10 +220,28 @@ namespace winrt::FFmpegInterop::implementation
 			case AVMEDIA_TYPE_AUDIO:
 				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateAudioStream(stream, m_reader, config);
 
-				if (!hasAudio)
+				if (hasAudio || i == preferredAudioStreamId)
 				{
-					hasAudio = true;
-					sampleProvider->Select(); // The first audio stream is selected
+					// Add the stream to the MSS
+					m_mss.AddStreamDescriptor(streamDescriptor);
+
+					// Check if this is the first audio stream added to the MSS
+					if (!hasAudio)
+					{
+						hasAudio = true;
+						sampleProvider->Select(); // The first audio stream is selected by default
+
+						// Add any audio streams we already enumerated
+						for (auto& streamDescriptor : pendingAudioStreamDescriptors)
+						{
+							m_mss.AddStreamDescriptor(move(streamDescriptor));
+						}
+					}
+				}
+				else
+				{
+					// We'll add this stream to the MSS after the preferred audio stream has been enumerated
+					pendingAudioStreamDescriptors.push_back(streamDescriptor);
 				}
 
 				break;
@@ -231,10 +256,28 @@ namespace winrt::FFmpegInterop::implementation
 
 				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateVideoStream(stream, m_reader, config);
 
-				if (!hasVideo)
+				if (hasVideo || i == preferredVideoStreamId)
 				{
-					hasVideo = true;
-					sampleProvider->Select(); // The first video stream is selected
+					// Add the stream to the MSS
+					m_mss.AddStreamDescriptor(streamDescriptor);
+
+					// Check if this is the first video stream added to the MSS
+					if (!hasVideo)
+					{
+						hasVideo = true;
+						sampleProvider->Select(); // The first video stream is selected by default
+
+						// Add any video streams we already enumerated
+						for (auto& streamDescriptor : pendingVideoStreamDescriptors)
+						{
+							m_mss.AddStreamDescriptor(move(streamDescriptor));
+						}
+					}
+				}
+				else
+				{
+					// We'll add this stream to the MSS after the preferred video stream has been enumerated
+					pendingVideoStreamDescriptors.push_back(streamDescriptor);
 				}
 
 				break;
@@ -253,6 +296,9 @@ namespace winrt::FFmpegInterop::implementation
 					continue;
 				}
 
+				// Add the stream to the MSS
+				m_mss.AddStreamDescriptor(streamDescriptor);
+
 				break;
 
 			default:
@@ -263,9 +309,6 @@ namespace winrt::FFmpegInterop::implementation
 					TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
 				continue;
 			}
-
-			// Add the stream to the MSS
-			m_mss.AddStreamDescriptor(streamDescriptor);
 
 			// Add the stream to our maps
 			m_streamIdMap[i] = sampleProvider.get();
@@ -329,7 +372,7 @@ namespace winrt::FFmpegInterop::implementation
 
 				for (auto& [streamId, stream] : m_streamIdMap)
 				{
-					stream->OnSeek(avSeekTime);
+					stream->OnSeek(hnsSeekTime.count());
 				}
 
 				request.SetActualStartPosition(hnsSeekTime);
@@ -428,7 +471,7 @@ namespace winrt::FFmpegInterop::implementation
 		lock_guard<mutex> lock{ m_lock };
 
 		// Unregister event handlers
-		// This is critcally important to do for the media source app service scenario! If we don't unregister these event handlers, then
+		// This is critically important to do for the media source app service scenario! If we don't unregister these event handlers, then
 		// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
 		// the remote app process being suspended. If the remote app process is suspended first, then COM may cause a hang until the 
 		// remote app process is terminated.
@@ -438,7 +481,7 @@ namespace winrt::FFmpegInterop::implementation
 		m_mss.Closed(m_closedEventToken);
 
 		// Release the MSS and file stream
-		// This is critcally important to do for the media source app service scenario! The remote app process may be suspended anytime after 
+		// This is critically important to do for the media source app service scenario! The remote app process may be suspended anytime after 
 		// this Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could 
 		// cause file related issues until the remote app process is terminated.
 		m_mss = nullptr;

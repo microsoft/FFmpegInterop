@@ -26,7 +26,7 @@ namespace winrt::FFmpegInterop::implementation
 		public SampleProvider
 	{
 	public:
-		SubtitleSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
+		SubtitleSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
 
 		void NotifyEOF() noexcept override;
 		void GetSample(_Inout_ const Windows::Media::Core::MediaStreamSourceSampleRequest& request) override;

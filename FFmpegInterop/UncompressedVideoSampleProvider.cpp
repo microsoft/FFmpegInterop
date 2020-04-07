@@ -27,7 +27,7 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
 		UncompressedSampleProvider(stream, reader)
 	{
 		if (m_codecContext->pix_fmt != AV_PIX_FMT_NV12)

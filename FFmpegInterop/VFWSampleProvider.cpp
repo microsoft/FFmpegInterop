@@ -27,7 +27,7 @@ using namespace wil;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	VFWSampleProvider::VFWSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	VFWSampleProvider::VFWSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
 		SampleProvider(stream, reader)
 	{
 		

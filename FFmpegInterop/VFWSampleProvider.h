@@ -28,7 +28,7 @@ namespace winrt::FFmpegInterop::implementation
 		public SampleProvider
 	{
 	public:
-		VFWSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
+		VFWSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
 
 	protected:
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;

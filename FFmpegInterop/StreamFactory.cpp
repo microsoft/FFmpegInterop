@@ -88,7 +88,7 @@ namespace
 
 namespace winrt::FFmpegInterop::implementation
 {
-	tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAudioStream(_In_ const AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAudioStream(_In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		// Create the sample provider and encoding properties
 		unique_ptr<SampleProvider> audioSampleProvider;
@@ -212,7 +212,7 @@ namespace winrt::FFmpegInterop::implementation
 		return { move(audioSampleProvider), move(audioStreamDescriptor) };
 	}
 
-	tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVideoStream(_In_ const AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVideoStream(_In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		// Create the sample provider and encoding properties
 		unique_ptr<SampleProvider> videoSampleProvider;
@@ -312,7 +312,7 @@ namespace winrt::FFmpegInterop::implementation
 		return { move(videoSampleProvider), move(videoStreamDescriptor) };
 	}
 
-	tuple<unique_ptr<SampleProvider>, TimedMetadataStreamDescriptor> StreamFactory::CreateSubtitleStream(_In_ const AVStream* stream, _In_ Reader& reader)
+	tuple<unique_ptr<SampleProvider>, TimedMetadataStreamDescriptor> StreamFactory::CreateSubtitleStream(_In_ AVStream* stream, _In_ Reader& reader)
 	{
 		// Create the sample provider and encoding properties
 		unique_ptr<SubtitleSampleProvider> subtitleSampleProvider;

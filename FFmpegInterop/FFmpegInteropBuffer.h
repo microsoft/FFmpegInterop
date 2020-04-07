@@ -69,10 +69,11 @@ namespace winrt::FFmpegInterop::implementation
 		STDMETHODIMP DisconnectObject(_Reserved_ DWORD dwReserved) noexcept;
 
 	private:
-		HRESULT InitMarshaler() noexcept;
+		void InitMarshaler();
 
 		uint32_t m_length{ 0 };
 		std::unique_ptr<uint8_t, std::function<void(uint8_t*)>> m_buf;
 		com_ptr<IMarshal> m_marshaler;
+		std::once_flag m_marshalerInitFlag;
 	};
 }

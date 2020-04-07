@@ -26,7 +26,7 @@ namespace winrt::FFmpegInterop::implementation
 		public SampleProvider
 	{
 	public:
-		UncompressedSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
+		UncompressedSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
 
 	protected:
 		void Flush() noexcept override;
@@ -34,5 +34,6 @@ namespace winrt::FFmpegInterop::implementation
 		AVFrame_ptr GetFrame();
 
 		AVCodecContext_ptr m_codecContext;
+		bool m_draining{ false };
 	};
 }

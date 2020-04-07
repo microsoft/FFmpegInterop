@@ -27,7 +27,7 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	H264SampleProvider::H264SampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	H264SampleProvider::H264SampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
 		NALUSampleProvider(stream, reader)
 	{
 		// Parse codec private data if present

@@ -78,7 +78,7 @@ namespace winrt::FFmpegInterop::implementation
 		return naluLength;
 	}
 
-	NALUSampleProvider::NALUSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	NALUSampleProvider::NALUSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
 		SampleProvider(stream, reader)
 	{
 
@@ -95,7 +95,10 @@ namespace winrt::FFmpegInterop::implementation
 		videoProp.Insert(MF_MT_MPEG2_LEVEL, PropertyValue::CreateUInt32(static_cast<uint32_t>(m_stream->codecpar->level)));
 		videoProp.Insert(MF_NALU_LENGTH_SET, PropertyValue::CreateUInt32(static_cast<uint32_t>(true)));
 
-		videoProp.Insert(MF_MT_MPEG_SEQUENCE_HEADER, PropertyValue::CreateUInt8Array({ m_spsPpsData.data(), m_spsPpsData.data() + m_spsPpsData.size() }));
+		if (!m_spsPpsData.empty())
+		{
+			videoProp.Insert(MF_MT_MPEG_SEQUENCE_HEADER, PropertyValue::CreateUInt8Array({ m_spsPpsData.data(), m_spsPpsData.data() + m_spsPpsData.size() }));
+		}
 	}
 
 	tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> NALUSampleProvider::GetSampleData()

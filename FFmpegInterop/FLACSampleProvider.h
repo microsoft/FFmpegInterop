@@ -26,7 +26,7 @@ namespace winrt::FFmpegInterop::implementation
 		public SampleProvider
 	{
 	public:
-		FLACSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader);
+		FLACSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
 
 	protected:
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;

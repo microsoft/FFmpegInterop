@@ -24,7 +24,7 @@ using namespace winrt::Windows::Media::MediaProperties;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	SubtitleSampleProvider::SubtitleSampleProvider(_In_ const AVStream* stream, _In_ Reader& reader) :
+	SubtitleSampleProvider::SubtitleSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
 		SampleProvider(stream, reader)
 	{
 

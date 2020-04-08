@@ -20,43 +20,43 @@
 #include "pch.h"
 #include "FFmpegInteropLogging.h"
 #include "FFmpegInteropLogging.g.cpp"
+#include "LogEventArgs.h"
 
 using namespace winrt;
+using namespace winrt::Windows::Foundation;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	FFmpegInterop::ILogProvider FFmpegInteropLogging::s_LogProvider{ nullptr };
+	event<EventHandler<FFmpegInterop::LogEventArgs>> FFmpegInteropLogging::m_logEvent;
 
-	void FFmpegInteropLogging::SetLogLevel(_In_ const FFmpegInterop::LogLevel& level)
+	void FFmpegInteropLogging::Log(void* avcl, int level, const char* fmt, va_list vl)
 	{
-		av_log_set_level(static_cast<int>(level));
-	}
+		constexpr int LINE_SIZE{ 1024 };
 
-	void FFmpegInteropLogging::SetLogProvider(_In_ const FFmpegInterop::ILogProvider& logProvider)
-	{
-		s_LogProvider = logProvider;
-		av_log_set_callback([](void* avcl, int level, const char* fmt, va_list vl)->void
+		// Format the log line
+		char lineA[LINE_SIZE];
+		int printPrefix{ 1 };
+		av_log_format_line(avcl, level, fmt, vl, lineA, LINE_SIZE, &printPrefix);
+
+		// Convert from UTF8 -> UTF16
+		wchar_t lineW[LINE_SIZE];
+		if (MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, lineA, -1, lineW, LINE_SIZE) > 0)
 		{
-			if (level <= av_log_get_level())
-			{
-				if (s_LogProvider != nullptr)
-				{
-					char pLine[1000];
-					int printPrefix = 1;
-					av_log_format_line(avcl, level, fmt, vl, pLine, sizeof(pLine), &printPrefix);
+			TraceLoggingWrite(g_FFmpegInteropProvider, "FFmpegTrace", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+				TraceLoggingValue(lineW, "Message"));
 
-					wchar_t wLine[sizeof(pLine)];
-					if (MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pLine, -1, wLine, sizeof(pLine)) != 0)
-					{
-						s_LogProvider.Log((FFmpegInterop::LogLevel)level, hstring(wLine));
-					}
-				}
-			}
-		});
+			// Raise a log event to any registered handlers
+			m_logEvent(nullptr, make<LogEventArgs>(static_cast<FFmpegInterop::LogLevel>(level), hstring{ lineW }));
+		}
 	}
 
-	void FFmpegInteropLogging::SetDefaultLogProvider()
+	event_token FFmpegInteropLogging::Log(const EventHandler<FFmpegInterop::LogEventArgs>& handler)
 	{
-		av_log_set_callback(av_log_default_callback);
+		return m_logEvent.add(handler);
+	}
+
+	void FFmpegInteropLogging::Log(const event_token& token) noexcept
+	{
+		m_logEvent.remove(token);
 	}
 }

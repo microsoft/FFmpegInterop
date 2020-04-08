@@ -30,7 +30,7 @@ namespace MediaPlayerCS
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
-    sealed partial class App : Application, ILogProvider
+    sealed partial class App : Application
     {
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -41,13 +41,12 @@ namespace MediaPlayerCS
             InitializeComponent();
             Suspending += OnSuspending;
 
-            FFmpegInteropLogging.SetLogLevel(LogLevel.Info);
-            FFmpegInteropLogging.SetLogProvider(this);
+            FFmpegInteropLogging.Log += Log;
         }
 
-        public void Log(LogLevel level, string message)
+        public static void Log(object sender, FFmpegInterop.LogEventArgs args)
         {
-            System.Diagnostics.Debug.WriteLine("FFmpeg ({0}): {1}", level, message);
+            System.Diagnostics.Debug.WriteLine("FFmpeg ({0}): {1}", args.Level, args.Message);
         }
 
         /// <summary>

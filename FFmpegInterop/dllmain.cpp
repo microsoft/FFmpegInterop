@@ -17,6 +17,7 @@
 //*****************************************************************************
 
 #include "pch.h"
+#include "FFmpegInteropLogging.h"
 
 using namespace winrt::FFmpegInterop::implementation;
 
@@ -29,6 +30,9 @@ BOOL WINAPI DllMain(_In_ HINSTANCE hInstance, _In_ DWORD dwReason, _In_opt_ LPVO
 
 		// Register TraceLogging provider
 		TraceLoggingRegister(g_FFmpegInteropProvider);
+
+		// Register FFmpegInteropLogging callback
+		av_log_set_callback(&FFmpegInteropLogging::Log);
 	}
 	else if (dwReason == DLL_PROCESS_DETACH)
 	{

@@ -23,7 +23,7 @@
 namespace winrt::MediaPlayerCPP::implementation
 {
 	class App : 
-		public AppT<App, FFmpegInterop::ILogProvider>
+		public AppT<App>
 	{
 	public:
 		App();
@@ -33,7 +33,7 @@ namespace winrt::MediaPlayerCPP::implementation
 		void OnSuspending(const IInspectable& sender, const Windows::ApplicationModel::SuspendingEventArgs& args);
 		void OnNavigationFailed(const IInspectable& sender, const Windows::UI::Xaml::Navigation::NavigationFailedEventArgs& args);
 
-		void Log(FFmpegInterop::LogLevel level, const hstring& message);
+		static void Log(const IInspectable& sender, const FFmpegInterop::LogEventArgs& args);
 
 	private:
 		void InitRootFrame();

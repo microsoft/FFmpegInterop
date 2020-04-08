@@ -29,6 +29,7 @@ using namespace winrt::Windows::UI::Xaml;
 using namespace winrt::Windows::UI::Xaml::Controls;
 using namespace winrt::Windows::UI::Xaml::Navigation;
 using namespace winrt::Windows::Storage;
+using namespace FFmpegInterop;
 
 /// <summary>
 /// Initializes the singleton application object.  This is the first line of authored code
@@ -39,8 +40,7 @@ App::App()
 	InitializeComponent();
 	Suspending({ this, &App::OnSuspending });
 
-	FFmpegInterop::FFmpegInteropLogging::SetLogLevel(FFmpegInterop::LogLevel::Info);
-	FFmpegInterop::FFmpegInteropLogging::SetLogProvider(*this);
+	(void) FFmpegInteropLogging::Log({ &App::Log });
 
 #if defined _DEBUG && !defined DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION
 	UnhandledException([this](IInspectable const&, UnhandledExceptionEventArgs const& e)
@@ -54,9 +54,9 @@ App::App()
 #endif
 }
 
-void App::Log(FFmpegInterop::LogLevel, const hstring& message)
+void App::Log(const IInspectable&, const LogEventArgs& args)
 {
-	OutputDebugString(message.c_str());
+	OutputDebugString(args.Message().c_str());
 }
 
 /// <summary>

@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2017 Microsoft Corporation
+//	Copyright 2020 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -16,32 +16,28 @@
 //
 //*****************************************************************************
 
-#pragma once
+#include "pch.h"
+#include "LogEventArgs.h"
+#include "LogEventArgs.g.cpp"
 
-#include "FFmpegInteropLogging.g.h"
+using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	class FFmpegInteropLogging
-	{
-	public:
-		static void Log(void* avcl, int level, const char* fmt, va_list vl);
+    LogEventArgs::LogEventArgs(FFmpegInterop::LogLevel level, hstring message) :
+        m_level(level),
+        m_message(move(message))
+    {
 
-		static event_token Log(const Windows::Foundation::EventHandler<FFmpegInterop::LogEventArgs>& handler);
-		static void Log(const event_token& token) noexcept;
+    }
 
-	private:
-		FFmpegInteropLogging() = delete;
+    FFmpegInterop::LogLevel LogEventArgs::Level()
+    {
+        return m_level;
+    }
 
-		static event<Windows::Foundation::EventHandler<FFmpegInterop::LogEventArgs>> m_logEvent;
-	};
-}
-
-namespace winrt::FFmpegInterop::factory_implementation
-{
-	struct FFmpegInteropLogging :
-		public FFmpegInteropLoggingT<FFmpegInteropLogging, implementation::FFmpegInteropLogging>
-	{
-
-	};
+    hstring LogEventArgs::Message()
+    {
+        return m_message;
+    }
 }

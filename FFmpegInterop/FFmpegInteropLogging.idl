@@ -31,15 +31,14 @@ namespace FFmpegInterop
 		Trace = 56
 	};
 
-	interface ILogProvider
+	runtimeclass LogEventArgs
 	{
-		void Log(LogLevel level, String message);
+		LogLevel Level{ get; };
+		String Message{ get; };
 	}
 
 	static runtimeclass FFmpegInteropLogging
 	{
-		static void SetLogLevel(LogLevel level);
-		static void SetLogProvider(ILogProvider logProvider);
-		static void SetDefaultLogProvider();
+		static event Windows.Foundation.EventHandler<LogEventArgs> Log;
 	}
 }

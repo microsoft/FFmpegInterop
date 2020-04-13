@@ -30,7 +30,7 @@ namespace winrt::FFmpegInterop::implementation
 		public NALUSampleProvider
 	{
 	public:
-		HEVCSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
+		HEVCSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader);
 	};
 
 	class HEVCConfigParser
@@ -39,7 +39,7 @@ namespace winrt::FFmpegInterop::implementation
 		HEVCConfigParser(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize);
 
 		uint8_t GetNaluLengthSize() const noexcept;
-		std::tuple<std::vector<uint8_t>, std::vector<uint32_t>> GetSpsPpsData() const;
+		std::tuple<std::vector<uint8_t>, std::vector<uint32_t>> GetNaluData() const;
 
 	private:
 		static constexpr size_t MIN_SIZE{ 23 };

@@ -32,7 +32,7 @@ namespace winrt::FFmpegInterop::implementation
 		public SampleProvider
 	{
 	public:
-		NALUSampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
+		NALUSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 
@@ -41,8 +41,8 @@ namespace winrt::FFmpegInterop::implementation
 
 		bool m_isBitstreamAnnexB{ true };
 		uint8_t m_naluLengthSize{ 0 }; // Only valid when bitstream is *not* Annex B
-		std::vector<uint8_t> m_spsPpsData;
-		std::vector<uint32_t> m_spsPpsNaluLengths;
+		std::vector<uint8_t> m_codecPrivateNaluData;
+		std::vector<uint32_t> m_codecPrivateNaluLengths;
 
 	private:
 		static constexpr size_t MAX_NALU_NUM_SUPPORTED{ 512 };
@@ -55,7 +55,7 @@ namespace winrt::FFmpegInterop::implementation
 	public:
 		AnnexBParser(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize);
 
-		std::tuple<std::vector<uint8_t>, std::vector<uint32_t>> GetSpsPpsData() const;
+		std::tuple<std::vector<uint8_t>, std::vector<uint32_t>> GetNaluData() const;
 
 	private:
 		const uint8_t* m_data{ nullptr };

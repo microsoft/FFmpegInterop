@@ -24,8 +24,8 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedSampleProvider::UncompressedSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
-		SampleProvider(stream, reader)
+	UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
+		SampleProvider(formatContext, stream, reader)
 	{
 		// Create a new decoding context
 		AVCodec* codec{ avcodec_find_decoder(stream->codecpar->codec_id) };

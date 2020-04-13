@@ -28,14 +28,14 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	SampleProvider::SampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
+	SampleProvider::SampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
 		m_stream(stream),
 		m_reader(reader)
 	{
-		if (m_stream->start_time != AV_NOPTS_VALUE)
+		if (formatContext->start_time != AV_NOPTS_VALUE)
 		{
-			m_startOffset = m_stream->start_time;
-			m_nextSamplePts = m_stream->start_time;
+			m_startOffset = av_rescale_q(formatContext->start_time, av_get_time_base_q(), stream->time_base);
+			m_nextSamplePts = m_startOffset;
 		}
 	}
 

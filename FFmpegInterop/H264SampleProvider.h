@@ -26,7 +26,7 @@ namespace winrt::FFmpegInterop::implementation
 		public NALUSampleProvider
 	{
 	public:
-		H264SampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
+		H264SampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 	};
@@ -37,7 +37,7 @@ namespace winrt::FFmpegInterop::implementation
 		AVCConfigParser(_In_reads_(dataSize) const uint8_t* data, _In_ uint32_t dataSize);
 
 		uint8_t GetNaluLengthSize() const noexcept;
-		std::tuple<std::vector<uint8_t>, std::vector<uint32_t>> GetSpsPpsData() const;
+		std::tuple<std::vector<uint8_t>, std::vector<uint32_t>> GetNaluData() const;
 		bool HasNoFMOASO() const;
 
 	private:

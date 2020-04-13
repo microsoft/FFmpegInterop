@@ -26,8 +26,8 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
-		UncompressedSampleProvider(stream, reader),
+	UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
+		UncompressedSampleProvider(formatContext, stream, reader),
 		m_minAudioSampleDur(ConvertToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base))
 	{
 		if (m_codecContext->sample_fmt != AV_SAMPLE_FMT_S16)

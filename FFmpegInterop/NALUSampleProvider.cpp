@@ -78,8 +78,8 @@ namespace winrt::FFmpegInterop::implementation
 		return naluLength;
 	}
 
-	NALUSampleProvider::NALUSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
-		SampleProvider(stream, reader)
+	NALUSampleProvider::NALUSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
+		SampleProvider(formatContext, stream, reader)
 	{
 
 	}
@@ -95,9 +95,9 @@ namespace winrt::FFmpegInterop::implementation
 		videoProp.Insert(MF_MT_MPEG2_LEVEL, PropertyValue::CreateUInt32(static_cast<uint32_t>(m_stream->codecpar->level)));
 		videoProp.Insert(MF_NALU_LENGTH_SET, PropertyValue::CreateUInt32(static_cast<uint32_t>(true)));
 
-		if (!m_spsPpsData.empty())
+		if (!m_codecPrivateNaluData.empty())
 		{
-			videoProp.Insert(MF_MT_MPEG_SEQUENCE_HEADER, PropertyValue::CreateUInt8Array({ m_spsPpsData.data(), m_spsPpsData.data() + m_spsPpsData.size() }));
+			videoProp.Insert(MF_MT_MPEG_SEQUENCE_HEADER, PropertyValue::CreateUInt8Array({ m_codecPrivateNaluData.data(), m_codecPrivateNaluData.data() + m_codecPrivateNaluData.size() }));
 		}
 	}
 
@@ -130,8 +130,8 @@ namespace winrt::FFmpegInterop::implementation
 
 	tuple<IBuffer, vector<uint32_t>> NALUSampleProvider::TransformSample(_Inout_ AVPacket_ptr packet, _In_ bool isKeyFrame)
 	{
-		bool copySpsPpsData{ isKeyFrame && !m_spsPpsData.empty() };
-		const bool writeToBuf{ copySpsPpsData || (!m_isBitstreamAnnexB && m_naluLengthSize != sizeof(NALU_START_CODE)) };
+		bool copyCodecPrivateNaluData{ isKeyFrame && !m_codecPrivateNaluData.empty() };
+		const bool writeToBuf{ copyCodecPrivateNaluData || (!m_isBitstreamAnnexB && m_naluLengthSize != sizeof(NALU_START_CODE)) };
 
 		vector<uint8_t> buf;
 		if (writeToBuf)
@@ -140,8 +140,8 @@ namespace winrt::FFmpegInterop::implementation
 
 			if (isKeyFrame)
 			{
-				// Reserve space for SPS/PPS data
-				sampleSize += m_spsPpsData.size();
+				// Reserve space for codec private NALU data
+				sampleSize += m_codecPrivateNaluData.size();
 			}
 
 			if (!m_isBitstreamAnnexB && m_naluLengthSize > sizeof(NALU_START_CODE))
@@ -170,18 +170,18 @@ namespace winrt::FFmpegInterop::implementation
 				naluLength = GetAVCNaluLength(packet->data + i, packet->size - i, m_naluLengthSize);
 			}
 
-			if (copySpsPpsData)
+			if (copyCodecPrivateNaluData)
 			{
 				// Check if this NALU is an AUD (access unit delimiter). The AUD must be the first NALU in the sample.
-				if (naluLength < naluPrefixLength || packet->data[naluPrefixLength] != NALU_TYPE_AUD)
+				if (naluLength == 0 || packet->data[naluPrefixLength] != NALU_TYPE_AUD)
 				{
-					// Copy the SPS/PPS data
-					buf.insert(buf.end(), m_spsPpsData.data(), m_spsPpsData.data() + m_spsPpsData.size());
+					// Copy the codec private NALU data
+					buf.insert(buf.end(), m_codecPrivateNaluData.data(), m_codecPrivateNaluData.data() + m_codecPrivateNaluData.size());
 
-					// Save the SPS/PPS NALU lengths
-					naluLengths.insert(naluLengths.end(), m_spsPpsNaluLengths.begin(), m_spsPpsNaluLengths.end());
+					// Save the codec private NALU lengths
+					naluLengths.insert(naluLengths.end(), m_codecPrivateNaluLengths.begin(), m_codecPrivateNaluLengths.end());
 
-					copySpsPpsData = false;
+					copyCodecPrivateNaluData = false;
 				}
 			}
 
@@ -194,6 +194,8 @@ namespace winrt::FFmpegInterop::implementation
 			}
 			else if (!m_isBitstreamAnnexB)
 			{
+				WINRT_ASSERT(m_naluLengthSize == sizeof(NALU_START_CODE));
+
 				// Replace the NALU length with the NALU start code
 				copy(begin(NALU_START_CODE), end(NALU_START_CODE), packet->data + i);
 			}
@@ -204,15 +206,15 @@ namespace winrt::FFmpegInterop::implementation
 			i += naluPrefixLength + naluLength;
 		}
 
-		if (copySpsPpsData)
+		if (copyCodecPrivateNaluData)
 		{
-			// Copy the SPS/PPS data
-			buf.insert(buf.end(), m_spsPpsData.data(), m_spsPpsData.data() + m_spsPpsData.size());
+			// Copy the codec private NALU data
+			buf.insert(buf.end(), m_codecPrivateNaluData.data(), m_codecPrivateNaluData.data() + m_codecPrivateNaluData.size());
 
-			// Save the SPS/PPS NALU lengths
-			naluLengths.insert(naluLengths.end(), m_spsPpsNaluLengths.begin(), m_spsPpsNaluLengths.end());
+			// Save the codec private NALU lengths
+			naluLengths.insert(naluLengths.end(), m_codecPrivateNaluLengths.begin(), m_codecPrivateNaluLengths.end());
 
-			copySpsPpsData = false;
+			copyCodecPrivateNaluData = false;
 		}
 
 		if (writeToBuf)
@@ -235,21 +237,21 @@ namespace winrt::FFmpegInterop::implementation
 		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, !equal(begin(NALU_START_CODE), end(NALU_START_CODE), m_data));
 	}
 
-	tuple<vector<uint8_t>, vector<uint32_t>> AnnexBParser::GetSpsPpsData() const
+	tuple<vector<uint8_t>, vector<uint32_t>> AnnexBParser::GetNaluData() const
 	{
-		vector<uint8_t> spsPpsData{ m_data, m_data + m_dataSize };
-		vector<uint32_t> spsPpsNaluLengths;
+		vector<uint8_t> naluData{ m_data, m_data + m_dataSize };
+		vector<uint32_t> naluLengths;
 
 		for (uint32_t i{ 0 }; i < m_dataSize;)
 		{
-			uint32_t naluLength{ GetAnnexBNaluLength(m_data + i, m_dataSize - i) };
+			uint32_t naluLength{ sizeof(NALU_START_CODE) + GetAnnexBNaluLength(m_data + i, m_dataSize - i) };
 
 			// Save the NALU length
-			spsPpsNaluLengths.push_back(naluLength);
+			naluLengths.push_back(naluLength);
 
 			i += naluLength;
 		}
 
-		return { spsPpsData, spsPpsNaluLengths };
+		return { naluData, naluLengths };
 	}
 }

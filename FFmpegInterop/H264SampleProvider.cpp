@@ -27,8 +27,8 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	H264SampleProvider::H264SampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
-		NALUSampleProvider(stream, reader)
+	H264SampleProvider::H264SampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
+		NALUSampleProvider(formatContext, stream, reader)
 	{
 		// Parse codec private data if present
 		if (m_stream->codecpar->extradata != nullptr && m_stream->codecpar->extradata_size > 0)
@@ -44,7 +44,7 @@ namespace winrt::FFmpegInterop::implementation
 
 				AVCConfigParser parser{ m_stream->codecpar->extradata, static_cast<uint32_t>(m_stream->codecpar->extradata_size) };
 				m_naluLengthSize = parser.GetNaluLengthSize();
-				tie(m_spsPpsData, m_spsPpsNaluLengths) = parser.GetSpsPpsData();
+				tie(m_codecPrivateNaluData, m_codecPrivateNaluLengths) = parser.GetNaluData();
 			}
 			else
 			{
@@ -53,7 +53,7 @@ namespace winrt::FFmpegInterop::implementation
 					TraceLoggingValue(m_stream->index, "StreamId"));
 
 				AnnexBParser parser{ m_stream->codecpar->extradata, static_cast<uint32_t>(m_stream->codecpar->extradata_size) };
-				tie(m_spsPpsData, m_spsPpsNaluLengths) = parser.GetSpsPpsData();
+				tie(m_codecPrivateNaluData, m_codecPrivateNaluLengths) = parser.GetNaluData();
 			}
 		}
 		else
@@ -93,35 +93,35 @@ namespace winrt::FFmpegInterop::implementation
 		return m_data[4] & 0x03 + 1;
 	}
 
-	tuple<vector<uint8_t>, vector<uint32_t>> AVCConfigParser::GetSpsPpsData() const
+	tuple<vector<uint8_t>, vector<uint32_t>> AVCConfigParser::GetNaluData() const
 	{
-		vector<uint8_t> spsPpsData;
-		vector<uint32_t> spsPpsNaluLengths;
+		vector<uint8_t> naluData;
+		vector<uint32_t> naluLengths;
 		uint32_t pos{ 5 };
 
 		// Parse SPS NALUs
 		uint8_t spsCount{ static_cast<uint8_t>(m_data[pos++] & 0x1F) };
-		pos += ParseParameterSets(spsCount, m_data + pos, m_dataSize - pos, spsPpsData, spsPpsNaluLengths);
+		pos += ParseParameterSets(spsCount, m_data + pos, m_dataSize - pos, naluData, naluLengths);
 
 		// Parse PPS NALUs
 		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos >= m_dataSize);
 		uint8_t ppsCount{ m_data[pos++] };
-		ParseParameterSets(ppsCount, m_data + pos, m_dataSize - pos, spsPpsData, spsPpsNaluLengths);
+		ParseParameterSets(ppsCount, m_data + pos, m_dataSize - pos, naluData, naluLengths);
 
-		return { spsPpsData, spsPpsNaluLengths };
+		return { naluData, naluLengths };
 	}
 
 	uint32_t AVCConfigParser::ParseParameterSets(
 		_In_ uint8_t parameterSetCount,
 		_In_reads_(dataSize) const uint8_t* data,
 		_In_ uint32_t dataSize,
-		_Inout_ vector<uint8_t>& spsPpsData,
-		_Inout_ vector<uint32_t>& spsPpsNaluLengths) const
+		_Inout_ vector<uint8_t>& naluData,
+		_Inout_ vector<uint32_t>& naluLengths) const
 	{
 		// Reserve estimated space now to minimize reallocations
-		spsPpsNaluLengths.reserve(spsPpsNaluLengths.size() + parameterSetCount);
+		naluLengths.reserve(naluLengths.size() + parameterSetCount);
 
-		// Parse the parameter sets and convert the SPS/PPS data to Annex B format
+		// Parse the parameter sets and convert the NALU data to Annex B format
 		uint32_t pos{ 0 };
 		for (uint8_t i{ 0 }; i < parameterSetCount; i++)
 		{
@@ -129,11 +129,11 @@ namespace winrt::FFmpegInterop::implementation
 			uint32_t naluLength{ GetAVCNaluLength(data + pos, dataSize - pos, sizeof(uint16_t)) };
 			pos += sizeof(uint16_t);
 
-			// Write the NALU start code and SPS/PPS data to the buffer
-			spsPpsData.insert(spsPpsData.end(), begin(NALU_START_CODE), end(NALU_START_CODE));
-			spsPpsData.insert(spsPpsData.end(), data + pos, data + pos + naluLength);
+			// Write the NALU start code and NALU data to the buffer
+			naluData.insert(naluData.end(), begin(NALU_START_CODE), end(NALU_START_CODE));
+			naluData.insert(naluData.end(), data + pos, data + pos + naluLength);
 
-			spsPpsNaluLengths.push_back(sizeof(NALU_START_CODE) + naluLength);
+			naluLengths.push_back(sizeof(NALU_START_CODE) + naluLength);
 
 			pos += naluLength;
 		}
@@ -173,7 +173,7 @@ namespace winrt::FFmpegInterop::implementation
 			return true;
 		}
 
-		// Even though the stream has a non-constrained baseline we can still safely use DXVA if none of the PPS have multiple slice groups.
+		// Even though the stream has a non-constrained baseline we can still safely use DXVA if none of the PPS NALUs have multiple slice groups.
 		// Scan the PPS NALUs and check if any have multiple slice groups
 		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, pos >= m_dataSize);
 		uint8_t ppsCount{ m_data[pos++] };

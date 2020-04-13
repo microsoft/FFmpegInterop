@@ -25,8 +25,8 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	FLACSampleProvider::FLACSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
-		SampleProvider(stream, reader)
+	FLACSampleProvider::FLACSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
+		SampleProvider(formatContext, stream, reader)
 	{
 
 	}

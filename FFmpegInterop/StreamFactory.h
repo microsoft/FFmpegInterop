@@ -31,9 +31,9 @@ namespace winrt::FFmpegInterop::implementation
 	class StreamFactory
 	{
 	public:
-		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::AudioStreamDescriptor> CreateAudioStream(_In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::VideoStreamDescriptor> CreateVideoStream(_In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::TimedMetadataStreamDescriptor> CreateSubtitleStream(_In_ AVStream* stream, _In_ Reader& reader);
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::AudioStreamDescriptor> CreateAudioStream(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::VideoStreamDescriptor> CreateVideoStream(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static std::tuple<std::unique_ptr<SampleProvider>, Windows::Media::Core::TimedMetadataStreamDescriptor> CreateSubtitleStream(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader);
 
 	private:
 		StreamFactory() = delete;

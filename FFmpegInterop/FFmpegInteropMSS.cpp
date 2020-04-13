@@ -218,7 +218,7 @@ namespace winrt::FFmpegInterop::implementation
 			switch (stream->codecpar->codec_type)
 			{
 			case AVMEDIA_TYPE_AUDIO:
-				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateAudioStream(stream, m_reader, config);
+				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateAudioStream(m_formatContext.get(), stream, m_reader, config);
 
 				if (hasAudio || i == preferredAudioStreamId)
 				{
@@ -254,7 +254,7 @@ namespace winrt::FFmpegInterop::implementation
 					continue;
 				}
 
-				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateVideoStream(stream, m_reader, config);
+				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateVideoStream(m_formatContext.get(), stream, m_reader, config);
 
 				if (hasVideo || i == preferredVideoStreamId)
 				{
@@ -285,7 +285,7 @@ namespace winrt::FFmpegInterop::implementation
 			case AVMEDIA_TYPE_SUBTITLE:
 				try
 				{
-					tie(sampleProvider, streamDescriptor) = StreamFactory::CreateSubtitleStream(stream, m_reader);
+					tie(sampleProvider, streamDescriptor) = StreamFactory::CreateSubtitleStream(m_formatContext.get(), stream, m_reader);
 				}
 				catch (...)
 				{

@@ -26,8 +26,8 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	HEVCSampleProvider::HEVCSampleProvider(_In_ AVStream* stream, _In_ Reader& reader) :
-		NALUSampleProvider(stream, reader)
+	HEVCSampleProvider::HEVCSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
+		NALUSampleProvider(formatContext, stream, reader)
 	{
 		// Parse codec private data if present
 		if (m_stream->codecpar->extradata != nullptr && m_stream->codecpar->extradata_size > 0)
@@ -43,7 +43,7 @@ namespace winrt::FFmpegInterop::implementation
 
 				HEVCConfigParser parser{ m_stream->codecpar->extradata, static_cast<uint32_t>(m_stream->codecpar->extradata_size) };
 				m_naluLengthSize = parser.GetNaluLengthSize();
-				tie(m_spsPpsData, m_spsPpsNaluLengths) = parser.GetSpsPpsData();
+				tie(m_codecPrivateNaluData, m_codecPrivateNaluLengths) = parser.GetNaluData();
 			}
 			else
 			{
@@ -52,7 +52,7 @@ namespace winrt::FFmpegInterop::implementation
 					TraceLoggingValue(m_stream->index, "StreamId"));
 
 				AnnexBParser parser{ m_stream->codecpar->extradata, static_cast<uint32_t>(m_stream->codecpar->extradata_size) };
-				tie(m_spsPpsData, m_spsPpsNaluLengths) = parser.GetSpsPpsData();
+				tie(m_codecPrivateNaluData, m_codecPrivateNaluLengths) = parser.GetNaluData();
 			}
 		}
 	}
@@ -71,10 +71,10 @@ namespace winrt::FFmpegInterop::implementation
 		return m_data[21] & 0x03 + 1;
 	}
 
-	tuple<vector<uint8_t>, vector<uint32_t>> HEVCConfigParser::GetSpsPpsData() const
+	tuple<vector<uint8_t>, vector<uint32_t>> HEVCConfigParser::GetNaluData() const
 	{
-		vector<uint8_t> spsPpsData;
-		vector<uint32_t> spsPpsNaluLengths;
+		vector<uint8_t> naluData;
+		vector<uint32_t> naluLengths;
 
 		// Scan the parameter sets
 		uint32_t pos{ 22 };
@@ -92,7 +92,7 @@ namespace winrt::FFmpegInterop::implementation
 			if (copyNaluData)
 			{
 				// Reserve estimated space now to minimize reallocations
-				spsPpsNaluLengths.reserve(spsPpsNaluLengths.size() + naluCount);
+				naluLengths.reserve(naluLengths.size() + naluCount);
 			}
 
 			// Scan the NALUs
@@ -105,16 +105,16 @@ namespace winrt::FFmpegInterop::implementation
 				if (copyNaluData)
 				{
 					// Write the NALU start code and VPS/SPS/PPS data to the buffer
-					spsPpsData.insert(spsPpsData.end(), begin(NALU_START_CODE), end(NALU_START_CODE));
-					spsPpsData.insert(spsPpsData.end(), m_data + pos, m_data + pos + naluLength);
+					naluData.insert(naluData.end(), begin(NALU_START_CODE), end(NALU_START_CODE));
+					naluData.insert(naluData.end(), m_data + pos, m_data + pos + naluLength);
 
-					spsPpsNaluLengths.push_back(sizeof(NALU_START_CODE) + naluLength);
+					naluLengths.push_back(sizeof(NALU_START_CODE) + naluLength);
 				}
 
 				pos += naluLength;
 			}
 		}
 
-		return { spsPpsData, spsPpsNaluLengths };
+		return { naluData, naluLengths };
 	}
 }

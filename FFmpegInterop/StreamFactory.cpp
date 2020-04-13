@@ -88,7 +88,7 @@ namespace
 
 namespace winrt::FFmpegInterop::implementation
 {
-	tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAudioStream(_In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	tuple<unique_ptr<SampleProvider>, AudioStreamDescriptor> StreamFactory::CreateAudioStream(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		// Create the sample provider and encoding properties
 		unique_ptr<SampleProvider> audioSampleProvider;
@@ -118,56 +118,56 @@ namespace winrt::FFmpegInterop::implementation
 				audioEncProp = AudioEncodingProperties::CreateAac(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
 			}
 
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_AC3:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_Dolby_AC3);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_ALAC:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_ALAC);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			setFormatUserData = true;
 			break;
 
 		case AV_CODEC_ID_DTS:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_DTS_HD);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_EAC3:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_Dolby_DDPlus);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_FLAC:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_FLAC);
-			audioSampleProvider = make_unique<FLACSampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<FLACSampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_MP1:
 		case AV_CODEC_ID_MP2:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_MPEG);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_MP3:
 			audioEncProp = AudioEncodingProperties::CreateMp3(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_OPUS:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_Opus);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			setFormatUserData = true;
 			break;
 
 		case AV_CODEC_ID_PCM_F32LE:
 		case AV_CODEC_ID_PCM_F64LE:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_Float);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_PCM_S16BE:
@@ -178,12 +178,12 @@ namespace winrt::FFmpegInterop::implementation
 		case AV_CODEC_ID_PCM_S32LE:
 		case AV_CODEC_ID_PCM_U8:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_PCM);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_TRUEHD:
 			audioEncProp = CreateAudioEncProp(MEDIASUBTYPE_DOLBY_TRUEHD);
-			audioSampleProvider = make_unique<SampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_PCM_MULAW:
@@ -193,13 +193,13 @@ namespace winrt::FFmpegInterop::implementation
 		case AV_CODEC_ID_WMAV2:
 		case AV_CODEC_ID_WMAVOICE:
 			audioEncProp = AudioEncodingProperties::AudioEncodingProperties();
-			audioSampleProvider = make_unique<ACMSampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<ACMSampleProvider>(formatContext, stream, reader);
 			break;
 
 		default:
 			constexpr uint32_t bitsPerSample{ 16 };
 			audioEncProp = AudioEncodingProperties::CreatePcm(stream->codecpar->sample_rate, stream->codecpar->channels, bitsPerSample);
-			audioSampleProvider = make_unique<UncompressedAudioSampleProvider>(stream, reader);
+			audioSampleProvider = make_unique<UncompressedAudioSampleProvider>(formatContext, stream, reader);
 			break;
 		}
 
@@ -212,7 +212,7 @@ namespace winrt::FFmpegInterop::implementation
 		return { move(audioSampleProvider), move(audioStreamDescriptor) };
 	}
 
-	tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVideoStream(_In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	tuple<unique_ptr<SampleProvider>, VideoStreamDescriptor> StreamFactory::CreateVideoStream(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		// Create the sample provider and encoding properties
 		unique_ptr<SampleProvider> videoSampleProvider;
@@ -234,53 +234,53 @@ namespace winrt::FFmpegInterop::implementation
 		{
 		case AV_CODEC_ID_AV1:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_AV1);
-			videoSampleProvider = make_unique<AV1SampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<AV1SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_H264:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_H264);
-			videoSampleProvider = make_unique<H264SampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<H264SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_HEVC:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_HEVC);
-			videoSampleProvider = make_unique<HEVCSampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<HEVCSampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_MJPEG:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_MJPG);
-			videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_MPEG1VIDEO:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_MPG1);
-			videoSampleProvider = make_unique<MPEGSampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<MPEGSampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_MPEG2VIDEO:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_MPEG2);
-			videoSampleProvider = make_unique<MPEGSampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<MPEGSampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_MPEG4:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_MP4V);
-			videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			setFormatUserData = true;
 			break;
 
 		case AV_CODEC_ID_MSMPEG4V3:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_MP43);
-			videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_VP8:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_VP80);
-			videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_VP9:
 			videoEncProp = CreateVideoEncProp(MFVideoFormat_VP90);
-			videoSampleProvider = make_unique<SampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_AYUV:
@@ -293,13 +293,13 @@ namespace winrt::FFmpegInterop::implementation
 		case AV_CODEC_ID_WMV2:
 		case AV_CODEC_ID_WMV3:
 			videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
-			videoSampleProvider = make_unique<VFWSampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<VFWSampleProvider>(formatContext, stream, reader);
 			setFormatUserData = true;
 			break;
 
 		default:
 			videoEncProp = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12(), stream->codecpar->width, stream->codecpar->height);
-			videoSampleProvider = make_unique<UncompressedVideoSampleProvider>(stream, reader);
+			videoSampleProvider = make_unique<UncompressedVideoSampleProvider>(formatContext, stream, reader);
 			break;
 		}
 
@@ -312,7 +312,7 @@ namespace winrt::FFmpegInterop::implementation
 		return { move(videoSampleProvider), move(videoStreamDescriptor) };
 	}
 
-	tuple<unique_ptr<SampleProvider>, TimedMetadataStreamDescriptor> StreamFactory::CreateSubtitleStream(_In_ AVStream* stream, _In_ Reader& reader)
+	tuple<unique_ptr<SampleProvider>, TimedMetadataStreamDescriptor> StreamFactory::CreateSubtitleStream(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader)
 	{
 		// Create the sample provider and encoding properties
 		unique_ptr<SubtitleSampleProvider> subtitleSampleProvider;
@@ -329,25 +329,25 @@ namespace winrt::FFmpegInterop::implementation
 		case AV_CODEC_ID_ASS:
 		case AV_CODEC_ID_SSA:
 			subtitleEncProp = CreateSubtitleEncProp(MFSubtitleFormat_SSA);
-			subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader);
+			subtitleSampleProvider = make_unique<SubtitleSampleProvider>(formatContext, stream, reader);
 			setFormatUserData = true;
 			break;
 
 		case AV_CODEC_ID_DVD_SUBTITLE:
 			subtitleEncProp = CreateEncProp<TimedMetadataEncodingProperties>(L"VobSub"); // MFSubtitleFormat_VobSub
-			subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader);
+			subtitleSampleProvider = make_unique<SubtitleSampleProvider>(formatContext, stream, reader);
 			setFormatUserData = true;
 			break;
 
 		case AV_CODEC_ID_HDMV_PGS_SUBTITLE:
 			subtitleEncProp = CreateEncProp<TimedMetadataEncodingProperties>(L"PGS"); // MFSubtitleFormat_PGS
-			subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader);
+			subtitleSampleProvider = make_unique<SubtitleSampleProvider>(formatContext, stream, reader);
 			break;
 
 		case AV_CODEC_ID_SUBRIP:
 		case AV_CODEC_ID_TEXT:
 			subtitleEncProp = CreateSubtitleEncProp(MFSubtitleFormat_SRT);
-			subtitleSampleProvider = make_unique<SubtitleSampleProvider>(stream, reader);
+			subtitleSampleProvider = make_unique<SubtitleSampleProvider>(formatContext, stream, reader);
 			break;
 
 		default:

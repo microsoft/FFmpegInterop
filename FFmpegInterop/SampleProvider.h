@@ -25,7 +25,7 @@ namespace winrt::FFmpegInterop::implementation
 	class SampleProvider
 	{
 	public:
-		SampleProvider(_In_ AVStream* stream, _In_ Reader& reader);
+		SampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader);
 
 		virtual ~SampleProvider() = default;
 
@@ -51,7 +51,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool m_isEOS{ false };
 		bool m_isDiscontinuous{ true };
 		std::deque<AVPacket_ptr> m_packetQueue;
-		int64_t m_startOffset{ 0 };
-		int64_t m_nextSamplePts{ 0 };
+		int64_t m_startOffset{ 0 }; // AVStream::time_base units
+		int64_t m_nextSamplePts{ 0 }; // AVStream::time_base units
 	};
 }

@@ -28,33 +28,40 @@ using namespace std;
 namespace winrt::FFmpegInterop::implementation
 {
 	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
-		UncompressedSampleProvider(formatContext, stream, reader)
+		UncompressedSampleProvider(formatContext, stream, reader),
+		m_outputWidth(m_codecContext->width),
+		m_outputHeight(m_codecContext->height)
 	{
 		if (m_codecContext->pix_fmt != AV_PIX_FMT_NV12)
 		{
-			// Setup software scaler to convert the pixel format to NV12
-			m_swsContext.reset(sws_getContext(
-				m_codecContext->width,
-				m_codecContext->height,
-				m_codecContext->pix_fmt,
-				m_codecContext->width,
-				m_codecContext->height,
-				AV_PIX_FMT_NV12,
-				SWS_BICUBIC,
-				nullptr,
-				nullptr,
-				nullptr));
-			THROW_IF_NULL_ALLOC(m_swsContext);
-
-			THROW_HR_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, AV_PIX_FMT_NV12, m_codecContext->width));
-
-			// Create a buffer pool
-			const int requiredBufferSize = av_image_get_buffer_size(AV_PIX_FMT_NV12, m_codecContext->width, m_codecContext->height, 1);
-			THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
-
-			m_bufferPool.reset(av_buffer_pool_init(requiredBufferSize, nullptr));
-			THROW_IF_NULL_ALLOC(m_bufferPool);
+			InitScaler();
 		}
+	}
+
+	void UncompressedVideoSampleProvider::InitScaler()
+	{
+		// Setup software scaler to convert the pixel format to NV12
+		m_swsContext.reset(sws_getContext(
+			m_outputWidth,
+			m_outputHeight,
+			m_codecContext->pix_fmt,
+			m_outputWidth,
+			m_outputHeight,
+			AV_PIX_FMT_NV12,
+			SWS_BICUBIC,
+			nullptr,
+			nullptr,
+			nullptr));
+		THROW_IF_NULL_ALLOC(m_swsContext);
+
+		THROW_HR_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, AV_PIX_FMT_NV12, m_outputWidth));
+
+		// Create a buffer pool
+		const int requiredBufferSize{ av_image_get_buffer_size(AV_PIX_FMT_NV12, m_outputWidth, m_outputHeight, 1) };
+		THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
+
+		m_bufferPool.reset(av_buffer_pool_init(requiredBufferSize, nullptr));
+		THROW_IF_NULL_ALLOC(m_bufferPool);
 	}
 
 	void UncompressedVideoSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
@@ -74,10 +81,13 @@ namespace winrt::FFmpegInterop::implementation
 		videoProp.Insert(MF_MT_INTERLACE_MODE, PropertyValue::CreateUInt32(MFVideoInterlace_MixedInterlaceOrProgressive));
 	}
 
-	tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> UncompressedVideoSampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedVideoSampleProvider::GetSampleData()
 	{
 		// Get the next decoded sample
 		AVFrame_ptr frame{ GetFrame() };
+
+		// Check for dynamic format changes
+		vector<pair<GUID, IInspectable>> formatChanges{ CheckForFormatChanges(frame.get()) };
 
 		// Get the sample buffer
 		IBuffer sampleBuf{ nullptr };
@@ -93,34 +103,61 @@ namespace winrt::FFmpegInterop::implementation
 			THROW_IF_NULL_ALLOC(bufferRef);
 
 			uint8_t* data[4]{ };
-			const int requiredBufferSize{ av_image_fill_pointers(data, AV_PIX_FMT_NV12, m_codecContext->height, bufferRef->data, m_lineSizes) };
+			const int requiredBufferSize{ av_image_fill_pointers(data, AV_PIX_FMT_NV12, frame->height, bufferRef->data, m_lineSizes) };
 			THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
 			THROW_HR_IF(MF_E_UNEXPECTED, requiredBufferSize != bufferRef->size);
 
-			THROW_HR_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), frame->data, frame->linesize, 0, m_codecContext->height, data, m_lineSizes));
+			THROW_HR_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), frame->data, frame->linesize, 0, frame->height, data, m_lineSizes));
 
 			sampleBuf = make<FFmpegInteropBuffer>(move(bufferRef));
 		}
 
 		// Get the sample properties
-		map<GUID, IInspectable> properties{ GetSampleProperties(frame.get()) };
+		vector<pair<GUID, IInspectable>> properties{ GetSampleProperties(frame.get()) };
 
-		return { move(sampleBuf), frame->best_effort_timestamp, frame->pkt_duration, move(properties) };
+		return { move(sampleBuf), frame->best_effort_timestamp, frame->pkt_duration, move(properties), move(formatChanges) };
 	}
 
-	map<GUID, IInspectable> UncompressedVideoSampleProvider::GetSampleProperties(_In_ const AVFrame* frame)
+	vector<pair<GUID, IInspectable>> UncompressedVideoSampleProvider::CheckForFormatChanges(_In_ const AVFrame* frame)
 	{
-		map<GUID, IInspectable> properties;
+		vector<pair<GUID, IInspectable>> formatChanges;
+
+		// Check if the resolution changed
+		if (frame->width != m_outputWidth || frame->height != m_outputHeight)
+		{
+			TraceLoggingWrite(g_FFmpegInteropProvider, "ResolutionChanged", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingValue(m_stream->index, "StreamId"),
+				TraceLoggingValue(m_outputWidth, "OldWidth"),
+				TraceLoggingValue(m_outputHeight, "OldHeight"),
+				TraceLoggingValue(frame->width, "NewWidth"),
+				TraceLoggingValue(frame->height, "NewHeight"));
+
+			m_outputWidth = frame->width;
+			m_outputHeight = frame->height;
+			formatChanges.emplace_back(MF_MT_FRAME_SIZE, PropertyValue::CreateUInt64(Pack2UINT32AsUINT64(m_outputWidth, m_outputHeight)));
+
+			if (m_swsContext != nullptr)
+			{
+				InitScaler();
+			}
+		}
+
+		return formatChanges;
+	}
+
+	vector<pair<GUID, IInspectable>> UncompressedVideoSampleProvider::GetSampleProperties(_In_ const AVFrame* frame)
+	{
+		vector<pair<GUID, IInspectable>> properties;
 
 		if (frame->interlaced_frame)
 		{
-			properties[MFSampleExtension_Interlaced] = PropertyValue::CreateUInt32(true);
-			properties[MFSampleExtension_BottomFieldFirst] = PropertyValue::CreateUInt32(!frame->top_field_first);
-			properties[MFSampleExtension_RepeatFirstField] = PropertyValue::CreateUInt32(false);
+			properties.emplace_back(MFSampleExtension_Interlaced, PropertyValue::CreateUInt32(true));
+			properties.emplace_back(MFSampleExtension_BottomFieldFirst, PropertyValue::CreateUInt32(!frame->top_field_first));
+			properties.emplace_back(MFSampleExtension_RepeatFirstField, PropertyValue::CreateUInt32(false));
 		}
 		else
 		{
-			properties[MFSampleExtension_Interlaced] = PropertyValue::CreateUInt32(false);
+			properties.emplace_back(MFSampleExtension_Interlaced, PropertyValue::CreateUInt32(false));
 		}
 
 		return properties;

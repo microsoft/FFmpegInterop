@@ -101,7 +101,7 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	}
 
-	tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> NALUSampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> NALUSampleProvider::GetSampleData()
 	{
 		// Get the next sample
 		AVPacket_ptr packet{ GetPacket() };
@@ -114,18 +114,18 @@ namespace winrt::FFmpegInterop::implementation
 		auto [buf, naluLengths] = TransformSample(move(packet), isKeyFrame);
 
 		// Set sample properties
-		map<GUID, IInspectable> properties;
+		vector<pair<GUID, IInspectable>> properties;
 
 		if (isKeyFrame)
 		{
-			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateUInt32(true);
+			properties.emplace_back(MFSampleExtension_CleanPoint, PropertyValue::CreateUInt32(true));
 		}
 
 		const uint8_t* naluLengthsBuf{ reinterpret_cast<const uint8_t*>(naluLengths.data()) };
 		const size_t naluLengthsBufSize{ sizeof(decltype(naluLengths)::value_type) * naluLengths.size() };
-		properties[MF_NALU_LENGTH_INFORMATION] = PropertyValue::CreateUInt8Array({ naluLengthsBuf, naluLengthsBuf + naluLengthsBufSize });
+		properties.emplace_back(MF_NALU_LENGTH_INFORMATION, PropertyValue::CreateUInt8Array({ naluLengthsBuf, naluLengthsBuf + naluLengthsBufSize }));
 
-		return { move(buf), pts, dur, move(properties) };
+		return { move(buf), pts, dur, move(properties), { } };
 	}
 
 	tuple<IBuffer, vector<uint32_t>> NALUSampleProvider::TransformSample(_Inout_ AVPacket_ptr packet, _In_ bool isKeyFrame)

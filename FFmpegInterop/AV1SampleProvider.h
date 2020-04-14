@@ -29,7 +29,7 @@ namespace winrt::FFmpegInterop::implementation
 		AV1SampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader);
 
 	protected:
-		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
 
 	private:
 		Windows::Storage::Streams::IBuffer TransformSample(_Inout_ AVPacket_ptr packet, _In_ bool isKeyFrame);

@@ -31,7 +31,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	}
 
-	tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> FLACSampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> FLACSampleProvider::GetSampleData()
 	{
 		if (m_isDiscontinuous)
 		{
@@ -47,7 +47,7 @@ namespace winrt::FFmpegInterop::implementation
 			buf.insert(buf.end(), FLAC_STREAMINFO_HEADER, FLAC_STREAMINFO_HEADER + sizeof(FLAC_STREAMINFO_HEADER));
 			buf.insert(buf.end(), m_stream->codecpar->extradata, m_stream->codecpar->extradata + FLAC_STREAMINFO_SIZE);
 
-			return { make<FFmpegInteropBuffer>(move(buf)), m_startOffset, 0, { } };
+			return { make<FFmpegInteropBuffer>(move(buf)), m_startOffset, 0, { }, { } };
 		}
 		else
 		{

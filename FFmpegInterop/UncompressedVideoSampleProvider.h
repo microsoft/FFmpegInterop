@@ -31,11 +31,15 @@ namespace winrt::FFmpegInterop::implementation
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 
 	protected:
-		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
 
 	private:
-		std::map<GUID, Windows::Foundation::IInspectable> GetSampleProperties(_In_ const AVFrame* frame);
+		void InitScaler();
+		std::vector<std::pair<GUID, Windows::Foundation::IInspectable>> CheckForFormatChanges(_In_ const AVFrame* frame);
+		std::vector<std::pair<GUID, Windows::Foundation::IInspectable>> GetSampleProperties(_In_ const AVFrame* frame);
 
+		int m_outputWidth{ 0 };
+		int m_outputHeight{ 0 };
 		SwsContext_ptr m_swsContext;
 		int m_lineSizes[4]{ 0, 0, 0, 0};
 		AVBufferPool_ptr m_bufferPool;

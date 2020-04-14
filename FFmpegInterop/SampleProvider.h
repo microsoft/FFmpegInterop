@@ -43,7 +43,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool HasPacket() const noexcept { return !m_packetQueue.empty(); }
 
 		virtual void Flush() noexcept;
-		virtual std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData();
+		virtual std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData();
 
 		AVStream* m_stream;
 		Reader& m_reader;

@@ -344,7 +344,7 @@ namespace winrt::FFmpegInterop::implementation
 		THROW_HR_IF(MF_E_INVALIDREQUEST, !m_isSelected);
 
 		// Get the sample data, timestamp, duration, and properties
-		auto [buf, pts, dur, properties] = GetSampleData();
+		auto [buf, pts, dur, properties, formatChanges] = GetSampleData();
 
 		// Make sure the PTS is set
 		if (pts == AV_NOPTS_VALUE)
@@ -364,15 +364,53 @@ namespace winrt::FFmpegInterop::implementation
 		sample.Duration(TimeSpan{ dur });
 		sample.Discontinuous(m_isDiscontinuous);
 
-		MediaStreamSamplePropertySet extendedProperties{ sample.ExtendedProperties() };
-		for (const auto& [key, value] : properties)
+		if (!properties.empty())
 		{
-			extendedProperties.Insert(key, value);
+			MediaStreamSamplePropertySet extendedProperties{ sample.ExtendedProperties() };
+			for (const auto& [key, value] : properties)
+			{
+				extendedProperties.Insert(key, value);
+			}
 		}
 
 		m_isDiscontinuous = false;
 
 		request.Sample(sample);
+
+		// Update the stream's encoding properties if there were any dynamic format changes
+		if (!formatChanges.empty())
+		{
+			IMediaStreamDescriptor streamDescriptor{ request.StreamDescriptor() };
+			IMediaEncodingProperties encProp{ nullptr };
+
+			switch (m_stream->codecpar->codec_type)
+			{
+			case AVMEDIA_TYPE_AUDIO:
+				encProp = streamDescriptor.as<IAudioStreamDescriptor>().EncodingProperties();
+				break;
+
+			case AVMEDIA_TYPE_VIDEO:
+				encProp = streamDescriptor.as<IVideoStreamDescriptor>().EncodingProperties();
+				break;
+
+			case AVMEDIA_TYPE_SUBTITLE:
+				encProp = streamDescriptor.as<ITimedMetadataStreamDescriptor>().EncodingProperties();
+				break;
+
+			default:
+				WINRT_ASSERT(false);
+				THROW_HR(E_UNEXPECTED);
+			}
+
+			MediaPropertySet encodingProperties{ encProp.Properties() };
+			for (const auto& [key, value] : formatChanges)
+			{
+				encodingProperties.Insert(key, value);
+			}
+
+			TraceLoggingWrite(g_FFmpegInteropProvider, "DynamicFormatChange", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingValue(m_stream->index, "StreamId"));
+		}
 
 		TraceLoggingWrite(g_FFmpegInteropProvider, "SampleRequestFilled", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 			TraceLoggingValue(m_stream->index, "StreamId"),
@@ -380,7 +418,7 @@ namespace winrt::FFmpegInterop::implementation
 			TraceLoggingValue(sample.Duration().count(), "DurHNS"));
 	}
 
-	tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> SampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> SampleProvider::GetSampleData()
 	{
 		AVPacket_ptr packet{ GetPacket() };
 
@@ -388,14 +426,14 @@ namespace winrt::FFmpegInterop::implementation
 		const int64_t dur{ packet->duration };
 
 		// Set sample properties
-		map<GUID, IInspectable> properties;
+		vector<pair<GUID, IInspectable>> properties;
 
 		if ((packet->flags & AV_PKT_FLAG_KEY) != 0)
 		{
-			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateUInt32(true);
+			properties.emplace_back(MFSampleExtension_CleanPoint, PropertyValue::CreateUInt32(true));
 		}
 
-		return { make<FFmpegInteropBuffer>(move(packet)), pts, dur, move(properties) };
+		return { make<FFmpegInteropBuffer>(move(packet)), pts, dur, move(properties), { } };
 	}
 
 	AVPacket_ptr SampleProvider::GetPacket()

@@ -31,7 +31,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	}
 
-	tuple<IBuffer, int64_t, int64_t, map<GUID, IInspectable>> AV1SampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> AV1SampleProvider::GetSampleData()
 	{
 		// Get the next sample
 		AVPacket_ptr packet{ GetPacket() };
@@ -44,13 +44,13 @@ namespace winrt::FFmpegInterop::implementation
 		IBuffer buf{ TransformSample(move(packet), isKeyFrame) };
 
 		// Set sample properties
-		map<GUID, IInspectable> properties;
+		vector<pair<GUID, IInspectable>> properties;
 		if (isKeyFrame)
 		{
-			properties[MFSampleExtension_CleanPoint] = PropertyValue::CreateUInt32(true);
+			properties.emplace_back(MFSampleExtension_CleanPoint, PropertyValue::CreateUInt32(true));
 		}
 
-		return { move(buf), pts, dur, move(properties) };
+		return { move(buf), pts, dur, move(properties), { } };
 	}
 
 	IBuffer AV1SampleProvider::TransformSample(_Inout_ AVPacket_ptr packet, _In_ bool isKeyFrame)

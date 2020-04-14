@@ -37,7 +37,7 @@ namespace winrt::FFmpegInterop::implementation
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 
 	protected:
-		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::map<GUID, Windows::Foundation::IInspectable>> GetSampleData() override;
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
 
 		bool m_isBitstreamAnnexB{ true };
 		uint8_t m_naluLengthSize{ 0 }; // Only valid when bitstream is *not* Annex B

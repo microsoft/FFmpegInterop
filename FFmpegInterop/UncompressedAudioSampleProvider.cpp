@@ -57,7 +57,7 @@ namespace winrt::FFmpegInterop::implementation
 		// it would set encoding properties with values for the compressed audio type.
 	}
 
-	tuple<IBuffer, int64_t, int64_t, std::map<GUID, IInspectable>> UncompressedAudioSampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedAudioSampleProvider::GetSampleData()
 	{
 		// Decode samples until we reach the minimum sample duration threshold or EOS
 		IBuffer sampleBuf{ nullptr };
@@ -163,6 +163,6 @@ namespace winrt::FFmpegInterop::implementation
 			}
 		}
 
-		return { move(sampleBuf), pts, dur, { } };
+		return { move(sampleBuf), pts, dur, { }, { } };
 	}
 }

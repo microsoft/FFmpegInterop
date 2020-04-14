@@ -44,6 +44,16 @@ namespace winrt::FFmpegInterop::implementation
         m_forceVideoDecode = forceVideoDecode;
     }
 
+    uint32_t FFmpegInteropMSSConfig::AllowedDecodeErrors()
+    {
+        return m_allowedDecodeErrors;
+    }
+
+    void FFmpegInteropMSSConfig::AllowedDecodeErrors(_In_ uint32_t allowedDecodeErrors)
+    {
+        m_allowedDecodeErrors = allowedDecodeErrors;
+    }
+
     StringMap FFmpegInteropMSSConfig::FFmpegOptions()
     {
         return m_ffmpegOptions;

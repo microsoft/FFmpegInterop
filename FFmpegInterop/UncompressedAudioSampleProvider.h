@@ -25,11 +25,12 @@ namespace winrt::FFmpegInterop::implementation
 		public UncompressedSampleProvider
 	{
 	public:
-		UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader);
+		UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors);
 
 		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
 
 	protected:
+		void Flush() noexcept override;
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
 
 	private:
@@ -39,5 +40,6 @@ namespace winrt::FFmpegInterop::implementation
 
 		int64_t m_minAudioSampleDur{ 0 };
 		SwrContext_ptr m_swrContext;
+		bool m_lastDecodeFailed{ false };
 	};
 }

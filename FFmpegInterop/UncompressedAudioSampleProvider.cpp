@@ -26,8 +26,8 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
-		UncompressedSampleProvider(formatContext, stream, reader),
+	UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
+		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors),
 		m_minAudioSampleDur(ConvertToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base))
 	{
 		if (m_codecContext->sample_fmt != AV_SAMPLE_FMT_S16)
@@ -57,6 +57,13 @@ namespace winrt::FFmpegInterop::implementation
 		// it would set encoding properties with values for the compressed audio type.
 	}
 
+	void UncompressedAudioSampleProvider::Flush() noexcept
+	{
+		UncompressedSampleProvider::Flush();
+
+		m_lastDecodeFailed = false;
+	}
+
 	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedAudioSampleProvider::GetSampleData()
 	{
 		// Decode samples until we reach the minimum sample duration threshold or EOS
@@ -64,7 +71,16 @@ namespace winrt::FFmpegInterop::implementation
 		int64_t pts{ -1 };
 		int64_t dur{ 0 };
 		bool firstDecodedSample{ true };
+		uint32_t decodeErrors{ 0 };
 		vector<uint8_t> compactedSampleBuf;
+
+		// Check if we had a decode error on the last GetSampleData() call
+		if (m_lastDecodeFailed)
+		{
+			decodeErrors++;
+			m_isDiscontinuous = true;
+			m_lastDecodeFailed = false;
+		}
 
 		while (true)
 		{
@@ -73,25 +89,71 @@ namespace winrt::FFmpegInterop::implementation
 			try
 			{
 				frame = GetFrame();
+				decodeErrors = 0;
 			}
 			catch (...)
 			{
 				const hresult hr{ to_hresult() };
-				if (hr != MF_E_END_OF_STREAM)
+				switch (hr)
 				{
-					// Unexpected error. Rethrow.
+				case MF_E_END_OF_STREAM:
+					// We've reached EOF
+					if (firstDecodedSample)
+					{
+						// Nothing more to do
+						throw;
+					}
+					else
+					{
+						// Return the decoded sample data we have
+						sampleBuf = make<FFmpegInteropBuffer>(move(compactedSampleBuf));
+					}
+
+					break;
+
+				case E_OUTOFMEMORY:
+					// Always treat as fatal error
 					throw;
+
+				default:
+					// Unexpected decode error
+					if (decodeErrors < m_allowedDecodeErrors)
+					{
+						decodeErrors++;
+						TraceLoggingWrite(g_FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+							TraceLoggingValue(m_stream->index, "StreamId"),
+							TraceLoggingValue(decodeErrors, "DecodeErrorCount"),
+							TraceLoggingValue(m_allowedDecodeErrors, "DecodeErrorLimit"));
+
+						if (firstDecodedSample)
+						{
+							m_isDiscontinuous = true;
+						}
+						else
+						{
+							m_lastDecodeFailed = true;
+
+							// Return the decoded sample data we have
+							sampleBuf = make<FFmpegInteropBuffer>(move(compactedSampleBuf));
+						}
+					}
+					else
+					{
+						throw;
+					}
+
+					break;
 				}
-				else if (firstDecodedSample)
+
+				if (sampleBuf != nullptr)
 				{
-					// No decoded samples. Rethrow.
-					throw;
+					// Return the decoded sample data we have
+					break;
 				}
 				else
 				{
-					// Return the decoded sample data we have
-					sampleBuf = make<FFmpegInteropBuffer>(move(compactedSampleBuf));
-					break;
+					// Try to decode a sample again
+					continue;
 				}
 			}
 
@@ -111,7 +173,7 @@ namespace winrt::FFmpegInterop::implementation
 				int bufSize{ av_samples_alloc(&buf, nullptr, frame->channels, frame->nb_samples, AV_SAMPLE_FMT_S16, 0) };
 				THROW_HR_IF_FFMPEG_FAILED(bufSize);
 
-				int resampledSamplesCount{ swr_convert(m_swrContext.get(), &buf, bufSize, const_cast<const uint8_t**>(frame->extended_data), frame->nb_samples) };
+				int resampledSamplesCount{ swr_convert(m_swrContext.get(), &buf, frame->nb_samples, const_cast<const uint8_t**>(frame->extended_data), frame->nb_samples) };
 				AVBlob_ptr resampledData{ exchange(buf, nullptr) };
 				THROW_HR_IF_FFMPEG_FAILED(resampledSamplesCount);
 

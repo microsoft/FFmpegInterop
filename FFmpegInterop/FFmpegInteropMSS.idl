@@ -24,6 +24,7 @@ namespace FFmpegInterop
 		
 		Boolean ForceAudioDecode;
 		Boolean ForceVideoDecode;
+		UInt32 AllowedDecodeErrors;
 		Windows.Foundation.Collections.StringMap FFmpegOptions{ get; };
 	}
 

@@ -27,8 +27,8 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
-		UncompressedSampleProvider(formatContext, stream, reader),
+	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
+		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors),
 		m_outputWidth(m_codecContext->width),
 		m_outputHeight(m_codecContext->height)
 	{
@@ -84,7 +84,46 @@ namespace winrt::FFmpegInterop::implementation
 	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedVideoSampleProvider::GetSampleData()
 	{
 		// Get the next decoded sample
-		AVFrame_ptr frame{ GetFrame() };
+		AVFrame_ptr frame;
+		uint32_t decodeErrors{ 0 };
+
+		while (true)
+		{
+			try
+			{
+				frame = GetFrame();
+				break;
+			}
+			catch (...)
+			{
+				const hresult hr{ to_hresult() };
+				switch (hr)
+				{
+				case MF_E_END_OF_STREAM: // We've reached EOF. Nothing more to do.
+				case E_OUTOFMEMORY: // Always treat as fatal error
+					throw;
+
+				default:
+					// Unexpected decode error
+					if (decodeErrors < m_allowedDecodeErrors)
+					{
+						decodeErrors++;
+						TraceLoggingWrite(g_FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+							TraceLoggingValue(m_stream->index, "StreamId"),
+							TraceLoggingValue(decodeErrors, "DecodeErrorCount"),
+							TraceLoggingValue(m_allowedDecodeErrors, "DecodeErrorLimit"));
+
+						m_isDiscontinuous = true;
+					}
+					else
+					{
+						throw;
+					}
+
+					break;
+				}
+			}
+		}
 
 		// Check for dynamic format changes
 		vector<pair<GUID, IInspectable>> formatChanges{ CheckForFormatChanges(frame.get()) };

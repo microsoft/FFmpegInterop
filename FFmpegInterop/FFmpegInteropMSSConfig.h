@@ -31,11 +31,16 @@ namespace winrt::FFmpegInterop::implementation
         void ForceAudioDecode(_In_ bool forceAudioDecode);
         bool ForceVideoDecode();
         void ForceVideoDecode(bool forceVideoDecode);
+        uint32_t AllowedDecodeErrors();
+        void AllowedDecodeErrors(_In_ uint32_t allowedDecodeErrors);
         Windows::Foundation::Collections::StringMap FFmpegOptions();
+
+        static constexpr uint32_t kAllowedDecodeErrorsDefault{ 10 };
 
     private:
         bool m_forceAudioDecode{ false };
         bool m_forceVideoDecode{ false };
+        uint32_t m_allowedDecodeErrors{ kAllowedDecodeErrorsDefault };
         Windows::Foundation::Collections::StringMap m_ffmpegOptions;
     };
 }

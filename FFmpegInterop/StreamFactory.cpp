@@ -199,7 +199,7 @@ namespace winrt::FFmpegInterop::implementation
 		default:
 			constexpr uint32_t bitsPerSample{ 16 };
 			audioEncProp = AudioEncodingProperties::CreatePcm(stream->codecpar->sample_rate, stream->codecpar->channels, bitsPerSample);
-			audioSampleProvider = make_unique<UncompressedAudioSampleProvider>(formatContext, stream, reader);
+			audioSampleProvider = make_unique<UncompressedAudioSampleProvider>(formatContext, stream, reader, config != nullptr ? config.AllowedDecodeErrors() : FFmpegInteropMSSConfig::kAllowedDecodeErrorsDefault);
 			break;
 		}
 
@@ -299,7 +299,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		default:
 			videoEncProp = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12(), stream->codecpar->width, stream->codecpar->height);
-			videoSampleProvider = make_unique<UncompressedVideoSampleProvider>(formatContext, stream, reader);
+			videoSampleProvider = make_unique<UncompressedVideoSampleProvider>(formatContext, stream, reader, config != nullptr ? config.AllowedDecodeErrors() : FFmpegInteropMSSConfig::kAllowedDecodeErrorsDefault);
 			break;
 		}
 

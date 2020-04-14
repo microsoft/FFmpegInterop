@@ -24,8 +24,9 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
-		SampleProvider(formatContext, stream, reader)
+	UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
+		SampleProvider(formatContext, stream, reader),
+		m_allowedDecodeErrors(allowedDecodeErrors)
 	{
 		// Create a new decoding context
 		AVCodec* codec{ avcodec_find_decoder(stream->codecpar->codec_id) };
@@ -50,7 +51,7 @@ namespace winrt::FFmpegInterop::implementation
 		SampleProvider::Flush();
 
 		avcodec_flush_buffers(m_codecContext.get());
-		m_draining = false;
+		m_sendInput = true;
 	}
 
 	AVFrame_ptr UncompressedSampleProvider::GetFrame()
@@ -61,7 +62,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		while (true)
 		{
-			if (!m_draining)
+			if (m_sendInput)
 			{
 				// Send a packet to the decoder and see if it can produce a frame
 				AVPacket_ptr packet;
@@ -72,11 +73,10 @@ namespace winrt::FFmpegInterop::implementation
 				}
 				catch (...)
 				{
-					HRESULT hr{ to_hresult() };
+					hresult hr{ to_hresult() };
 					if (hr == MF_E_END_OF_STREAM)
 					{
 						// We're at EOF. Send a null packet to the decoder to enter draining mode.
-						m_draining = true;
 					}
 					else
 					{
@@ -85,6 +85,7 @@ namespace winrt::FFmpegInterop::implementation
 				}
 
 				THROW_HR_IF_FFMPEG_FAILED(avcodec_send_packet(m_codecContext.get(), packet.get()));
+				m_sendInput = false;
 			}
 
 			int decodeResult{ avcodec_receive_frame(m_codecContext.get(), frame.get()) };
@@ -93,6 +94,8 @@ namespace winrt::FFmpegInterop::implementation
 				// The decoder needs more data to produce a frame
 				TraceLoggingWrite(g_FFmpegInteropProvider, "DecoderNeedsMoreInput", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(m_stream->index, "StreamId"));
+
+				m_sendInput = true;
 				continue;
 			}
 			THROW_HR_IF_FFMPEG_FAILED(decodeResult);

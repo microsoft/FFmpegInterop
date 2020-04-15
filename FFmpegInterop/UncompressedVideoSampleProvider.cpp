@@ -18,140 +18,187 @@
 
 #include "pch.h"
 #include "UncompressedVideoSampleProvider.h"
-#include <mfapi.h>
 
-extern "C"
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media::Core;
+using namespace winrt::Windows::Media::MediaProperties;
+using namespace winrt::Windows::Storage::Streams;
+using namespace std;
+
+namespace winrt::FFmpegInterop::implementation
 {
-#include <libavutil/imgutils.h>
-}
-
-
-using namespace FFmpegInterop;
-
-UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(
-	FFmpegReader^ reader,
-	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_pSwsCtx(nullptr)
-{
-	for (int i = 0; i < 4; i++)
+	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
+		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors),
+		m_outputWidth(m_codecContext->width),
+		m_outputHeight(m_codecContext->height)
 	{
-		m_rgVideoBufferLineSize[i] = 0;
-		m_rgVideoBufferData[i] = nullptr;
+		if (m_codecContext->pix_fmt != AV_PIX_FMT_NV12)
+		{
+			InitScaler();
+		}
 	}
-}
 
-HRESULT UncompressedVideoSampleProvider::AllocateResources()
-{
-	HRESULT hr = S_OK;
-	hr = UncompressedSampleProvider::AllocateResources();
-	if (SUCCEEDED(hr))
+	void UncompressedVideoSampleProvider::InitScaler()
 	{
-		// Setup software scaler to convert any decoder pixel format (e.g. YUV420P) to NV12 that is supported in Windows & Windows Phone MediaElement
-		m_pSwsCtx = sws_getContext(
-			m_pAvCodecCtx->width,
-			m_pAvCodecCtx->height,
-			m_pAvCodecCtx->pix_fmt,
-			m_pAvCodecCtx->width,
-			m_pAvCodecCtx->height,
+		// Setup software scaler to convert the pixel format to NV12
+		m_swsContext.reset(sws_getContext(
+			m_outputWidth,
+			m_outputHeight,
+			m_codecContext->pix_fmt,
+			m_outputWidth,
+			m_outputHeight,
 			AV_PIX_FMT_NV12,
 			SWS_BICUBIC,
-			NULL,
-			NULL,
-			NULL);
+			nullptr,
+			nullptr,
+			nullptr));
+		THROW_IF_NULL_ALLOC(m_swsContext);
 
-		if (m_pSwsCtx == nullptr)
+		THROW_HR_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, AV_PIX_FMT_NV12, m_outputWidth));
+
+		// Create a buffer pool
+		const int requiredBufferSize{ av_image_get_buffer_size(AV_PIX_FMT_NV12, m_outputWidth, m_outputHeight, 1) };
+		THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
+
+		m_bufferPool.reset(av_buffer_pool_init(requiredBufferSize, nullptr));
+		THROW_IF_NULL_ALLOC(m_bufferPool);
+	}
+
+	void UncompressedVideoSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
+	{
+		SampleProvider::SetEncodingProperties(encProp, setFormatUserData);
+
+		VideoEncodingProperties videoEncProp{ encProp.as<VideoEncodingProperties>() };
+
+		if (m_codecContext->framerate.num != 0 && m_codecContext->framerate.den != 0)
 		{
-			hr = E_OUTOFMEMORY;
+			MediaRatio frameRate{ videoEncProp.FrameRate() };
+			frameRate.Numerator(m_codecContext->framerate.num);
+			frameRate.Denominator(m_codecContext->framerate.den);
 		}
+
+		MediaPropertySet videoProp{ videoEncProp.Properties() };
+		videoProp.Insert(MF_MT_INTERLACE_MODE, PropertyValue::CreateUInt32(MFVideoInterlace_MixedInterlaceOrProgressive));
 	}
 
-	if (SUCCEEDED(hr))
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedVideoSampleProvider::GetSampleData()
 	{
-		m_pAvFrame = av_frame_alloc();
-		if (m_pAvFrame == nullptr)
+		// Get the next decoded sample
+		AVFrame_ptr frame;
+		uint32_t decodeErrors{ 0 };
+
+		while (true)
 		{
-			hr = E_OUTOFMEMORY;
+			try
+			{
+				frame = GetFrame();
+				break;
+			}
+			catch (...)
+			{
+				const hresult hr{ to_hresult() };
+				switch (hr)
+				{
+				case MF_E_END_OF_STREAM: // We've reached EOF. Nothing more to do.
+				case E_OUTOFMEMORY: // Always treat as fatal error
+					throw;
+
+				default:
+					// Unexpected decode error
+					if (decodeErrors < m_allowedDecodeErrors)
+					{
+						decodeErrors++;
+						TraceLoggingWrite(g_FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+							TraceLoggingValue(m_stream->index, "StreamId"),
+							TraceLoggingValue(decodeErrors, "DecodeErrorCount"),
+							TraceLoggingValue(m_allowedDecodeErrors, "DecodeErrorLimit"));
+
+						m_isDiscontinuous = true;
+					}
+					else
+					{
+						throw;
+					}
+
+					break;
+				}
+			}
 		}
-	}
 
-	if (SUCCEEDED(hr))
-	{
-		if (av_image_alloc(m_rgVideoBufferData, m_rgVideoBufferLineSize, m_pAvCodecCtx->width, m_pAvCodecCtx->height, AV_PIX_FMT_NV12, 1) < 0)
+		// Check for dynamic format changes
+		vector<pair<GUID, IInspectable>> formatChanges{ CheckForFormatChanges(frame.get()) };
+
+		// Get the sample buffer
+		IBuffer sampleBuf{ nullptr };
+		if (m_swsContext == nullptr)
 		{
-			hr = E_FAIL;
-		}
-	}
-
-	return hr;
-}
-
-UncompressedVideoSampleProvider::~UncompressedVideoSampleProvider()
-{
-	if (m_pAvFrame)
-	{
-		av_frame_free(&m_pAvFrame);
-	}
-
-	if (m_rgVideoBufferData)
-	{
-		av_freep(m_rgVideoBufferData);
-	}
-}
-
-HRESULT UncompressedVideoSampleProvider::DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration)
-{
-	HRESULT hr = S_OK;
-	hr = UncompressedSampleProvider::DecodeAVPacket(dataWriter, avPacket, framePts, frameDuration);
-
-	// Don't set a timestamp on S_FALSE
-	if (hr == S_OK)
-	{
-		// Try to get the best effort timestamp for the frame.
-		framePts = m_pAvFrame->best_effort_timestamp;
-		m_interlaced_frame = m_pAvFrame->interlaced_frame == 1;
-		m_top_field_first = m_pAvFrame->top_field_first == 1;
-	}
-
-	return hr;
-}
-
-MediaStreamSample^ UncompressedVideoSampleProvider::GetNextSample()
-{
-	MediaStreamSample^ sample = MediaSampleProvider::GetNextSample();
-
-	if (sample != nullptr)
-	{
-		if (m_interlaced_frame)
-		{
-			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, TRUE);
-			sample->ExtendedProperties->Insert(MFSampleExtension_BottomFieldFirst, m_top_field_first ? safe_cast<Platform::Object^>(FALSE) : TRUE);
-			sample->ExtendedProperties->Insert(MFSampleExtension_RepeatFirstField, safe_cast<Platform::Object^>(FALSE));
+			// Image is already in the desired output format
+			sampleBuf = make<FFmpegInteropBuffer>(frame->buf[0]);
 		}
 		else
 		{
-			sample->ExtendedProperties->Insert(MFSampleExtension_Interlaced, safe_cast<Platform::Object^>(FALSE));
+			// Scale the image to the desired output format
+			AVBufferRef_ptr bufferRef{ av_buffer_pool_get(m_bufferPool.get()) };
+			THROW_IF_NULL_ALLOC(bufferRef);
+
+			uint8_t* data[4]{ };
+			const int requiredBufferSize{ av_image_fill_pointers(data, AV_PIX_FMT_NV12, frame->height, bufferRef->data, m_lineSizes) };
+			THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
+			THROW_HR_IF(MF_E_UNEXPECTED, requiredBufferSize != bufferRef->size);
+
+			THROW_HR_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), frame->data, frame->linesize, 0, frame->height, data, m_lineSizes));
+
+			sampleBuf = make<FFmpegInteropBuffer>(move(bufferRef));
 		}
+
+		// Get the sample properties
+		vector<pair<GUID, IInspectable>> properties{ GetSampleProperties(frame.get()) };
+
+		return { move(sampleBuf), frame->best_effort_timestamp, frame->pkt_duration, move(properties), move(formatChanges) };
 	}
 
-	return sample;
-}
-
-HRESULT UncompressedVideoSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
-{
-	// Convert decoded video pixel format to NV12 using FFmpeg software scaler
-	if (sws_scale(m_pSwsCtx, (const uint8_t **)(m_pAvFrame->data), m_pAvFrame->linesize, 0, m_pAvCodecCtx->height, m_rgVideoBufferData, m_rgVideoBufferLineSize) < 0)
+	vector<pair<GUID, IInspectable>> UncompressedVideoSampleProvider::CheckForFormatChanges(_In_ const AVFrame* frame)
 	{
-		return E_FAIL;
+		vector<pair<GUID, IInspectable>> formatChanges;
+
+		// Check if the resolution changed
+		if (frame->width != m_outputWidth || frame->height != m_outputHeight)
+		{
+			TraceLoggingWrite(g_FFmpegInteropProvider, "ResolutionChanged", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingValue(m_stream->index, "StreamId"),
+				TraceLoggingValue(m_outputWidth, "OldWidth"),
+				TraceLoggingValue(m_outputHeight, "OldHeight"),
+				TraceLoggingValue(frame->width, "NewWidth"),
+				TraceLoggingValue(frame->height, "NewHeight"));
+
+			m_outputWidth = frame->width;
+			m_outputHeight = frame->height;
+			formatChanges.emplace_back(MF_MT_FRAME_SIZE, PropertyValue::CreateUInt64(Pack2UINT32AsUINT64(m_outputWidth, m_outputHeight)));
+
+			if (m_swsContext != nullptr)
+			{
+				InitScaler();
+			}
+		}
+
+		return formatChanges;
 	}
 
-	auto YBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[0], m_rgVideoBufferLineSize[0] * m_pAvCodecCtx->height);
-	auto UVBuffer = ref new Platform::Array<uint8_t>(m_rgVideoBufferData[1], m_rgVideoBufferLineSize[1] * m_pAvCodecCtx->height / 2);
-	dataWriter->WriteBytes(YBuffer);
-	dataWriter->WriteBytes(UVBuffer);
-	av_frame_unref(m_pAvFrame);
-	av_frame_free(&m_pAvFrame);
+	vector<pair<GUID, IInspectable>> UncompressedVideoSampleProvider::GetSampleProperties(_In_ const AVFrame* frame)
+	{
+		vector<pair<GUID, IInspectable>> properties;
 
-	return S_OK;
+		if (frame->interlaced_frame)
+		{
+			properties.emplace_back(MFSampleExtension_Interlaced, PropertyValue::CreateUInt32(true));
+			properties.emplace_back(MFSampleExtension_BottomFieldFirst, PropertyValue::CreateUInt32(!frame->top_field_first));
+			properties.emplace_back(MFSampleExtension_RepeatFirstField, PropertyValue::CreateUInt32(false));
+		}
+		else
+		{
+			properties.emplace_back(MFSampleExtension_Interlaced, PropertyValue::CreateUInt32(false));
+		}
+
+		return properties;
+	}
 }

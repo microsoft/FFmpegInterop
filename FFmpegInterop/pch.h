@@ -18,13 +18,64 @@
 
 #pragma once
 
-#include <collection.h>
-#include <ppltasks.h>
-#include <mferror.h>
-
-// Disable debug string output on non-debug build
-#if !_DEBUG
-#define DebugMessage(x)
-#else
-#define DebugMessage(x) OutputDebugString(x)
+#ifndef NOMINMAX
+#define NOMINMAX // Don't define min()/max() macros in Windows.h
 #endif
+
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+
+// WIL
+#include <wil/cppwinrt.h>
+#include <wil/result.h>
+
+// WinRT
+#include <winrt/base.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Storage.Streams.h>
+#include <winrt/Windows.Media.Core.h>
+#include <winrt/Windows.Media.MediaProperties.h>
+#include <robuffer.h>
+
+// Windows
+#include <Windows.h>
+#include <evntrace.h>
+#include <TraceLoggingProvider.h>
+#include <TraceLoggingActivity.h>
+#include <shcore.h>
+
+// MF
+#include <mfidl.h>
+#include <mfapi.h>
+#include <mferror.h>
+#include <codecapi.h>
+#include <wmcodecdsp.h>
+#include <amvideo.h>
+
+// FFmpeg
+extern "C"
+{
+#include <libavformat/avformat.h>
+#include <libavutil/log.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/mastering_display_metadata.h>
+#include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
+}
+
+// STL
+#include <algorithm>
+#include <memory>
+#include <functional>
+#include <deque>
+#include <map>
+#include <mutex>
+#include <tuple>
+#include <limits>
+#include <codecvt> // TODO: Deprecated in C++17. Replace when an alternative is available.
+#include <cstdlib>
+
+// FFmpegInterop
+#include "Tracing.h"
+#include "Utility.h"
+#include "FFmpegInteropBuffer.h"

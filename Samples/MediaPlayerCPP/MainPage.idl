@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2015 Microsoft Corporation
+//	Copyright 2019 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -16,26 +16,16 @@
 //
 //*****************************************************************************
 
-#pragma once
-#include "MediaSampleProvider.h"
-
-namespace FFmpegInterop
+namespace MediaPlayerCPP
 {
-	ref class H264AVCSampleProvider :
-		public MediaSampleProvider
-	{
-	public:
-		virtual ~H264AVCSampleProvider();
+    [default_interface]
+    runtimeclass MainPage : Windows.UI.Xaml.Controls.Page
+    {
+        MainPage();
 
-	private:
-		HRESULT WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket);
-		HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter);
-
-	internal:
-		H264AVCSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-	};
+        void OpenFilePicker(Object sender, Windows.UI.Xaml.RoutedEventArgs args);
+        void OnFileActivated(Windows.Storage.StorageFile file);
+        void OnUriBoxKeyUp(Object sender, Windows.UI.Xaml.Input.KeyRoutedEventArgs args);
+        void OnMediaFailed(Object sender, Windows.UI.Xaml.ExceptionRoutedEventArgs args);
+    }
 }

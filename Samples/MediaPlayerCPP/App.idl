@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2017 Microsoft Corporation
+//	Copyright 2019 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -16,43 +16,7 @@
 //
 //*****************************************************************************
 
-#pragma once
-using namespace Platform;
-using namespace Windows::Storage::Streams;
-
-namespace FFmpegInterop
+namespace MediaPlayerCPP
 {
-	public ref class MediaThumbnailData sealed
-	{
-		IBuffer^ _buffer;
-		String^ _extension;
 
-	public:
-
-		property IBuffer^ Buffer
-		{
-			IBuffer^ get()
-			{
-				return _buffer;
-			}
-		}
-		property String^ Extension
-		{
-			String^ get()
-			{
-				return _extension;
-			}
-		}
-
-		MediaThumbnailData(IBuffer^ buffer, String^ extension)
-		{
-			this->_buffer = buffer;
-			this->_extension = extension;
-		}
-	private: ~MediaThumbnailData()
-		{
-			delete _buffer;
-			delete _extension;
-		}
-	};
 }

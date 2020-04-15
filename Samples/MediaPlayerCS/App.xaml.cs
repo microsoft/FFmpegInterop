@@ -17,29 +17,20 @@
 //*****************************************************************************
 
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using FFmpegInterop;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using Windows.Storage;
 
 namespace MediaPlayerCS
 {
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
-    sealed partial class App : Application, ILogProvider
+    sealed partial class App : Application
     {
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -47,33 +38,47 @@ namespace MediaPlayerCS
         /// </summary>
         public App()
         {
-            this.InitializeComponent();
-            this.Suspending += OnSuspending;
-            FFmpegInteropLogging.SetLogLevel(LogLevel.Info);
-            FFmpegInteropLogging.SetLogProvider(this);
+            InitializeComponent();
+            Suspending += OnSuspending;
+
+            FFmpegInteropLogging.Log += Log;
         }
 
-        public void Log(LogLevel level, string message)
+        public static void Log(object sender, FFmpegInterop.LogEventArgs args)
         {
-            System.Diagnostics.Debug.WriteLine("FFmpeg ({0}): {1}", level, message);
+            System.Diagnostics.Debug.WriteLine("FFmpeg ({0}): {1}", args.Level, args.Message);
         }
 
         /// <summary>
         /// Invoked when the application is launched normally by the end user.  Other entry points
         /// will be used such as when the application is launched to open a specific file.
         /// </summary>
-        /// <param name="e">Details about the launch request and process.</param>
-        protected override void OnLaunched(LaunchActivatedEventArgs e)
+        /// <param name="args">Details about the launch request and process.</param>
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
-
-#if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
+            if (!args.PrelaunchActivated)
             {
-                this.DebugSettings.EnableFrameRateCounter = true;
+                InitRootFrame();
             }
-#endif
+        }
 
-            Frame rootFrame = Window.Current.Content as Frame;
+        protected override void OnFileActivated(FileActivatedEventArgs args)
+        {
+            var files = args.Files;
+            if (files.Count > 0)
+            {
+                InitRootFrame();
+
+                var rootFrame = Window.Current.Content as Frame;
+                var mainPage = rootFrame.Content as MainPage;
+
+                mainPage.OnFileActivated(files[0] as StorageFile);
+            }
+        }
+
+        private void InitRootFrame()
+        {
+            var rootFrame = Window.Current.Content as Frame;
 
             // Do not repeat app initialization when the Window already has content,
             // just ensure that the window is active
@@ -84,11 +89,6 @@ namespace MediaPlayerCS
 
                 rootFrame.NavigationFailed += OnNavigationFailed;
 
-                if (e.PreviousExecutionState == ApplicationExecutionState.Terminated)
-                {
-                    //TODO: Load state from previously suspended application
-                }
-
                 // Place the frame in the current Window
                 Window.Current.Content = rootFrame;
             }
@@ -98,8 +98,9 @@ namespace MediaPlayerCS
                 // When the navigation stack isn't restored navigate to the first page,
                 // configuring the new page by passing required information as a navigation
                 // parameter
-                rootFrame.Navigate(typeof(MainPage), e.Arguments);
+                rootFrame.Navigate(typeof(MainPage));
             }
+
             // Ensure the current window is active
             Window.Current.Activate();
         }
@@ -108,10 +109,10 @@ namespace MediaPlayerCS
         /// Invoked when Navigation to a certain page fails
         /// </summary>
         /// <param name="sender">The Frame which failed navigation</param>
-        /// <param name="e">Details about the navigation failure</param>
-        void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
+        /// <param name="args">Details about the navigation failure</param>
+        void OnNavigationFailed(object sender, NavigationFailedEventArgs args)
         {
-            throw new Exception("Failed to load Page " + e.SourcePageType.FullName);
+            throw new Exception("Failed to load Page " + args.SourcePageType.FullName);
         }
 
         /// <summary>
@@ -120,11 +121,10 @@ namespace MediaPlayerCS
         /// of memory still intact.
         /// </summary>
         /// <param name="sender">The source of the suspend request.</param>
-        /// <param name="e">Details about the suspend request.</param>
-        private void OnSuspending(object sender, SuspendingEventArgs e)
+        /// <param name="args">Details about the suspend request.</param>
+        private void OnSuspending(object sender, SuspendingEventArgs args)
         {
-            var deferral = e.SuspendingOperation.GetDeferral();
-            //TODO: Save application state and stop any background activity
+            var deferral = args.SuspendingOperation.GetDeferral();
             deferral.Complete();
         }
     }

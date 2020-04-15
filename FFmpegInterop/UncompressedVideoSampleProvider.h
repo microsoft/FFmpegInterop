@@ -17,36 +17,31 @@
 //*****************************************************************************
 
 #pragma once
+
 #include "UncompressedSampleProvider.h"
 
-extern "C"
+namespace winrt::FFmpegInterop::implementation
 {
-#include <libswscale/swscale.h>
-}
-
-
-namespace FFmpegInterop
-{
-	ref class UncompressedVideoSampleProvider: UncompressedSampleProvider
+	class UncompressedVideoSampleProvider :
+		public UncompressedSampleProvider
 	{
 	public:
-		virtual ~UncompressedVideoSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
-	internal:
-		UncompressedVideoSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT AllocateResources() override;
+		UncompressedVideoSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors);
+
+		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
+
+	protected:
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
 
 	private:
-		SwsContext* m_pSwsCtx;
-		int m_rgVideoBufferLineSize[4];
-		uint8_t* m_rgVideoBufferData[4];
-		bool m_interlaced_frame;
-		bool m_top_field_first;
+		void InitScaler();
+		std::vector<std::pair<GUID, Windows::Foundation::IInspectable>> CheckForFormatChanges(_In_ const AVFrame* frame);
+		std::vector<std::pair<GUID, Windows::Foundation::IInspectable>> GetSampleProperties(_In_ const AVFrame* frame);
+
+		int m_outputWidth{ 0 };
+		int m_outputHeight{ 0 };
+		SwsContext_ptr m_swsContext;
+		int m_lineSizes[4]{ 0, 0, 0, 0};
+		AVBufferPool_ptr m_bufferPool;
 	};
 }
-

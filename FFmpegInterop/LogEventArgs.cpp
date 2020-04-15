@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2017 Microsoft Corporation
+//	Copyright 2020 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -16,28 +16,28 @@
 //
 //*****************************************************************************
 
-#pragma once
+#include "pch.h"
+#include "LogEventArgs.h"
+#include "LogEventArgs.g.cpp"
 
-using namespace Platform;
+using namespace std;
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
-	// Level values from ffmpeg: libavutil/log.h
-	public enum class LogLevel
-	{
-		Panic = 0,
-		Fatal = 8,
-		Error = 16,
-		Warning = 24,
-		Info = 32,
-		Verbose = 40,
-		Debug = 48,
-		Trace = 56
-	};
+    LogEventArgs::LogEventArgs(FFmpegInterop::LogLevel level, hstring message) :
+        m_level(level),
+        m_message(move(message))
+    {
 
-	public interface class ILogProvider
-	{
-		void Log(LogLevel level, String^ message);
-	};
+    }
+
+    FFmpegInterop::LogLevel LogEventArgs::Level()
+    {
+        return m_level;
+    }
+
+    hstring LogEventArgs::Message()
+    {
+        return m_message;
+    }
 }
-

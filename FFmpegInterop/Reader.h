@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 //
 //	Copyright 2015 Microsoft Corporation
 //
@@ -16,28 +16,21 @@
 //
 //*****************************************************************************
 
-//
-// MainPage.xaml.h
-// Declaration of the MainPage class.
-//
-
 #pragma once
 
-#include "MainPage.g.h"
-
-namespace MediaPlayerCPP
+namespace winrt::FFmpegInterop::implementation
 {
-	public ref class MainPage sealed
+	class SampleProvider;
+
+	class Reader
 	{
 	public:
-		MainPage();
+		Reader(_In_ AVFormatContext* formatContext, _In_ const std::map<int, SampleProvider*>& streamMap);
+
+		void ReadPacket();
 
 	private:
-		void OpenLocalFile(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-		void URIBoxKeyUp(Platform::Object^ sender, Windows::UI::Xaml::Input::KeyRoutedEventArgs^ e);
-		void MediaFailed(Platform::Object^ sender, Windows::UI::Xaml::ExceptionRoutedEventArgs^ e);
-		void DisplayErrorMessage(Platform::String^ message);
-
-		FFmpegInterop::FFmpegInteropMSS^ FFmpegMSS;
+		AVFormatContext* m_formatContext{ nullptr };
+		const std::map<int, SampleProvider*>& m_streamIdMap;
 	};
 }

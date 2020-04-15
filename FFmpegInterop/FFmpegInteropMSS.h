@@ -17,148 +17,56 @@
 //*****************************************************************************
 
 #pragma once
-#include <queue>
-#include <mutex>
-#include "FFmpegReader.h"
-#include "MediaSampleProvider.h"
-#include "MediaThumbnailData.h"
 
-using namespace Platform;
-using namespace Windows::Foundation;
-using namespace Windows::Foundation::Collections;
-using namespace Windows::Media::Core;
+#include "FFmpegInteropMSS.g.h"
+#include "Reader.h"
 
-extern "C"
+namespace winrt::FFmpegInterop::implementation
 {
-#include <libavformat/avformat.h>
-}
-
-namespace FFmpegInterop
-{
-	public ref class FFmpegInteropMSS sealed
+	class FFmpegInteropMSS :
+		public FFmpegInteropMSST<FFmpegInteropMSS>
 	{
 	public:
-		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss);
-		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
-		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromStream(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode);
-		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
-		static FFmpegInteropMSS^ CreateFFmpegInteropMSSFromUri(String^ uri, bool forceAudioDecode, bool forceVideoDecode);
-		MediaThumbnailData^ ExtractThumbnail();
+		static void CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static void CreateFromUri(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
-		// Contructor
-		MediaStreamSource^ GetMediaStreamSource();
-		virtual ~FFmpegInteropMSS();
-
-		// Properties
-		property AudioStreamDescriptor^ AudioDescriptor
-		{
-			AudioStreamDescriptor^ get()
-			{
-				return audioStreamDescriptor;
-			};
-		};
-		property VideoStreamDescriptor^ VideoDescriptor
-		{
-			VideoStreamDescriptor^ get()
-			{
-				return videoStreamDescriptor;
-			};
-		};
-		property TimedMetadataStreamDescriptor^ SubtitleDescriptor
-		{
-			TimedMetadataStreamDescriptor^ get()
-			{
-				return subtitleStreamDescriptor;
-			};
-		};
-		property TimeSpan Duration
-		{
-			TimeSpan get()
-			{
-				return mediaDuration;
-			};
-		};
-		property String^ VideoCodecName
-		{
-			String^ get()
-			{
-				return videoCodecName;
-			};
-		};
-		property String^ AudioCodecName
-		{
-			String^ get()
-			{
-				return audioCodecName;
-			};
-		};
-		property String^ SubtitleCodecName
-		{
-			String^ get()
-			{
-				return subtitleCodecName;
-			};
-		};
-
-		void ReleaseFileStream();
-
-	internal:
-		int ReadPacket();
+		FFmpegInteropMSS(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		FFmpegInteropMSS(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
 	private:
-		FFmpegInteropMSS();
+		FFmpegInteropMSS(_In_ const Windows::Media::Core::MediaStreamSource& mss);
 
-		HRESULT CreateMediaStreamSource(IRandomAccessStream^ stream, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions, MediaStreamSource^ mss);
-		HRESULT CreateMediaStreamSource(String^ uri, bool forceAudioDecode, bool forceVideoDecode, PropertySet^ ffmpegOptions);
-		HRESULT InitFFmpegContext(bool forceAudioDecode, bool forceVideoDecode);
-		HRESULT CreateAudioStreamDescriptor(bool forceAudioDecode);
-		HRESULT CreateAudioStreamDescriptorFromParameters(const AVCodecParameters* avCodecParams);
-		HRESULT CreateVideoStreamDescriptor(bool forceVideoDecode);
-		HRESULT CreateSubtitleStreamDescriptor(const AVStream* avStream);
-		HRESULT ConvertCodecName(const char* codecName, String^ *outputCodecName);
-		HRESULT ParseOptions(PropertySet^ ffmpegOptions);
-		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
-		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
-		void OnSwitchStreamsRequested(MediaStreamSource ^sender, MediaStreamSourceSwitchStreamsRequestedEventArgs ^args);
+		void OpenFile(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		void OpenFile(_In_z_ const char* uri, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
-		MediaStreamSource^ mss;
-		EventRegistrationToken startingRequestedToken;
-		EventRegistrationToken sampleRequestedToken;
-		EventRegistrationToken switchStreamsRequestedToken;
+		void InitFFmpegContext(_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
-	internal:
-		AVDictionary* avDict;
-		AVIOContext* avIOCtx;
-		AVFormatContext* avFormatCtx;
-		AVCodecContext* avAudioCodecCtx;
-		AVCodecContext* avVideoCodecCtx;
+		void OnStarting(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceStartingEventArgs& args);
+		void OnSampleRequested(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs& args);
+		void OnSwitchStreamsRequested(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceSwitchStreamsRequestedEventArgs& args);
+		void OnClosed(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceClosedEventArgs& args);
 
-	private:
-		AudioStreamDescriptor^ audioStreamDescriptor;
-		VideoStreamDescriptor^ videoStreamDescriptor;
-		TimedMetadataStreamDescriptor^ subtitleStreamDescriptor;
-		int audioStreamIndex;
-		int videoStreamIndex;
-		int subtitleStreamIndex;
-		int thumbnailStreamIndex;
-		bool audioStreamSelected;
-		bool videoStreamSelected;
-		bool subtitleStreamSelected;
-		
-		bool rotateVideo;
-		int rotationAngle;
-		std::recursive_mutex mutexGuard;
-		
-		MediaSampleProvider^ audioSampleProvider;
-		MediaSampleProvider^ videoSampleProvider;
-		MediaSampleProvider^ subtitleSampleProvider;
+		std::mutex m_lock;
+		Windows::Media::Core::MediaStreamSource m_mss; // We hold a circular reference to the provided MSS which we break when the Closed event is fired
+		com_ptr<IStream> m_fileStream;
+		AVIOContext_ptr m_ioContext;
+		AVFormatContext_ptr m_formatContext;
+		Reader m_reader;
+		std::map<Windows::Media::Core::IMediaStreamDescriptor, std::unique_ptr<SampleProvider>> m_streamDescriptorMap;
+		std::map<int, SampleProvider*> m_streamIdMap;
 
-		String^ videoCodecName;
-		String^ audioCodecName;
-		String^ subtitleCodecName;
-		TimeSpan mediaDuration;
-		IStream* fileStreamData;
-		unsigned char* fileStreamBuffer;
-		FFmpegReader^ m_pReader;
+		event_token m_startingEventToken;
+		event_token m_sampleRequestedEventToken;
+		event_token m_switchStreamsRequestedEventToken;
+		event_token m_closedEventToken;
+	};
+}
+
+namespace winrt::FFmpegInterop::factory_implementation
+{
+	struct FFmpegInteropMSS :
+		public FFmpegInteropMSST<FFmpegInteropMSS, implementation::FFmpegInteropMSS>
+	{
+
 	};
 }

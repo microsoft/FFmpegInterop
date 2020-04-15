@@ -17,161 +17,214 @@
 //*****************************************************************************
 
 #include "pch.h"
-
 #include "UncompressedAudioSampleProvider.h"
 
-using namespace FFmpegInterop;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media::MediaProperties;
+using namespace winrt::Windows::Storage::Streams;
+using namespace std;
 
-// Minimum duration for uncompressed audio samples (200 ms)
-const LONGLONG MINAUDIOSAMPLEDURATION = 2000000;
-
-UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
-	FFmpegReader^ reader,
-	AVFormatContext* avFormatCtx,
-	AVCodecContext* avCodecCtx)
-	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_pSwrCtx(nullptr)
+namespace winrt::FFmpegInterop::implementation
 {
-}
-
-HRESULT UncompressedAudioSampleProvider::AllocateResources()
-{
-	HRESULT hr = S_OK;
-	hr = UncompressedSampleProvider::AllocateResources();
-	if (SUCCEEDED(hr))
+	UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
+		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors),
+		m_minAudioSampleDur(ConvertToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base))
 	{
-		// Set default channel layout when the value is unknown (0)
-		int64 inChannelLayout = m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels);
-		int64 outChannelLayout = av_get_default_channel_layout(m_pAvCodecCtx->channels);
-
-		// Set up resampler to convert any PCM format (e.g. AV_SAMPLE_FMT_FLTP) to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element.
-		// Additional logic can be added to avoid resampling PCM data that is already in AV_SAMPLE_FMT_S16_PCM.
-		m_pSwrCtx = swr_alloc_set_opts(
-			NULL,
-			outChannelLayout,
-			AV_SAMPLE_FMT_S16,
-			m_pAvCodecCtx->sample_rate,
-			inChannelLayout,
-			m_pAvCodecCtx->sample_fmt,
-			m_pAvCodecCtx->sample_rate,
-			0,
-			NULL);
-
-		if (!m_pSwrCtx)
+		if (m_codecContext->sample_fmt != AV_SAMPLE_FMT_S16)
 		{
-			hr = E_OUTOFMEMORY;
+			// Set up resampler to convert to AV_SAMPLE_FMT_S16 PCM format
+			int64_t inChannelLayout{ m_codecContext->channel_layout != 0 ? static_cast<int64_t>(m_codecContext->channel_layout) : av_get_default_channel_layout(m_codecContext->channels) };
+			int64_t outChannelLayout{ av_get_default_channel_layout(m_codecContext->channels) };
+
+			m_swrContext.reset(swr_alloc_set_opts(
+				m_swrContext.release(),
+				outChannelLayout,
+				AV_SAMPLE_FMT_S16,
+				m_codecContext->sample_rate,
+				inChannelLayout,
+				m_codecContext->sample_fmt,
+				m_codecContext->sample_rate,
+				0,
+				nullptr));
+			THROW_IF_NULL_ALLOC(m_swrContext);
+			THROW_HR_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
 		}
 	}
 
-	if (SUCCEEDED(hr))
+	void UncompressedAudioSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 	{
-		if (swr_init(m_pSwrCtx) < 0)
-		{
-			hr = E_FAIL;
-		}
+		// We intentionally don't call SampleProvider::SetEncodingProperties() here as
+		// it would set encoding properties with values for the compressed audio type.
 	}
 
-	return hr;
-}
-
-UncompressedAudioSampleProvider::~UncompressedAudioSampleProvider()
-{
-	if (m_pAvFrame)
+	void UncompressedAudioSampleProvider::Flush() noexcept
 	{
-		av_frame_free(&m_pAvFrame);
+		UncompressedSampleProvider::Flush();
+
+		m_lastDecodeFailed = false;
 	}
 
-	// Free 
-	swr_free(&m_pSwrCtx);
-}
-
-HRESULT UncompressedAudioSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPacket* avPacket)
-{
-	// Because each packet can contain multiple frames, we have already written the packet to the stream
-	// during the decode stage.
-	return S_OK;
-}
-
-HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWriter)
-{
-	// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
-	uint8_t *resampledData = nullptr;
-	unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-	int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-	auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
-	dataWriter->WriteBytes(aBuffer);
-	av_freep(&resampledData);
-	av_frame_unref(m_pAvFrame);
-	av_frame_free(&m_pAvFrame);
-
-	return S_OK;
-}
-
-MediaStreamSample^ UncompressedAudioSampleProvider::GetNextSample()
-{
-	// Similar to GetNextSample in MediaSampleProvider, 
-	// but we concatenate samples until reaching a minimum duration
-	DebugMessage(L"GetNextSample\n");
-
-	HRESULT hr = S_OK;
-
-	MediaStreamSample^ sample;
-	DataWriter^ dataWriter = ref new DataWriter();
-
-	LONGLONG finalPts = -1;
-	LONGLONG finalDur = 0;
-	bool isFirstPacket = true;
-	bool isDiscontinuous;
-
-	do
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedAudioSampleProvider::GetSampleData()
 	{
-		LONGLONG pts = 0;
-		LONGLONG dur = 0;
+		// Decode samples until we reach the minimum sample duration threshold or EOS
+		IBuffer sampleBuf{ nullptr };
+		int64_t pts{ -1 };
+		int64_t dur{ 0 };
+		bool firstDecodedSample{ true };
+		uint32_t decodeErrors{ 0 };
+		vector<uint8_t> compactedSampleBuf;
 
-		hr = GetNextPacket(dataWriter, pts, dur, isFirstPacket);
-		if (isFirstPacket)
+		// Check if we had a decode error on the last GetSampleData() call
+		if (m_lastDecodeFailed)
 		{
-			isDiscontinuous = m_isDiscontinuous;
+			decodeErrors++;
+			m_isDiscontinuous = true;
+			m_lastDecodeFailed = false;
 		}
-		isFirstPacket = false;
 
-		if (SUCCEEDED(hr))
+		while (true)
 		{
-			if (finalPts == -1)
+			// Get the next decoded sample
+			AVFrame_ptr frame;
+			try
 			{
-				finalPts = pts;
+				frame = GetFrame();
+				decodeErrors = 0;
 			}
-			finalDur += dur;
+			catch (...)
+			{
+				const hresult hr{ to_hresult() };
+				switch (hr)
+				{
+				case MF_E_END_OF_STREAM:
+					// We've reached EOF
+					if (firstDecodedSample)
+					{
+						// Nothing more to do
+						throw;
+					}
+					else
+					{
+						// Return the decoded sample data we have
+						sampleBuf = make<FFmpegInteropBuffer>(move(compactedSampleBuf));
+					}
+
+					break;
+
+				case E_OUTOFMEMORY:
+					// Always treat as fatal error
+					throw;
+
+				default:
+					// Unexpected decode error
+					if (decodeErrors < m_allowedDecodeErrors)
+					{
+						decodeErrors++;
+						TraceLoggingWrite(g_FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+							TraceLoggingValue(m_stream->index, "StreamId"),
+							TraceLoggingValue(decodeErrors, "DecodeErrorCount"),
+							TraceLoggingValue(m_allowedDecodeErrors, "DecodeErrorLimit"));
+
+						if (firstDecodedSample)
+						{
+							m_isDiscontinuous = true;
+						}
+						else
+						{
+							m_lastDecodeFailed = true;
+
+							// Return the decoded sample data we have
+							sampleBuf = make<FFmpegInteropBuffer>(move(compactedSampleBuf));
+						}
+					}
+					else
+					{
+						throw;
+					}
+
+					break;
+				}
+
+				if (sampleBuf != nullptr)
+				{
+					// Return the decoded sample data we have
+					break;
+				}
+				else
+				{
+					// Try to decode a sample again
+					continue;
+				}
+			}
+
+			IBuffer curSampleBuf{ nullptr };
+			int curSampleCount{ 0 };
+
+			if (m_swrContext == nullptr)
+			{
+				// Uncompressed frame is already in the desired output format
+				curSampleBuf = make<FFmpegInteropBuffer>(frame->buf[0]);
+				curSampleCount = frame->nb_samples;
+			}
+			else
+			{
+				// Resample uncompressed frame to desired output format
+				uint8_t* buf{ nullptr };
+				int bufSize{ av_samples_alloc(&buf, nullptr, frame->channels, frame->nb_samples, AV_SAMPLE_FMT_S16, 0) };
+				THROW_HR_IF_FFMPEG_FAILED(bufSize);
+
+				int resampledSamplesCount{ swr_convert(m_swrContext.get(), &buf, frame->nb_samples, const_cast<const uint8_t**>(frame->extended_data), frame->nb_samples) };
+				AVBlob_ptr resampledData{ exchange(buf, nullptr) };
+				THROW_HR_IF_FFMPEG_FAILED(resampledSamplesCount);
+
+				const uint32_t resampledDataSize{ static_cast<uint32_t>(resampledSamplesCount) * frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) };
+				WINRT_ASSERT(resampledDataSize <= static_cast<uint32_t>(bufSize));
+
+				curSampleBuf = make<FFmpegInteropBuffer>(move(resampledData), resampledDataSize);
+				curSampleCount = resampledSamplesCount;
+			}
+
+			// Update pts and dur
+			if (firstDecodedSample)
+			{
+				pts = frame->pts;
+			}
+
+			dur += ConvertToAVTime(curSampleCount, m_codecContext->sample_rate, m_stream->time_base);
+
+			const bool minSampleDurMet{ dur >= m_minAudioSampleDur };
+
+			// Copy the current sample data to the compacted sample buffer if needed
+			if (!firstDecodedSample || !minSampleDurMet)
+			{
+				compactedSampleBuf.insert(compactedSampleBuf.end(), curSampleBuf.data(), curSampleBuf.data() + curSampleBuf.Length());
+			}
+
+			// Check if we've reached the minimum sample duration threshold
+			if (minSampleDurMet)
+			{
+				if (firstDecodedSample)
+				{
+					sampleBuf = move(curSampleBuf);
+				}
+				else
+				{
+					sampleBuf = make<FFmpegInteropBuffer>(move(compactedSampleBuf));
+				}
+
+				break;
+			}
+			else
+			{
+				// Continue compacting samples
+				TraceLoggingWrite(g_FFmpegInteropProvider, "CompactingUncompressedAudioSamples", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+					TraceLoggingValue(m_stream->index, "StreamId"),
+					TraceLoggingValue(dur, "CompactedDur"));
+
+				firstDecodedSample = false;
+			}
 		}
 
-	} while (SUCCEEDED(hr) && finalDur < MINAUDIOSAMPLEDURATION);
-
-	if (finalPts != -1)
-	{
-		sample = MediaStreamSample::CreateFromBuffer(dataWriter->DetachBuffer(), { finalPts });
-
-		// Recalculate duration after appending samples
-		// FFMPEG does not seem to always output correct duration for uncompressed
-		const LONGLONG numerator = sample->Buffer->Length * 10000000LL;
-		const LONGLONG denominator = m_pAvFormatCtx->streams[m_streamIndex]->codecpar->channels * m_pAvFormatCtx->streams[m_streamIndex]->codecpar->sample_rate * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
-		if (denominator != 0)
-		{
-			sample->Duration = { numerator / denominator };
-		}
-
-		sample->Discontinuous = isDiscontinuous;
-		if (SUCCEEDED(hr))
-		{
-			// only reset flag if last packet was read successfully
-			m_isDiscontinuous = false;
-		}
+		return { move(sampleBuf), pts, dur, { }, { } };
 	}
-	else
-	{
-		// flush stream and disable any further processing
-		DebugMessage(L"Too many broken packets - disable stream\n");
-		DisableStream();
-	}
-
-	return sample;
 }

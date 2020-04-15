@@ -19,30 +19,27 @@
 #pragma once
 #include "UncompressedSampleProvider.h"
 
-extern "C"
+namespace winrt::FFmpegInterop::implementation
 {
-#include <libswresample/swresample.h>
-}
-
-namespace FFmpegInterop
-{
-	ref class UncompressedAudioSampleProvider: UncompressedSampleProvider
+	class UncompressedAudioSampleProvider :
+		public UncompressedSampleProvider
 	{
 	public:
-		virtual ~UncompressedAudioSampleProvider();
-		virtual MediaStreamSample^ GetNextSample() override;
+		UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors);
 
-	internal:
-		UncompressedAudioSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
-		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter) override;
-		virtual HRESULT AllocateResources() override;
+		void SetEncodingProperties(_Inout_ const Windows::Media::MediaProperties::IMediaEncodingProperties& encProp, _In_ bool setFormatUserData) override;
+
+	protected:
+		void Flush() noexcept override;
+		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
 
 	private:
-		SwrContext* m_pSwrCtx;
+		// Minimum duration (in ms) for uncompressed audio samples. 
+		// We'll compact shorter decoded audio samples until this threshold is reached.
+		static constexpr int64_t MIN_AUDIO_SAMPLE_DUR_MS{ 200 };
+
+		int64_t m_minAudioSampleDur{ 0 };
+		SwrContext_ptr m_swrContext;
+		bool m_lastDecodeFailed{ false };
 	};
 }
-

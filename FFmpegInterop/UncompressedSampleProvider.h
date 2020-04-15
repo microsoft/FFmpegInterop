@@ -17,29 +17,24 @@
 //*****************************************************************************
 
 #pragma once
-#include "MediaSampleProvider.h"
 
-extern "C"
-{
-#include <libswresample/swresample.h>
-}
+#include "SampleProvider.h"
 
-namespace FFmpegInterop
+namespace winrt::FFmpegInterop::implementation
 {
-	ref class UncompressedSampleProvider abstract : public MediaSampleProvider
+	class UncompressedSampleProvider :
+		public SampleProvider
 	{
-	internal:
-		// Try to get a frame from FFmpeg, otherwise, feed a frame to start decoding
-		virtual HRESULT GetFrameFromFFmpegDecoder(AVPacket* avPacket);
-		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT ProcessDecodedFrame(DataWriter^ dataWriter);
-		UncompressedSampleProvider(
-			FFmpegReader^ reader,
-			AVFormatContext* avFormatCtx,
-			AVCodecContext* avCodecCtx);
+	public:
+		UncompressedSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors);
 
-	internal:
-		AVFrame* m_pAvFrame;
+	protected:
+		void Flush() noexcept override;
+
+		AVFrame_ptr GetFrame();
+
+		AVCodecContext_ptr m_codecContext;
+		bool m_sendInput{ true };
+		uint32_t m_allowedDecodeErrors{ 0 };
 	};
 }
-

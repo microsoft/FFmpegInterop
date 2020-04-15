@@ -19,10 +19,10 @@
 using FFmpegInterop;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Graphics.Imaging;
+using Windows.Media.Core;
 using Windows.Storage;
 using Windows.Storage.Streams;
 
@@ -31,29 +31,34 @@ namespace UnitTest.Windows
     [TestClass]
     public class TestExtractThumbnail
     {
+        private MediaStreamSource CreateMSSFromStream(IRandomAccessStream stream, FFmpegInteropMSSConfig config)
+        {
+            // Create the MSS
+            IActivationFactory mssFactory = WindowsRuntimeMarshal.GetActivationFactory(typeof(MediaStreamSource));
+            MediaStreamSource mss = mssFactory.ActivateInstance() as MediaStreamSource;
+
+            // Create the FFmpegInteropMSS from the provided stream
+            FFmpegInteropMSS.CreateFromStream(stream, mss, config);
+
+            return mss;
+        }
+
         [TestMethod]
         public async Task GetThumbnailFromMedia()
         {
             // Create a stream from the resource URI that we have
-            var uri = new Uri("ms-appx:///silence with album art.mp3");
-            var file = await StorageFile.GetFileFromApplicationUriAsync(uri);
-            var stream = await file.OpenAsync(FileAccessMode.Read);
+            var uri = new Uri("ms-appx:///TestFiles//silence with album art.mp3");
+            StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);
+            IRandomAccessStream stream = await file.OpenAsync(FileAccessMode.Read);
 
             // CreateFFmpegInteropMSSFromUri should return null if uri is blank with default parameter
-            FFmpegInteropMSS FFmpegMSS = FFmpegInteropMSS.CreateFFmpegInteropMSSFromStream(stream, false, false);
-            Assert.IsNotNull(FFmpegMSS);
-
-            var thumbnailData = FFmpegMSS.ExtractThumbnail();
-            Assert.IsNotNull(thumbnailData);
+            MediaStreamSource mss = CreateMSSFromStream(stream, null);
 
             // Verify that we have a valid bitmap
-            using (IRandomAccessStream thumbnailstream = thumbnailData.Buffer.AsStream().AsRandomAccessStream())
+            using (IRandomAccessStream thumbnailStream = await mss.Thumbnail.OpenReadAsync())
             {
-                BitmapDecoder decoder = await BitmapDecoder.CreateAsync(thumbnailstream);
-
-                var bitmap = await decoder.GetFrameAsync(0);
-
-                Assert.IsNotNull(bitmap);
+                BitmapDecoder decoder = await BitmapDecoder.CreateAsync(thumbnailStream);
+                BitmapFrame bitmap = await decoder.GetFrameAsync(0);
             }
         }
     }

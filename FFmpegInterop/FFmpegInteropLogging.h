@@ -17,21 +17,31 @@
 //*****************************************************************************
 
 #pragma once
-#include "ILogProvider.h"
 
-namespace FFmpegInterop
+#include "FFmpegInteropLogging.g.h"
+
+namespace winrt::FFmpegInterop::implementation
 {
-	public ref class FFmpegInteropLogging sealed
+	class FFmpegInteropLogging
 	{
 	public:
-		static void SetLogLevel(LogLevel level);
-		static void SetLogProvider(ILogProvider^ logProvider);
-		static void SetDefaultLogProvider();
+		static void Log(void* avcl, int level, const char* fmt, va_list vl);
+
+		static event_token Log(const Windows::Foundation::EventHandler<FFmpegInterop::LogEventArgs>& handler);
+		static void Log(const event_token& token) noexcept;
 
 	private:
-		FFmpegInteropLogging();
+		FFmpegInteropLogging() = delete;
 
-		static ILogProvider^ s_pLogProvider;
+		static event<Windows::Foundation::EventHandler<FFmpegInterop::LogEventArgs>> m_logEvent;
 	};
 }
 
+namespace winrt::FFmpegInterop::factory_implementation
+{
+	struct FFmpegInteropLogging :
+		public FFmpegInteropLoggingT<FFmpegInteropLogging, implementation::FFmpegInteropLogging>
+	{
+
+	};
+}

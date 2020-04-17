@@ -360,6 +360,7 @@ namespace winrt::FFmpegInterop::implementation
 			{
 				// Convert the seek time from HNS to AV_TIME_BASE
 				int64_t avSeekTime{ ConvertToAVTime(hnsSeekTime.count(), HNS_PER_SEC, av_get_time_base_q()) };
+				THROW_HR_IF(MF_E_INVALID_TIMESTAMP, avSeekTime > m_formatContext->duration);
 
 				if (m_formatContext->start_time != AV_NOPTS_VALUE)
 				{
@@ -367,7 +368,6 @@ namespace winrt::FFmpegInterop::implementation
 					avSeekTime += m_formatContext->start_time;
 				}
 
-				THROW_HR_IF(MF_E_INVALID_TIMESTAMP, avSeekTime > m_formatContext->duration);
 				THROW_HR_IF_FFMPEG_FAILED(avformat_seek_file(m_formatContext.get(), -1, numeric_limits<int64_t>::min(), avSeekTime, avSeekTime, 0));
 
 				for (auto& [streamId, stream] : m_streamIdMap)

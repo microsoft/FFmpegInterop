@@ -232,9 +232,9 @@ namespace winrt::FFmpegInterop::implementation
 						sampleProvider->Select(); // The first audio stream is selected by default
 
 						// Add any audio streams we already enumerated
-						for (auto& streamDescriptor : pendingAudioStreamDescriptors)
+						for (auto& audioStreamDescriptor : pendingAudioStreamDescriptors)
 						{
-							m_mss.AddStreamDescriptor(move(streamDescriptor));
+							m_mss.AddStreamDescriptor(move(audioStreamDescriptor));
 						}
 					}
 				}
@@ -268,9 +268,9 @@ namespace winrt::FFmpegInterop::implementation
 						sampleProvider->Select(); // The first video stream is selected by default
 
 						// Add any video streams we already enumerated
-						for (auto& streamDescriptor : pendingVideoStreamDescriptors)
+						for (auto& videoStreamDescriptor : pendingVideoStreamDescriptors)
 						{
-							m_mss.AddStreamDescriptor(move(streamDescriptor));
+							m_mss.AddStreamDescriptor(move(videoStreamDescriptor));
 						}
 					}
 				}

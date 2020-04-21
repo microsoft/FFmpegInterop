@@ -29,7 +29,7 @@ namespace winrt::FFmpegInterop::implementation
 {
 	event<EventHandler<FFmpegInterop::LogEventArgs>> FFmpegInteropLogging::m_logEvent;
 
-	void FFmpegInteropLogging::Log(void* avcl, int level, const char* fmt, va_list vl)
+	void FFmpegInteropLogging::Log(_In_ void* avcl, _In_ int level, _In_ const char* fmt, _In_ va_list vl)
 	{
 		constexpr int LINE_SIZE{ 1024 };
 
@@ -50,12 +50,12 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	}
 
-	event_token FFmpegInteropLogging::Log(const EventHandler<FFmpegInterop::LogEventArgs>& handler)
+	event_token FFmpegInteropLogging::Log(_In_ const EventHandler<FFmpegInterop::LogEventArgs>& handler)
 	{
 		return m_logEvent.add(handler);
 	}
 
-	void FFmpegInteropLogging::Log(const event_token& token) noexcept
+	void FFmpegInteropLogging::Log(_In_ const event_token& token) noexcept
 	{
 		m_logEvent.remove(token);
 	}

@@ -30,5 +30,11 @@ namespace winrt::FFmpegInterop::implementation
 
 	protected:
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
+	
+		static constexpr uint32_t FLAC_STREAMINFO_SIZE{ 34 };
+		static constexpr std::array<uint8_t, 4> FLAC_MARKER{ 'f', 'L', 'a', 'C' };
+		static constexpr std::array<uint8_t, 4> FLAC_STREAMINFO_HEADER{ 0x80, 0x00, 0x00, 0x22 };
+
+		_Field_size_(FLAC_STREAMINFO_SIZE) const uint8_t* m_flacStreamInfo{ nullptr };
 	};
 }

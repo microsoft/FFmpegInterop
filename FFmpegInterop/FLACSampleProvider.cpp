@@ -18,8 +18,10 @@
 
 #include "pch.h"
 #include "FLACSampleProvider.h"
+#include "BitstreamReader.h"
 
 using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Media::MediaProperties;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
 
@@ -28,24 +30,41 @@ namespace winrt::FFmpegInterop::implementation
 	FLACSampleProvider::FLACSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader) :
 		SampleProvider(formatContext, stream, reader)
 	{
+		THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, m_stream->codecpar->extradata_size < FLAC_STREAMINFO_SIZE);
 
+		// Check if the codec private data includes the FLAC marker and block header before the FLAC stream info
+		if (equal(FLAC_MARKER.begin(), FLAC_MARKER.end(), m_stream->codecpar->extradata))
+		{
+			THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, m_stream->codecpar->extradata_size < FLAC_MARKER.size() + FLAC_STREAMINFO_HEADER.size() + FLAC_STREAMINFO_SIZE);
+			m_flacStreamInfo = m_stream->codecpar->extradata + FLAC_MARKER.size() + FLAC_STREAMINFO_HEADER.size();
+		}
+		else
+		{
+			m_flacStreamInfo = m_stream->codecpar->extradata;
+		}
+
+		// Update the codec parameters based on the stream info. These values may not have been set if FFmpeg wasn't built with the FLAC decoder.
+		BitstreamReader bitstreamReader{ m_flacStreamInfo, FLAC_STREAMINFO_SIZE };
+		bitstreamReader.SkipN(16); // Min block size
+		bitstreamReader.SkipN(16); // Max block size
+		bitstreamReader.SkipN(24); // Min frame size
+		bitstreamReader.SkipN(24); // Max frame size
+		m_stream->codecpar->sample_rate = static_cast<int>(bitstreamReader.ReadN(20));
+		m_stream->codecpar->channels = static_cast<int>(bitstreamReader.ReadN(3)) + 1;
+		m_stream->codecpar->bits_per_raw_sample = static_cast<int>(bitstreamReader.ReadN(5)) + 1;
+		// Remaining fields left unparsed as they are unneeded at this time
 	}
 
 	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> FLACSampleProvider::GetSampleData()
 	{
 		if (m_isDiscontinuous)
 		{
-			// On discontinuity send the codec private data containing the FLAC STREAMINFO block as the first sample to the decoder.
-			// We need to prepend the FLAC STREAMINFO block header as FFmpeg strips this out.
-			constexpr uint32_t FLAC_STREAMINFO_SIZE{ 34 };
-			constexpr uint8_t FLAC_STREAMINFO_HEADER[]{ 'f', 'L', 'a', 'C', 0x80, 0x00, 0x00, 0x22 };
-
-			THROW_HR_IF(E_UNEXPECTED, m_stream->codecpar->extradata_size < FLAC_STREAMINFO_SIZE);
-
+			// On discontinuity send the FLAC stream info as the first sample to the decoder
 			vector<uint8_t> buf;
-			buf.reserve(sizeof(FLAC_STREAMINFO_HEADER) + FLAC_STREAMINFO_SIZE);
-			buf.insert(buf.end(), FLAC_STREAMINFO_HEADER, FLAC_STREAMINFO_HEADER + sizeof(FLAC_STREAMINFO_HEADER));
-			buf.insert(buf.end(), m_stream->codecpar->extradata, m_stream->codecpar->extradata + FLAC_STREAMINFO_SIZE);
+			buf.reserve(FLAC_MARKER.size() + FLAC_STREAMINFO_HEADER.size() + FLAC_STREAMINFO_SIZE);
+			buf.insert(buf.end(), FLAC_MARKER.begin(), FLAC_MARKER.end());
+			buf.insert(buf.end(), FLAC_STREAMINFO_HEADER.begin(), FLAC_STREAMINFO_HEADER.end());
+			buf.insert(buf.end(), m_flacStreamInfo, m_flacStreamInfo + FLAC_STREAMINFO_SIZE);
 
 			return { make<FFmpegInteropBuffer>(move(buf)), m_startOffset, 0, { }, { } };
 		}

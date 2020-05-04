@@ -220,7 +220,7 @@ namespace winrt::FFmpegInterop::implementation
 			case AVMEDIA_TYPE_AUDIO:
 				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateAudioStream(m_formatContext.get(), stream, m_reader, config);
 
-				if (hasAudio || i == preferredAudioStreamId)
+				if (hasAudio || preferredAudioStreamId == i || preferredAudioStreamId < 0)
 				{
 					// Add the stream to the MSS
 					m_mss.AddStreamDescriptor(streamDescriptor);
@@ -256,7 +256,7 @@ namespace winrt::FFmpegInterop::implementation
 
 				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateVideoStream(m_formatContext.get(), stream, m_reader, config);
 
-				if (hasVideo || i == preferredVideoStreamId)
+				if (hasVideo || preferredVideoStreamId == i || preferredVideoStreamId < 0)
 				{
 					// Add the stream to the MSS
 					m_mss.AddStreamDescriptor(streamDescriptor);
@@ -314,6 +314,9 @@ namespace winrt::FFmpegInterop::implementation
 			m_streamIdMap[i] = sampleProvider.get();
 			m_streamDescriptorMap[move(streamDescriptor)] = move(sampleProvider);
 		}
+
+		WINRT_ASSERT(pendingAudioStreamDescriptors.empty());
+		WINRT_ASSERT(pendingVideoStreamDescriptors.empty());
 
 		if (m_formatContext->duration > 0)
 		{

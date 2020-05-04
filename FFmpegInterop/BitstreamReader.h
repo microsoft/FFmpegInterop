@@ -28,6 +28,7 @@ namespace winrt::FFmpegInterop::implementation
 		void SkipN(_In_ uint32_t numBits);
 		void SkipExpGolomb();
 
+		uint32_t ReadN(_In_range_(<= , 32) uint32_t numBitsToRead);
 		bool Read1() { return static_cast<bool>(ReadN(1)); }
 		uint8_t Read8() { return static_cast<uint8_t>(ReadN(8)); }
 		uint16_t Read16() { return static_cast<uint16_t>(ReadN(16)); }
@@ -37,7 +38,6 @@ namespace winrt::FFmpegInterop::implementation
 
 	private:
 		size_t BitsRemaining() const noexcept;
-		uint32_t ReadN(_In_range_(<= , 32) uint32_t numBitsToRead);
 
 		const uint8_t* m_data{ nullptr };
 		uint32_t m_dataSize{ 0 };

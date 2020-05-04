@@ -60,7 +60,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	uint32_t BitstreamReader::ReadN(_In_range_(<=, 32) uint32_t numBitsToRead)
 	{
-		WINRT_ASSERT(numBitsToRead <= 32);
+		THROW_HR_IF(E_INVALIDARG, numBitsToRead > 32);
 
 		// Make sure we have enough data left to fulfill the read request
 		THROW_HR_IF(MF_E_INVALID_POSITION, numBitsToRead > BitsRemaining());

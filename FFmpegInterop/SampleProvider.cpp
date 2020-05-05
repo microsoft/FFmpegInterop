@@ -331,8 +331,10 @@ namespace winrt::FFmpegInterop::implementation
 
 	void SampleProvider::QueuePacket(_In_ AVPacket_ptr packet)
 	{
-		WINRT_ASSERT(m_isSelected);
-		m_packetQueue.push_back(move(packet));
+		if (m_isSelected)
+		{
+			m_packetQueue.push_back(move(packet));
+		}
 	}
 
 	void SampleProvider::GetSample(_Inout_ const MediaStreamSourceSampleRequest& request)

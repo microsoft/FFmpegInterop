@@ -27,46 +27,89 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
-		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors),
-		m_outputWidth(m_codecContext->width),
-		m_outputHeight(m_codecContext->height)
+	const map<AVPixelFormat, GUID> UncompressedVideoSampleProvider::c_supportedFormats
 	{
-		if (m_codecContext->pix_fmt != AV_PIX_FMT_NV12)
+		{ AV_PIX_FMT_YUV420P, MFVideoFormat_IYUV },
+		{ AV_PIX_FMT_YUVJ420P, MFVideoFormat_IYUV },
+		{ AV_PIX_FMT_NV12, MFVideoFormat_NV12 },
+	};
+
+	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
+		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors, &GetFormat),
+		m_curWidth(m_codecContext->width),
+		m_curHeight(m_codecContext->height)
+	{
+		if (!IsSupportedFormat(m_codecContext->pix_fmt))
 		{
+			// We need to transcode to a supported format
 			InitScaler();
 		}
+		else
+		{
+			// We need a buffer pool for copying the image data
+			InitBufferPool(m_codecContext->pix_fmt);
+		}
+	}
+
+	AVPixelFormat UncompressedVideoSampleProvider::GetFormat(_In_ AVCodecContext* codecContext, _In_ const AVPixelFormat* formats) noexcept
+	{
+		// Try to select a format we support
+		for (uint32_t i{ 0 }; formats[i] != AV_PIX_FMT_NONE; i++)
+		{
+			if (IsSupportedFormat(formats[i]))
+			{
+				return formats[i];
+			}
+		}
+
+		// None of our supported formats are an option. We're going to have to transcode.
+		return avcodec_default_get_format(codecContext, formats);
 	}
 
 	void UncompressedVideoSampleProvider::InitScaler()
 	{
-		// Setup software scaler to convert the pixel format to NV12
+		// Setup software scaler to transcode to the desired output format
 		m_swsContext.reset(sws_getContext(
-			m_outputWidth,
-			m_outputHeight,
+			m_curWidth,
+			m_curHeight,
 			m_codecContext->pix_fmt,
-			m_outputWidth,
-			m_outputHeight,
-			AV_PIX_FMT_NV12,
+			m_curWidth,
+			m_curHeight,
+			DEFAULT_FORMAT,
 			SWS_BICUBIC,
 			nullptr,
 			nullptr,
 			nullptr));
 		THROW_IF_NULL_ALLOC(m_swsContext);
 
-		THROW_HR_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, AV_PIX_FMT_NV12, m_outputWidth));
+		InitBufferPool(DEFAULT_FORMAT);
+	}
 
-		// Create a buffer pool
-		const int requiredBufferSize{ av_image_get_buffer_size(AV_PIX_FMT_NV12, m_outputWidth, m_outputHeight, 1) };
+	void UncompressedVideoSampleProvider::InitBufferPool(_In_ AVPixelFormat format)
+	{
+		// Get the buffer size
+		int requiredBufferSize{ av_image_get_buffer_size(format, m_curWidth, m_curHeight, 1) };
 		THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
 
+		// Allocate a new buffer pool
 		m_bufferPool.reset(av_buffer_pool_init(requiredBufferSize, nullptr));
 		THROW_IF_NULL_ALLOC(m_bufferPool);
+
+		// Update the line sizes
+		THROW_HR_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, format, m_curWidth));
 	}
 
 	void UncompressedVideoSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 	{
 		SampleProvider::SetEncodingProperties(encProp, setFormatUserData);
+
+		auto formatIter{ c_supportedFormats.find(m_codecContext->pix_fmt) };
+		if (formatIter == c_supportedFormats.end())
+		{
+			formatIter = c_supportedFormats.find(DEFAULT_FORMAT);
+			WINRT_ASSERT(formatIter != c_supportedFormats.end());
+		}
+		encProp.Subtype(to_hstring(formatIter->second));
 
 		VideoEncodingProperties videoEncProp{ encProp.as<VideoEncodingProperties>() };
 
@@ -130,10 +173,13 @@ namespace winrt::FFmpegInterop::implementation
 
 		// Get the sample buffer
 		IBuffer sampleBuf{ nullptr };
-		if (m_swsContext == nullptr)
+		if (!IsUsingScaler())
 		{
-			// Image is already in the desired output format
-			sampleBuf = make<FFmpegInteropBuffer>(frame->buf[0]);
+			// The image is already in the desired output format. Copy the image data into a single buffer.
+			AVBufferRef_ptr bufferRef{ av_buffer_pool_get(m_bufferPool.get()) };
+			THROW_IF_NULL_ALLOC(bufferRef);
+			THROW_HR_IF_FFMPEG_FAILED(av_image_copy_to_buffer(bufferRef->data, bufferRef->size, frame->data, frame->linesize, static_cast<AVPixelFormat>(frame->format), frame->width, frame->height, 1));
+			sampleBuf = make<FFmpegInteropBuffer>(move(bufferRef));
 		}
 		else
 		{
@@ -142,9 +188,9 @@ namespace winrt::FFmpegInterop::implementation
 			THROW_IF_NULL_ALLOC(bufferRef);
 
 			uint8_t* data[4]{ };
-			const int requiredBufferSize{ av_image_fill_pointers(data, AV_PIX_FMT_NV12, frame->height, bufferRef->data, m_lineSizes) };
+			const int requiredBufferSize{ av_image_fill_pointers(data, DEFAULT_FORMAT, frame->height, bufferRef->data, m_lineSizes) };
 			THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
-			THROW_HR_IF(MF_E_UNEXPECTED, requiredBufferSize != bufferRef->size);
+			THROW_HR_IF(MF_E_BUFFERTOOSMALL, requiredBufferSize > bufferRef->size);
 
 			THROW_HR_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), frame->data, frame->linesize, 0, frame->height, data, m_lineSizes));
 
@@ -162,20 +208,21 @@ namespace winrt::FFmpegInterop::implementation
 		vector<pair<GUID, IInspectable>> formatChanges;
 
 		// Check if the resolution changed
-		if (frame->width != m_outputWidth || frame->height != m_outputHeight)
+		if (frame->width != m_curWidth || frame->height != m_curHeight)
 		{
 			TraceLoggingWrite(g_FFmpegInteropProvider, "ResolutionChanged", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"),
-				TraceLoggingValue(m_outputWidth, "OldWidth"),
-				TraceLoggingValue(m_outputHeight, "OldHeight"),
+				TraceLoggingValue(m_curWidth, "OldWidth"),
+				TraceLoggingValue(m_curHeight, "OldHeight"),
 				TraceLoggingValue(frame->width, "NewWidth"),
 				TraceLoggingValue(frame->height, "NewHeight"));
 
-			m_outputWidth = frame->width;
-			m_outputHeight = frame->height;
-			formatChanges.emplace_back(MF_MT_FRAME_SIZE, PropertyValue::CreateUInt64(Pack2UINT32AsUINT64(m_outputWidth, m_outputHeight)));
+			m_curWidth = frame->width;
+			m_curHeight = frame->height;
+			formatChanges.emplace_back(MF_MT_FRAME_SIZE, PropertyValue::CreateUInt64(Pack2UINT32AsUINT64(m_curWidth, m_curHeight)));
 
-			if (m_swsContext != nullptr)
+			// Reinitialze the scaler if needed
+			if (IsUsingScaler())
 			{
 				InitScaler();
 			}

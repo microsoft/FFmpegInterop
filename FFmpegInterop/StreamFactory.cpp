@@ -298,7 +298,7 @@ namespace winrt::FFmpegInterop::implementation
 			break;
 
 		default:
-			videoEncProp = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12(), stream->codecpar->width, stream->codecpar->height);
+			videoEncProp = VideoEncodingProperties::VideoEncodingProperties();
 			videoSampleProvider = make_unique<UncompressedVideoSampleProvider>(formatContext, stream, reader, config != nullptr ? config.AllowedDecodeErrors() : FFmpegInteropMSSConfig::kAllowedDecodeErrorsDefault);
 			break;
 		}

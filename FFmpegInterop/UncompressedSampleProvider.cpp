@@ -24,7 +24,12 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	UncompressedSampleProvider::UncompressedSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
+	UncompressedSampleProvider::UncompressedSampleProvider(
+		_In_ const AVFormatContext* formatContext,
+		_In_ AVStream* stream,
+		_In_ Reader& reader,
+		_In_ uint32_t allowedDecodeErrors,
+		_In_opt_ GetFormatFunc getFormat/* = nullptr */) :
 		SampleProvider(formatContext, stream, reader),
 		m_allowedDecodeErrors(allowedDecodeErrors)
 	{
@@ -35,6 +40,13 @@ namespace winrt::FFmpegInterop::implementation
 		m_codecContext.reset(avcodec_alloc_context3(codec));
 		THROW_IF_NULL_ALLOC(m_codecContext);
 		THROW_HR_IF_FFMPEG_FAILED(avcodec_parameters_to_context(m_codecContext.get(), stream->codecpar));
+
+		m_codecContext->opaque = this;
+
+		if (getFormat != nullptr)
+		{
+			m_codecContext->get_format = getFormat;
+		}
 
 		const unsigned int threadCount{ std::thread::hardware_concurrency() };
 		if (threadCount > 0)

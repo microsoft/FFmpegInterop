@@ -34,12 +34,20 @@ namespace winrt::FFmpegInterop::implementation
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
 
 	private:
+		static constexpr AVPixelFormat DEFAULT_FORMAT{ AV_PIX_FMT_NV12 };
+		static const std::map<AVPixelFormat, GUID> c_supportedFormats;
+		static bool IsSupportedFormat(_In_ AVPixelFormat format) noexcept { return c_supportedFormats.count(format); }
+
+		static AVPixelFormat GetFormat(_In_ AVCodecContext* codecContext, _In_ const AVPixelFormat* formats) noexcept;
+
 		void InitScaler();
+		bool IsUsingScaler() const noexcept { return m_swsContext != nullptr; }
+		void InitBufferPool(_In_ AVPixelFormat format);
 		std::vector<std::pair<GUID, Windows::Foundation::IInspectable>> CheckForFormatChanges(_In_ const AVFrame* frame);
 		std::vector<std::pair<GUID, Windows::Foundation::IInspectable>> GetSampleProperties(_In_ const AVFrame* frame);
 
-		int m_outputWidth{ 0 };
-		int m_outputHeight{ 0 };
+		int m_curWidth{ 0 };
+		int m_curHeight{ 0 };
 		SwsContext_ptr m_swsContext;
 		int m_lineSizes[4]{ 0, 0, 0, 0};
 		AVBufferPool_ptr m_bufferPool;

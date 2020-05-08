@@ -26,13 +26,13 @@ namespace winrt::FFmpegInterop::implementation
 		public SampleProvider
 	{
 	public:
-		using GetFormatFunc = AVPixelFormat(*)(_In_ AVCodecContext* codecContext, _In_ const AVPixelFormat* formats);
+		using InitCodecContextFunc = void(*)(_In_ AVCodecContext* codecContext) noexcept;
 
 		UncompressedSampleProvider(
 			_In_ const AVFormatContext* formatContext,
 			_In_ AVStream* stream, _In_ Reader& reader,
 			_In_ uint32_t allowedDecodeErrors,
-			_In_opt_ GetFormatFunc getFormat = nullptr);
+			_In_opt_ InitCodecContextFunc initCodecContext = nullptr);
 
 	protected:
 		void Flush() noexcept override;

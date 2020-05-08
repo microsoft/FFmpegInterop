@@ -27,21 +27,39 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	const map<AVPixelFormat, GUID> UncompressedVideoSampleProvider::c_supportedFormats
+	tuple<bool, GUID> UncompressedVideoSampleProvider::MapAVSampleFormatToMFVideoFormat(_In_ AVPixelFormat format) noexcept
 	{
-		{ AV_PIX_FMT_YUV420P, MFVideoFormat_IYUV },
-		{ AV_PIX_FMT_YUVJ420P, MFVideoFormat_IYUV },
-		{ AV_PIX_FMT_NV12, MFVideoFormat_NV12 },
-	};
+		bool isSupportedFormat{ true };
+		GUID mfVideoFormat{ GUID_NULL };
+
+		switch (format)
+		{
+		case AV_PIX_FMT_YUV420P:
+		case AV_PIX_FMT_YUVJ420P:
+			mfVideoFormat = MFVideoFormat_IYUV;
+			break;
+
+		default:
+			static_assert(DEFAULT_FORMAT == AV_PIX_FMT_NV12, "Need to update default case");
+			isSupportedFormat = false;
+			__fallthrough;
+
+		case AV_PIX_FMT_NV12:
+			mfVideoFormat = MFVideoFormat_NV12;
+			break;
+		}
+
+		return { isSupportedFormat, mfVideoFormat };
+	}
 
 	UncompressedVideoSampleProvider::UncompressedVideoSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
-		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors, &GetFormat),
-		m_curWidth(m_codecContext->width),
-		m_curHeight(m_codecContext->height)
+		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors, &InitCodecContext),
+		m_outputWidth(m_codecContext->width),
+		m_outputHeight(m_codecContext->height)
 	{
 		if (!IsSupportedFormat(m_codecContext->pix_fmt))
 		{
-			// We need to transcode to a supported format
+			// We need to convert to a supported format
 			InitScaler();
 		}
 		else
@@ -51,9 +69,14 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	}
 
+	void UncompressedVideoSampleProvider::InitCodecContext(_In_ AVCodecContext* codecContext) noexcept
+	{
+		codecContext->get_format = &GetFormat; // Try to negotiate an AVPixelFormat we support so that we don't need to use the scaler
+	}
+
 	AVPixelFormat UncompressedVideoSampleProvider::GetFormat(_In_ AVCodecContext* codecContext, _In_ const AVPixelFormat* formats) noexcept
 	{
-		// Try to select a format we support
+		// Try to select a format we support so that we don't need to use the scaler
 		for (uint32_t i{ 0 }; formats[i] != AV_PIX_FMT_NONE; i++)
 		{
 			if (IsSupportedFormat(formats[i]))
@@ -62,19 +85,19 @@ namespace winrt::FFmpegInterop::implementation
 			}
 		}
 
-		// None of our supported formats are an option. We're going to have to transcode.
+		// None of our supported formats are an option
 		return avcodec_default_get_format(codecContext, formats);
 	}
 
 	void UncompressedVideoSampleProvider::InitScaler()
 	{
-		// Setup software scaler to transcode to the desired output format
+		// Setup software scaler to convert the image to the desired output format
 		m_swsContext.reset(sws_getContext(
-			m_curWidth,
-			m_curHeight,
+			m_outputWidth,
+			m_outputHeight,
 			m_codecContext->pix_fmt,
-			m_curWidth,
-			m_curHeight,
+			m_outputWidth,
+			m_outputHeight,
 			DEFAULT_FORMAT,
 			SWS_BICUBIC,
 			nullptr,
@@ -88,7 +111,7 @@ namespace winrt::FFmpegInterop::implementation
 	void UncompressedVideoSampleProvider::InitBufferPool(_In_ AVPixelFormat format)
 	{
 		// Get the buffer size
-		int requiredBufferSize{ av_image_get_buffer_size(format, m_curWidth, m_curHeight, 1) };
+		int requiredBufferSize{ av_image_get_buffer_size(format, m_outputWidth, m_outputHeight, 1) };
 		THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
 
 		// Allocate a new buffer pool
@@ -96,22 +119,15 @@ namespace winrt::FFmpegInterop::implementation
 		THROW_IF_NULL_ALLOC(m_bufferPool);
 
 		// Update the line sizes
-		THROW_HR_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, format, m_curWidth));
+		THROW_HR_IF_FFMPEG_FAILED(av_image_fill_linesizes(m_lineSizes, format, m_outputWidth));
 	}
 
 	void UncompressedVideoSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 	{
 		SampleProvider::SetEncodingProperties(encProp, setFormatUserData);
 
-		auto formatIter{ c_supportedFormats.find(m_codecContext->pix_fmt) };
-		if (formatIter == c_supportedFormats.end())
-		{
-			formatIter = c_supportedFormats.find(DEFAULT_FORMAT);
-			WINRT_ASSERT(formatIter != c_supportedFormats.end());
-		}
-		encProp.Subtype(to_hstring(formatIter->second));
-
 		VideoEncodingProperties videoEncProp{ encProp.as<VideoEncodingProperties>() };
+		videoEncProp.Subtype(to_hstring(GetMFVideoFormat(m_codecContext->pix_fmt)));
 
 		if (m_codecContext->framerate.num != 0 && m_codecContext->framerate.den != 0)
 		{
@@ -208,18 +224,18 @@ namespace winrt::FFmpegInterop::implementation
 		vector<pair<GUID, IInspectable>> formatChanges;
 
 		// Check if the resolution changed
-		if (frame->width != m_curWidth || frame->height != m_curHeight)
+		if (frame->width != m_outputWidth || frame->height != m_outputHeight)
 		{
 			TraceLoggingWrite(g_FFmpegInteropProvider, "ResolutionChanged", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"),
-				TraceLoggingValue(m_curWidth, "OldWidth"),
-				TraceLoggingValue(m_curHeight, "OldHeight"),
+				TraceLoggingValue(m_outputWidth, "OldWidth"),
+				TraceLoggingValue(m_outputHeight, "OldHeight"),
 				TraceLoggingValue(frame->width, "NewWidth"),
 				TraceLoggingValue(frame->height, "NewHeight"));
 
-			m_curWidth = frame->width;
-			m_curHeight = frame->height;
-			formatChanges.emplace_back(MF_MT_FRAME_SIZE, PropertyValue::CreateUInt64(Pack2UINT32AsUINT64(m_curWidth, m_curHeight)));
+			m_outputWidth = frame->width;
+			m_outputHeight = frame->height;
+			formatChanges.emplace_back(MF_MT_FRAME_SIZE, PropertyValue::CreateUInt64(Pack2UINT32AsUINT64(m_outputWidth, m_outputHeight)));
 
 			// Reinitialze the scaler if needed
 			if (IsUsingScaler())

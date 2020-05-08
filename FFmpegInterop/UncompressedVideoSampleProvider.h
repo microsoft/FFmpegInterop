@@ -35,8 +35,10 @@ namespace winrt::FFmpegInterop::implementation
 
 	private:
 		static constexpr AVPixelFormat DEFAULT_FORMAT{ AV_PIX_FMT_NV12 };
-		static const std::map<AVPixelFormat, GUID> c_supportedFormats;
-		static bool IsSupportedFormat(_In_ AVPixelFormat format) noexcept { return c_supportedFormats.count(format); }
+		static std::tuple<bool, GUID> MapAVSampleFormatToMFVideoFormat(_In_ AVPixelFormat format) noexcept;
+		static bool IsSupportedFormat(_In_ AVPixelFormat format) noexcept { auto [isSupported, mfVideoFormat] = MapAVSampleFormatToMFVideoFormat(format); return isSupported; }
+		static GUID GetMFVideoFormat(_In_ AVPixelFormat format) noexcept { auto [isSupported, mfVideoFormat] = MapAVSampleFormatToMFVideoFormat(format); return mfVideoFormat; }
+		static void InitCodecContext(_In_ AVCodecContext* codecContext) noexcept;
 
 		static AVPixelFormat GetFormat(_In_ AVCodecContext* codecContext, _In_ const AVPixelFormat* formats) noexcept;
 
@@ -46,8 +48,8 @@ namespace winrt::FFmpegInterop::implementation
 		std::vector<std::pair<GUID, Windows::Foundation::IInspectable>> CheckForFormatChanges(_In_ const AVFrame* frame);
 		std::vector<std::pair<GUID, Windows::Foundation::IInspectable>> GetSampleProperties(_In_ const AVFrame* frame);
 
-		int m_curWidth{ 0 };
-		int m_curHeight{ 0 };
+		int m_outputWidth{ 0 };
+		int m_outputHeight{ 0 };
 		SwsContext_ptr m_swsContext;
 		int m_lineSizes[4]{ 0, 0, 0, 0};
 		AVBufferPool_ptr m_bufferPool;

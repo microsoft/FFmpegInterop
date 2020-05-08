@@ -165,16 +165,12 @@ namespace winrt::FFmpegInterop::implementation
 			break;
 
 		case AV_CODEC_ID_PCM_F32LE:
-		case AV_CODEC_ID_PCM_F64LE:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_Float);
 			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
-		case AV_CODEC_ID_PCM_S16BE:
 		case AV_CODEC_ID_PCM_S16LE:
-		case AV_CODEC_ID_PCM_S24BE:
 		case AV_CODEC_ID_PCM_S24LE:
-		case AV_CODEC_ID_PCM_S32BE:
 		case AV_CODEC_ID_PCM_S32LE:
 		case AV_CODEC_ID_PCM_U8:
 			audioEncProp = CreateAudioEncProp(MFAudioFormat_PCM);

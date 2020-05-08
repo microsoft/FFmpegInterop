@@ -29,7 +29,7 @@ namespace winrt::FFmpegInterop::implementation
 		_In_ AVStream* stream,
 		_In_ Reader& reader,
 		_In_ uint32_t allowedDecodeErrors,
-		_In_opt_ GetFormatFunc getFormat/* = nullptr */) :
+		_In_opt_ InitCodecContextFunc initCodecContext/* = nullptr */) :
 		SampleProvider(formatContext, stream, reader),
 		m_allowedDecodeErrors(allowedDecodeErrors)
 	{
@@ -43,9 +43,9 @@ namespace winrt::FFmpegInterop::implementation
 
 		m_codecContext->opaque = this;
 
-		if (getFormat != nullptr)
+		if (initCodecContext != nullptr)
 		{
-			m_codecContext->get_format = getFormat;
+			initCodecContext(m_codecContext.get());
 		}
 
 		const unsigned int threadCount{ std::thread::hardware_concurrency() };

@@ -26,20 +26,48 @@ using namespace std;
 
 namespace winrt::FFmpegInterop::implementation
 {
+	tuple<AVSampleFormat, GUID> UncompressedAudioSampleProvider::GetOutputFormat(_In_ AVSampleFormat format) noexcept
+	{
+		AVSampleFormat ffmpegOutputFormat{ av_get_packed_sample_fmt(format) };
+		GUID mfOutputFormat{ GUID_NULL };
+
+		switch (ffmpegOutputFormat)
+		{
+		default:
+			ffmpegOutputFormat = AV_SAMPLE_FMT_S16;
+			__fallthrough;
+
+		case AV_SAMPLE_FMT_U8:
+		case AV_SAMPLE_FMT_S16:
+		case AV_SAMPLE_FMT_S32:
+			mfOutputFormat = MFAudioFormat_PCM;
+			break;
+
+		case AV_SAMPLE_FMT_FLT:
+			mfOutputFormat = MFAudioFormat_Float;
+			break;
+		}
+
+		WINRT_ASSERT(!av_sample_fmt_is_planar(ffmpegOutputFormat)); // We need the output format to be packed
+
+		return { ffmpegOutputFormat, mfOutputFormat };
+	}
+
 	UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
-		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors),
+		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors, &InitCodecContext),
 		m_minAudioSampleDur(ConvertToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base))
 	{
-		if (m_codecContext->sample_fmt != AV_SAMPLE_FMT_S16)
+		m_outputFormat = GetFFmpegOutputFormat(m_codecContext->sample_fmt);
+		if (m_codecContext->sample_fmt != m_outputFormat)
 		{
-			// Set up resampler to convert to AV_SAMPLE_FMT_S16 PCM format
+			// Set up resampler to convert to the desired output format
 			int64_t inChannelLayout{ m_codecContext->channel_layout != 0 ? static_cast<int64_t>(m_codecContext->channel_layout) : av_get_default_channel_layout(m_codecContext->channels) };
 			int64_t outChannelLayout{ av_get_default_channel_layout(m_codecContext->channels) };
 
 			m_swrContext.reset(swr_alloc_set_opts(
 				m_swrContext.release(),
 				outChannelLayout,
-				AV_SAMPLE_FMT_S16,
+				m_outputFormat,
 				m_codecContext->sample_rate,
 				inChannelLayout,
 				m_codecContext->sample_fmt,
@@ -51,10 +79,28 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	}
 
+	void UncompressedAudioSampleProvider::InitCodecContext(_In_ AVCodecContext* codecContext) noexcept
+	{
+		codecContext->request_sample_fmt = av_get_packed_sample_fmt(codecContext->sample_fmt); // Try to request packed formats to avoid resampling
+	}
+
 	void UncompressedAudioSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 	{
 		// We intentionally don't call SampleProvider::SetEncodingProperties() here as
 		// it would set encoding properties with values for the compressed audio type.
+
+		IAudioEncodingProperties audioEncProp{ encProp.as<IAudioEncodingProperties>() };
+		audioEncProp.Subtype(to_hstring(GetMFOutputFormat(m_codecContext->sample_fmt)));
+		audioEncProp.SampleRate(m_codecContext->sample_rate);
+		audioEncProp.ChannelCount(m_codecContext->channels);
+
+		int bitsPerSample{ av_get_bytes_per_sample(m_outputFormat) * BITS_PER_BYTE };
+		audioEncProp.Bitrate(static_cast<uint32_t>(m_codecContext->sample_rate * m_codecContext->channels * bitsPerSample));
+		audioEncProp.BitsPerSample(static_cast<uint32_t>(bitsPerSample));
+
+		MediaPropertySet properties{ audioEncProp.Properties() };
+		properties.Insert(MF_MT_ALL_SAMPLES_INDEPENDENT, PropertyValue::CreateUInt32(false));
+		properties.Insert(MF_MT_COMPRESSED, PropertyValue::CreateUInt32(true));
 	}
 
 	void UncompressedAudioSampleProvider::Flush() noexcept
@@ -160,27 +206,52 @@ namespace winrt::FFmpegInterop::implementation
 			IBuffer curSampleBuf{ nullptr };
 			int curSampleCount{ 0 };
 
-			if (m_swrContext == nullptr)
+			if (!IsUsingResampler())
 			{
 				// Uncompressed frame is already in the desired output format
+				WINRT_ASSERT(!av_sample_fmt_is_planar(static_cast<AVSampleFormat>(frame->format)));
 				curSampleBuf = make<FFmpegInteropBuffer>(frame->buf[0]);
 				curSampleCount = frame->nb_samples;
 			}
 			else
 			{
-				// Resample uncompressed frame to desired output format
-				uint8_t* buf{ nullptr };
-				int bufSize{ av_samples_alloc(&buf, nullptr, frame->channels, frame->nb_samples, AV_SAMPLE_FMT_S16, 0) };
-				THROW_HR_IF_FFMPEG_FAILED(bufSize);
+				// We need to resample the uncompressed frame to the desired output format.
+				// We use the compacted sample buffer as the output buffer for resampling to minimize copying.
+				// Allocate buffer space for the resampled data.
+				int requiredBufferSize{ av_samples_get_buffer_size(nullptr, frame->channels, frame->nb_samples, m_outputFormat, 0) };
+				THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
 
-				int resampledSamplesCount{ swr_convert(m_swrContext.get(), &buf, frame->nb_samples, const_cast<const uint8_t**>(frame->extended_data), frame->nb_samples) };
-				AVBlob_ptr resampledData{ exchange(buf, nullptr) };
+				if (firstDecodedSample)
+				{
+					// Reserve buffer space to minimize reallocations
+					int minSampleCount{ MIN_AUDIO_SAMPLE_DUR_MS * m_codecContext->sample_rate / MS_PER_SEC };
+					int minBufferSize{ av_samples_get_buffer_size(nullptr, frame->channels, minSampleCount, m_outputFormat, 0) };
+					compactedSampleBuf.reserve(max(minBufferSize, requiredBufferSize));
+				}
+
+				compactedSampleBuf.resize(compactedSampleBuf.size() + requiredBufferSize);
+
+				uint8_t* resampledData[AV_NUM_DATA_POINTERS]{ nullptr };
+				THROW_HR_IF_FFMPEG_FAILED(av_samples_fill_arrays(resampledData, nullptr, &compactedSampleBuf[compactedSampleBuf.size() - requiredBufferSize], frame->channels, frame->nb_samples, m_outputFormat, 0));
+
+				// Convert to the output format
+				int resampledSamplesCount{ swr_convert(m_swrContext.get(), resampledData, frame->nb_samples, const_cast<const uint8_t**>(frame->extended_data), frame->nb_samples) };
 				THROW_HR_IF_FFMPEG_FAILED(resampledSamplesCount);
 
-				const uint32_t resampledDataSize{ static_cast<uint32_t>(resampledSamplesCount) * frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) };
-				WINRT_ASSERT(resampledDataSize <= static_cast<uint32_t>(bufSize));
+				if (resampledSamplesCount < frame->nb_samples)
+				{
+					// We got less samples than we expected. We need to shrink the buffer.
+					int resampledDataSize{ av_samples_get_buffer_size(nullptr, frame->channels, resampledSamplesCount, m_outputFormat, 0) };
+					THROW_HR_IF_FFMPEG_FAILED(resampledDataSize);
+					compactedSampleBuf.resize(compactedSampleBuf.size() - (requiredBufferSize - resampledDataSize));
+				}
+				else if (resampledSamplesCount > frame->nb_samples)
+				{
+					// There may have been a buffer overflow... This should never happen.
+					WINRT_ASSERT(false);
+					THROW_HR(E_UNEXPECTED);
+				}
 
-				curSampleBuf = make<FFmpegInteropBuffer>(move(resampledData), resampledDataSize);
 				curSampleCount = resampledSamplesCount;
 			}
 
@@ -195,15 +266,23 @@ namespace winrt::FFmpegInterop::implementation
 			const bool minSampleDurMet{ dur >= m_minAudioSampleDur };
 
 			// Copy the current sample data to the compacted sample buffer if needed
-			if (!firstDecodedSample || !minSampleDurMet)
+			if (!IsUsingResampler() && (!firstDecodedSample || !minSampleDurMet))
 			{
+				if (firstDecodedSample)
+				{
+					// Reserve buffer space to minimize reallocations
+					int minSampleCount{ MIN_AUDIO_SAMPLE_DUR_MS * m_codecContext->sample_rate / MS_PER_SEC };
+					int minBufferSize{ av_samples_get_buffer_size(nullptr, frame->channels, minSampleCount, m_outputFormat, 0) };
+					compactedSampleBuf.reserve(minBufferSize);
+				}
+
 				compactedSampleBuf.insert(compactedSampleBuf.end(), curSampleBuf.data(), curSampleBuf.data() + curSampleBuf.Length());
 			}
 
 			// Check if we've reached the minimum sample duration threshold
 			if (minSampleDurMet)
 			{
-				if (firstDecodedSample)
+				if (!IsUsingResampler() && firstDecodedSample)
 				{
 					sampleBuf = move(curSampleBuf);
 				}

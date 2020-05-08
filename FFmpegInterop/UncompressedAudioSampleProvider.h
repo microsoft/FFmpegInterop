@@ -38,7 +38,16 @@ namespace winrt::FFmpegInterop::implementation
 		// We'll compact shorter decoded audio samples until this threshold is reached.
 		static constexpr int64_t MIN_AUDIO_SAMPLE_DUR_MS{ 200 };
 
+		static std::tuple<AVSampleFormat, GUID> GetOutputFormat(_In_ AVSampleFormat format) noexcept;
+		static bool IsSupportedFormat(_In_ AVSampleFormat format) noexcept { auto [ffmpegOutputFormat, mfOutputFormat] = GetOutputFormat(format); return format == ffmpegOutputFormat; }
+		static AVSampleFormat GetFFmpegOutputFormat(_In_ AVSampleFormat format) noexcept { auto [ffmpegOutputFormat, mfOutputFormat] = GetOutputFormat(format); return ffmpegOutputFormat; }
+		static GUID GetMFOutputFormat(_In_ AVSampleFormat format) noexcept { auto [ffmpegOutputFormat, mfOutputFormat] = GetOutputFormat(format); return mfOutputFormat; }
+		static void InitCodecContext(_In_ AVCodecContext* codecContext) noexcept;
+
+		bool IsUsingResampler() const noexcept { return m_swrContext != nullptr; }
+
 		int64_t m_minAudioSampleDur{ 0 };
+		AVSampleFormat m_outputFormat{ AV_SAMPLE_FMT_NONE };
 		SwrContext_ptr m_swrContext;
 		bool m_lastDecodeFailed{ false };
 	};

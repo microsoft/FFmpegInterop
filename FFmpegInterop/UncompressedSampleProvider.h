@@ -32,7 +32,7 @@ namespace winrt::FFmpegInterop::implementation
 			_In_ const AVFormatContext* formatContext,
 			_In_ AVStream* stream, _In_ Reader& reader,
 			_In_ uint32_t allowedDecodeErrors,
-			_In_opt_ InitCodecContextFunc initCodecContext = nullptr);
+			_In_ InitCodecContextFunc initCodecContext);
 
 	protected:
 		void Flush() noexcept override;

@@ -71,9 +71,9 @@ namespace winrt::FFmpegInterop::implementation
 	}
 
 	// Helper function to map AVERROR to HRESULT
-	inline HRESULT averror_to_hresult(_In_range_(< , 0) int result)
+	inline constexpr HRESULT averror_to_hresult(_In_range_(< , 0) int status) noexcept
 	{
-		switch (result)
+		switch (status)
 		{
 		case AVERROR(EINVAL):
 			return E_INVALIDARG;
@@ -89,7 +89,22 @@ namespace winrt::FFmpegInterop::implementation
 	}
 
 	// Macro to check the result of FFmpeg calls
-	#define THROW_HR_IF_FFMPEG_FAILED(result) if ((result) < 0) { THROW_HR(averror_to_hresult(result)); }
+	template <typename T>
+	_Post_satisfies_(return == status)
+	inline constexpr int verify_averror(T status)
+	{
+		static_assert(std::is_same<T, int>::value, "Wrong Type: int expected");
+		return status;
+	}
+
+	#define THROW_HR_IF_FFMPEG_FAILED(status) \
+	do { \
+		const int __status = verify_averror(status); \
+		if (__status < 0) \
+		{ \
+			THROW_HR_MSG(averror_to_hresult(__status), #status); \
+		} \
+	} while (false) \
 
 	// Helper function to create a PropertyValue from an MF attribute
 	extern winrt::Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propVar);
@@ -174,7 +189,7 @@ namespace winrt::FFmpegInterop::implementation
 	struct AVChannelLayoutWrapper :
 		public AVChannelLayout
 	{
-		AVChannelLayoutWrapper()
+		AVChannelLayoutWrapper() noexcept
 		{
 			order = AV_CHANNEL_ORDER_UNSPEC;
 			nb_channels = 0;
@@ -182,7 +197,14 @@ namespace winrt::FFmpegInterop::implementation
 			opaque = nullptr;
 		}
 
-		AVChannelLayoutWrapper(const AVChannelLayout& other)
+		AVChannelLayoutWrapper(const AVChannelLayout& other) :
+			AVChannelLayoutWrapper()
+		{
+			THROW_HR_IF_FFMPEG_FAILED(av_channel_layout_copy(this, &other));
+		}
+
+		AVChannelLayoutWrapper(const AVChannelLayoutWrapper& other) :
+			AVChannelLayoutWrapper()
 		{
 			THROW_HR_IF_FFMPEG_FAILED(av_channel_layout_copy(this, &other));
 		}
@@ -193,19 +215,19 @@ namespace winrt::FFmpegInterop::implementation
 			*this = std::move(other);
 		}
 
-		AVChannelLayoutWrapper(int channels)
+		AVChannelLayoutWrapper(int channels) noexcept :
+			AVChannelLayoutWrapper()
 		{
 			av_channel_layout_default(this, channels);
 		}
 
-		AVChannelLayoutWrapper(uint64_t mask)
+		AVChannelLayoutWrapper(uint64_t mask) :
+			AVChannelLayoutWrapper()
 		{
 			THROW_HR_IF_FFMPEG_FAILED(av_channel_layout_from_mask(this, mask));
 		}
 
-		AVChannelLayoutWrapper(const AVChannelLayoutWrapper&) = delete;
-
-		~AVChannelLayoutWrapper()
+		~AVChannelLayoutWrapper() noexcept
 		{
 			av_channel_layout_uninit(this);
 		}

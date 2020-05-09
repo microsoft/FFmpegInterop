@@ -229,6 +229,7 @@ namespace winrt::FFmpegInterop::implementation
 						{
 							m_mss.AddStreamDescriptor(move(audioStreamDescriptor));
 						}
+						pendingAudioStreamDescriptors.clear();
 					}
 				}
 				else
@@ -265,6 +266,7 @@ namespace winrt::FFmpegInterop::implementation
 						{
 							m_mss.AddStreamDescriptor(move(videoStreamDescriptor));
 						}
+						pendingVideoStreamDescriptors.clear();
 					}
 				}
 				else

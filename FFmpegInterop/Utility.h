@@ -88,7 +88,7 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	}
 
-	// Macro to check the result of FFmpeg calls
+	// Macros to check the result of FFmpeg calls
 	template <typename T>
 	_Post_satisfies_(return == status)
 	inline constexpr int verify_averror(T status)
@@ -97,7 +97,11 @@ namespace winrt::FFmpegInterop::implementation
 		return status;
 	}
 
-	#define THROW_HR_IF_FFMPEG_FAILED(status) do { const int __status = verify_averror(status); if (__status < 0) { THROW_HR(averror_to_hresult(status)); } } while (false)
+	#define THROW_HR_IF_FFMPEG_FAILED(status) do { const int __status = verify_averror(status); if (__status < 0) { THROW_HR(averror_to_hresult(__status)); } } while (false)
+
+	#define RETURN_AVERROR_IF_FAILED(status) do { const int __status{ verify_averror(status) }; if (__status < 0) { LOG_HR(averror_to_hresult(__status)); return __status; } } while (false)
+	#define RETURN_AVERROR_IF_NULL_ALLOC(ptr) do { if ((ptr) == nullptr) { LOG_HR(E_OUTOFMEMORY); return AVERROR(ENOMEM); } } while (false)
+	#define RETURN_AVERROR_IF(status, condition) do { if (wil::verify_bool(condition)) { const int __status{ verify_averror(status) }; LOG_HR(averror_to_hresult(__status)); return verify_averror(__status); } } while (false)
 
 	// Helper function to create a PropertyValue from an MF attribute
 	extern winrt::Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propVar);

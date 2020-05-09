@@ -32,38 +32,31 @@ using namespace std;
 
 namespace
 {
+	using namespace winrt::FFmpegInterop::implementation;
+
 	// Function to read from file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
-	int FileStreamRead(void* ptr, uint8_t* buf, int bufSize)
+	int FileStreamRead(void* ptr, uint8_t* buf, int bufSize) noexcept
 	{
 		IStream* fileStream{ reinterpret_cast<IStream*>(ptr) };
 		ULONG bytesRead{ 0 };
 
-		if (FAILED(fileStream->Read(buf, bufSize, &bytesRead)))
-		{
-			return AVERROR_EXTERNAL;
-		}
+		RETURN_AVERROR_IF(AVERROR_EXTERNAL, FAILED(fileStream->Read(buf, bufSize, &bytesRead)));
 
 		// Assume we've reached EOF if we didn't read any bytes
-		if (bytesRead == 0)
-		{
-			return AVERROR_EOF;
-		}
+		RETURN_AVERROR_IF(AVERROR_EOF, bytesRead == 0);
 
 		return bytesRead;
 	}
 
 	// Function to seek in file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
-	int64_t FileStreamSeek(void* ptr, int64_t pos, int whence)
+	int64_t FileStreamSeek(void* ptr, int64_t pos, int whence) noexcept
 	{
 		IStream* fileStream{ reinterpret_cast<IStream*>(ptr) };
 		LARGE_INTEGER in{ 0 };
 		in.QuadPart = pos;
 		ULARGE_INTEGER out{ 0 };
 
-		if (FAILED(fileStream->Seek(in, whence, &out)))
-		{
-			return AVERROR_EXTERNAL;
-		}
+		RETURN_AVERROR_IF(AVERROR_EXTERNAL, FAILED(fileStream->Seek(in, whence, &out)));
 
 		return out.QuadPart;
 	}

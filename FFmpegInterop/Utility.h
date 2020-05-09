@@ -71,7 +71,7 @@ namespace winrt::FFmpegInterop::implementation
 	}
 
 	// Helper function to map AVERROR to HRESULT
-	inline HRESULT averror_to_hresult(_In_range_(< , 0) int result)
+	inline constexpr HRESULT averror_to_hresult(_In_range_(< , 0) int result)
 	{
 		switch (result)
 		{
@@ -89,7 +89,15 @@ namespace winrt::FFmpegInterop::implementation
 	}
 
 	// Macro to check the result of FFmpeg calls
-	#define THROW_HR_IF_FFMPEG_FAILED(result) if ((result) < 0) { THROW_HR(averror_to_hresult(result)); }
+	template <typename T>
+	_Post_satisfies_(return == status)
+	inline constexpr int verify_averror(T status)
+	{
+		static_assert(std::is_same<T, int>::value, "Wrong Type: int expected");
+		return status;
+	}
+
+	#define THROW_HR_IF_FFMPEG_FAILED(status) do { const int __status = verify_averror(status); if (__status < 0) { THROW_HR(averror_to_hresult(status)); } } while (false)
 
 	// Helper function to create a PropertyValue from an MF attribute
 	extern winrt::Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propVar);

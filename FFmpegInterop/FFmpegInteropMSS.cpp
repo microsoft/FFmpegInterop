@@ -26,6 +26,7 @@
 using namespace winrt;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Foundation::Collections;
+using namespace winrt::Windows::Foundation::Metadata;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
@@ -35,7 +36,7 @@ namespace
 	using namespace winrt::FFmpegInterop::implementation;
 
 	// Function to read from file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
-	int FileStreamRead(void* ptr, uint8_t* buf, int bufSize) noexcept
+	int FileStreamRead(_In_ void* ptr, _In_ uint8_t* buf, _In_ int bufSize) noexcept
 	{
 		IStream* fileStream{ reinterpret_cast<IStream*>(ptr) };
 		ULONG bytesRead{ 0 };
@@ -49,7 +50,7 @@ namespace
 	}
 
 	// Function to seek in file stream. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
-	int64_t FileStreamSeek(void* ptr, int64_t pos, int whence) noexcept
+	int64_t FileStreamSeek(_In_ void* ptr, _In_ int64_t pos, _In_ int whence) noexcept
 	{
 		IStream* fileStream{ reinterpret_cast<IStream*>(ptr) };
 		LARGE_INTEGER in{ 0 };
@@ -278,6 +279,16 @@ namespace winrt::FFmpegInterop::implementation
 				break;
 
 			case AVMEDIA_TYPE_SUBTITLE:
+				// Subtitle streams use TimedMetadataStreamDescriptor which was added in 17134. Check if this type is present.
+				// Note: MSS didn't expose subtitle streams in media engine scenarios until 19041.
+				if (!ApiInformation::IsTypePresent(L"Windows.Media.Core.TimedMetadataStreamDescriptor"))
+				{
+					TraceLoggingWrite(g_FFmpegInteropProvider, "NoSubtitleSupport", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+						TraceLoggingValue(stream->index, "StreamId"),
+						TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
+					continue;
+				}
+
 				try
 				{
 					tie(sampleProvider, streamDescriptor) = StreamFactory::CreateSubtitleStream(m_formatContext.get(), stream, m_reader);

@@ -36,7 +36,7 @@ namespace winrt::MediaPlayerCPP::implementation
 	private:
 		fire_and_forget OpenFile(_In_ const Windows::Storage::StorageFile& file);
 		void OpenUri(_In_ const hstring& uri);
-		void OpenMedia(_In_ std::function<void(const Windows::Media::Core::MediaStreamSource&, const FFmpegInterop::FFmpegInteropMSSConfig&)> createFunc);
+		void OpenMedia(_In_ std::function<FFmpegInterop::FFmpegInteropMSS(const FFmpegInterop::FFmpegInteropMSSConfig&)> createFunc);
 		fire_and_forget OnError(_In_ const hstring& errMsg);
 	};
 }

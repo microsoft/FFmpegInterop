@@ -27,19 +27,22 @@ namespace winrt::FFmpegInterop::implementation
 		public FFmpegInteropMSST<FFmpegInteropMSS>
 	{
 	public:
-		static void CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-		static void CreateFromUri(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static FFmpegInterop::FFmpegInteropMSS CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static FFmpegInterop::FFmpegInteropMSS CreateFromUri(_In_ const hstring& uri, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
-		FFmpegInteropMSS(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-		FFmpegInteropMSS(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		FFmpegInteropMSS(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		FFmpegInteropMSS(_In_ const hstring& uri, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+
+		Windows::Media::Core::MediaStreamSource GetMediaStreamSource() { return m_mss; }
+		void Shutdown();
 
 	private:
-		FFmpegInteropMSS(_In_ const Windows::Media::Core::MediaStreamSource& mss);
+		FFmpegInteropMSS(_In_opt_ const Windows::Media::Core::MediaStreamSource& mss);
 
 		void OpenFile(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 		void OpenFile(_In_z_ const char* uri, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-
 		void InitFFmpegContext(_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		void ShutdownInternal();
 
 		void OnStarting(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceStartingEventArgs& args);
 		void OnSampleRequested(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs& args);

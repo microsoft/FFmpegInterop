@@ -22,16 +22,26 @@ namespace FFmpegInterop
 	{
 		FFmpegInteropMSSConfig();
 		
+		// Force the use of FFmpeg decoders to decode audio streams and output uncompressed audio
 		Boolean ForceAudioDecode;
+
+		// Force the use of FFmpeg decoders to decode video streams and output uncompressed video
 		Boolean ForceVideoDecode;
+
+		// Allow up to N consecutive decode errors before failing playback
 		UInt32 AllowedDecodeErrors;
+
+		// Options passed to avformat_open_input()
 		Windows.Foundation.Collections.StringMap FFmpegOptions{ get; };
 	}
 
 	[default_interface]
 	runtimeclass FFmpegInteropMSS
 	{
-		static void CreateFromStream(Windows.Storage.Streams.IRandomAccessStream fileStream, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
-		static void CreateFromUri(String uri, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
+		static FFmpegInteropMSS CreateFromStream(Windows.Storage.Streams.IRandomAccessStream fileStream, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
+		static FFmpegInteropMSS CreateFromUri(String uri, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
+
+		Windows.Media.Core.MediaStreamSource GetMediaStreamSource();
+		void Shutdown();
 	}
 }

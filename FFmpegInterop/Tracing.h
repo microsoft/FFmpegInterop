@@ -102,4 +102,5 @@ namespace winrt::FFmpegInterop::implementation
 	TRACE_LOGGING_ACTIVITY_CLASS(OnSampleRequested);
 	TRACE_LOGGING_ACTIVITY_CLASS(OnSwitchStreamsRequested);
 	TRACE_LOGGING_ACTIVITY_CLASS(OnClosed);
+	TRACE_LOGGING_ACTIVITY_CLASS(Shutdown);
 }

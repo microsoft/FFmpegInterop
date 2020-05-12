@@ -65,34 +65,44 @@ namespace
 
 namespace winrt::FFmpegInterop::implementation
 {
-	void FFmpegInteropMSS::CreateFromStream(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	FFmpegInterop::FFmpegInteropMSS FFmpegInteropMSS::CreateFromStream(_In_ const IRandomAccessStream& fileStream, _In_opt_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		auto logger{ CreateFromStreamActivity::Start() };
 
-		(void) make<FFmpegInteropMSS>(fileStream, mss, config);
+		FFmpegInterop::FFmpegInteropMSS ffmpegInteropMSS{ make<FFmpegInteropMSS>(fileStream, mss, config) };
 
 		logger.Stop();
+
+		return ffmpegInteropMSS;
 	}
 
-	void FFmpegInteropMSS::CreateFromUri(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	FFmpegInterop::FFmpegInteropMSS FFmpegInteropMSS::CreateFromUri(_In_ const hstring& uri, _In_opt_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		auto logger{ CreateFromUriActivity::Start() };
 
-		(void) make<FFmpegInteropMSS>(uri, mss, config);
+		FFmpegInterop::FFmpegInteropMSS ffmpegInteropMSS{ make<FFmpegInteropMSS>(uri, mss, config) };
 
 		logger.Stop();
+
+		return ffmpegInteropMSS;
 	}
 
-	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const MediaStreamSource& mss) :
+	FFmpegInteropMSS::FFmpegInteropMSS(_In_opt_ const MediaStreamSource& mss) :
 		m_mss(mss),
 		m_formatContext(avformat_alloc_context()),
 		m_reader(m_formatContext.get(), m_streamIdMap)
 	{
-		THROW_HR_IF_NULL(E_INVALIDARG, mss);
 		THROW_IF_NULL_ALLOC(m_formatContext);
+
+		// Activate a new MSS instance if one was not provided
+		if (m_mss == nullptr)
+		{
+			IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
+			m_mss = mssFactory.ActivateInstance<MediaStreamSource>();
+		}
 	}
 
-	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
+	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const IRandomAccessStream& fileStream, _In_opt_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
 		FFmpegInteropMSS(mss)
 	{
 		try
@@ -108,7 +118,7 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	}
 
-	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
+	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_opt_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
 		FFmpegInteropMSS(mss)
 	{
 		try
@@ -479,23 +489,42 @@ namespace winrt::FFmpegInterop::implementation
 
 		lock_guard<mutex> lock{ m_lock };
 
-		// Unregister event handlers
-		// This is critically important to do for the media source app service scenario! If we don't unregister these event handlers, then
-		// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
-		// the remote app process being suspended. If the remote app process is suspended first, then COM may cause a hang until the 
-		// remote app process is terminated.
-		m_mss.Starting(m_startingEventToken);
-		m_mss.SampleRequested(m_sampleRequestedEventToken);
-		m_mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
-		m_mss.Closed(m_closedEventToken);
-
-		// Release the MSS and file stream
-		// This is critically important to do for the media source app service scenario! The remote app process may be suspended anytime after 
-		// this Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could 
-		// cause file related issues until the remote app process is terminated.
-		m_mss = nullptr;
-		m_fileStream = nullptr;
+		ShutdownInternal();
 
 		logger.Stop();
+	}
+
+	void FFmpegInteropMSS::Shutdown()
+	{
+		auto logger{ ShutdownActivity::Start() };
+
+		lock_guard<mutex> lock{ m_lock };
+
+		ShutdownInternal();
+
+		logger.Stop();
+	}
+
+	void FFmpegInteropMSS::ShutdownInternal()
+	{
+		if (m_mss != nullptr)
+		{
+			// Unregister event handlers
+			// This is critically important to do for the media source app service scenario! If we don't unregister these event handlers, then
+			// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
+			// the remote app process being suspended. If the remote app process is suspended first, then COM may cause a hang until the 
+			// remote app process is terminated.
+			m_mss.Starting(m_startingEventToken);
+			m_mss.SampleRequested(m_sampleRequestedEventToken);
+			m_mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
+			m_mss.Closed(m_closedEventToken);
+
+			// Release the MSS and file stream
+			// This is critically important to do for the media source app service scenario! The remote app process may be suspended anytime after 
+			// this Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could 
+			// cause file related issues until the remote app process is terminated.
+			m_mss = nullptr;
+			m_fileStream = nullptr;
+		}
 	}
 }

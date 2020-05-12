@@ -71,9 +71,9 @@ namespace MediaPlayerCS
 
 			IRandomAccessStream stream = await file.OpenReadAsync();
 
-			OpenMedia((mss, config) =>
+			OpenMedia((config) =>
 			{
-				FFmpegInteropMSS.CreateFromStream(stream, mss, config);
+				return FFmpegInteropMSS.CreateFromStream(stream, null, config);
 			});
 		}
 
@@ -93,13 +93,13 @@ namespace MediaPlayerCS
 
 		private void OpenUri(String uri)
 		{
-			OpenMedia((mss, config) =>
+			OpenMedia((config) =>
 			{
-				FFmpegInteropMSS.CreateFromUri(uri, mss, config);
+				return FFmpegInteropMSS.CreateFromUri(uri, null, config);
 			});
 		}
 
-		private void OpenMedia(Action<MediaStreamSource, FFmpegInteropMSSConfig> createFunc)
+		private void OpenMedia(Func<FFmpegInteropMSSConfig, FFmpegInteropMSS> createFunc)
 		{
 			// Stop any media currently playing
 			mediaElement.Stop();
@@ -107,19 +107,16 @@ namespace MediaPlayerCS
 			try
 			{
 				// Create the media source
-				IActivationFactory mssFactory = WindowsRuntimeMarshal.GetActivationFactory(typeof(MediaStreamSource));
-				MediaStreamSource mss = mssFactory.ActivateInstance() as MediaStreamSource;
-
 				var config = new FFmpegInteropMSSConfig
 				{
 					ForceAudioDecode = toggleSwitchAudioDecode.IsOn,
 					ForceVideoDecode = toggleSwitchVideoDecode.IsOn
 				};
 
-				createFunc(mss, config);
+				FFmpegInteropMSS ffmepgInteropMss = createFunc(config);
 
 				// Set the MSS as the media element's source
-				mediaElement.SetMediaStreamSource(mss);
+				mediaElement.SetMediaStreamSource(ffmepgInteropMss.GetMediaStreamSource());
 
 				// Close the control panel
 				splitter.IsPaneOpen = false;

@@ -30,6 +30,7 @@
 #include "UncompressedAudioSampleProvider.h"
 #include "UncompressedVideoSampleProvider.h"
 #include "VFWSampleProvider.h"
+#include "Codecs.h"
 
 using namespace winrt;
 using namespace winrt::Windows::Foundation;
@@ -224,6 +225,24 @@ namespace winrt::FFmpegInterop::implementation
 		{
 			TraceLoggingWrite(g_FFmpegInteropProvider, "ForceVideoDecode", TraceLoggingLevel(TRACE_LEVEL_VERBOSE));
 			codecId = AV_CODEC_ID_NONE;
+		}
+
+		// Check if this codec is supported through a codec pack
+		if (UsesCodecPack(codecId))
+		{
+			// Check if the codec pack is installed
+			if (!IsCodecPackInstalled(codecId))
+			{
+				TraceLoggingWrite(g_FFmpegInteropProvider, "RequiredCodecPackNotInstalled", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+					TraceLoggingValue(stream->index, "StreamId"),
+					TraceLoggingInt32(codecId, "AVCodecID"));
+
+				// Fallback to the FFmpeg decoder if present
+				if (avcodec_find_decoder(codecId) != nullptr)
+				{
+					codecId = AV_CODEC_ID_NONE;
+				}
+			}
 		}
 
 		switch (codecId)

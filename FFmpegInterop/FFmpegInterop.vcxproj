@@ -108,6 +108,7 @@
     <ClInclude Include="ACMSampleProvider.h" />
     <ClInclude Include="AV1SampleProvider.h" />
     <ClInclude Include="BitstreamReader.h" />
+    <ClInclude Include="Codecs.h" />
     <ClInclude Include="FFmpegInteropBuffer.h" />
     <ClInclude Include="FFmpegInteropLogging.h" />
     <ClInclude Include="FFmpegInteropMSS.h" />
@@ -135,6 +136,7 @@
     <ClCompile Include="ACMSampleProvider.cpp" />
     <ClCompile Include="AV1SampleProvider.cpp" />
     <ClCompile Include="BitstreamReader.cpp" />
+    <ClCompile Include="Codecs.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="FFmpegInteropBuffer.cpp" />
     <ClCompile Include="FFmpegInteropLogging.cpp" />

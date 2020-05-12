@@ -24,7 +24,7 @@ namespace UnitTest
         public static int DownloadUriLength = 89328;
         public static string DownloadStreamedFileName = "d8c317bd-9fbb-4c5f-94ed-501f09841917.mp4";
 
-        public static string StreamingUriSource = "rtsp://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov";
+        public static string StreamingUriSource = "rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_175k.mov";
         public static int StreamingUriLength = 596458;
     }
 }

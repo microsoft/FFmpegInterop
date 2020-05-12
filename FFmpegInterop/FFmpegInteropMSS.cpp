@@ -112,8 +112,12 @@ namespace winrt::FFmpegInterop::implementation
 		}
 		catch (...)
 		{
-			// Notify the MSS that an error occurred
-			mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
+			if (m_mss != nullptr)
+			{
+				// Notify the MSS that an error occurred
+				m_mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
+			}
+
 			throw;
 		}
 	}
@@ -131,8 +135,12 @@ namespace winrt::FFmpegInterop::implementation
 		}
 		catch (...)
 		{
-			// Notify the MSS that an error occurred
-			mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
+			if (m_mss != nullptr)
+			{
+				// Notify the MSS that an error occurred
+				m_mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
+			}
+
 			throw;
 		}
 	}
@@ -188,13 +196,6 @@ namespace winrt::FFmpegInterop::implementation
 		options.reset(exchange(optionsRaw, nullptr));
 		THROW_HR_IF_FFMPEG_FAILED(result);
 		m_formatContext.reset(exchange(formatContextRaw, nullptr));
-
-		if (options != nullptr)
-		{
-			// Options is not null if there was an issue with the provided FFmpeg options such as an invalid key or value.
-			WINRT_ASSERT(options == nullptr);
-			// TODO: Log options that weren't found
-		}
 	}
 
 	void FFmpegInteropMSS::InitFFmpegContext(_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)

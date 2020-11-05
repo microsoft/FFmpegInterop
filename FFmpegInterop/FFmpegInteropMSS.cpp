@@ -114,9 +114,17 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	mutexGuard.lock();
 	if (mss)
 	{
-		mss->Starting -= startingRequestedToken;
-		mss->SampleRequested -= sampleRequestedToken;
-		mss->SwitchStreamsRequested -= switchStreamsRequestedToken;
+		try
+		{
+			mss->Starting -= startingRequestedToken;
+			mss->SampleRequested -= sampleRequestedToken;
+			mss->SwitchStreamsRequested -= switchStreamsRequestedToken;
+		}
+		catch (...)
+		{
+			// C.36: A destructor may not fail
+		}
+		
 		mss = nullptr;
 	}
 

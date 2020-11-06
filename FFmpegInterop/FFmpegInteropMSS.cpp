@@ -495,7 +495,23 @@ namespace winrt::FFmpegInterop::implementation
 		logger.Stop();
 	}
 
-	void FFmpegInteropMSS::Shutdown()
+	STDMETHODIMP FFmpegInteropMSS::GetShutdownStatus(_Out_ MFSHUTDOWN_STATUS* status) noexcept
+	{
+		auto logger{ GetShutdownStatusActivity::Start() };
+
+		RETURN_HR_IF_NULL(E_POINTER, status);
+
+		lock_guard<mutex> lock{ m_lock };
+
+		RETURN_HR_IF(MF_E_INVALIDREQUEST, m_mss != nullptr);
+		*status = MFSHUTDOWN_COMPLETED;
+
+		logger.Stop();
+		return S_OK;
+	}
+
+	STDMETHODIMP FFmpegInteropMSS::Shutdown() noexcept
+	try
 	{
 		auto logger{ ShutdownActivity::Start() };
 
@@ -504,28 +520,30 @@ namespace winrt::FFmpegInterop::implementation
 		ShutdownInternal();
 
 		logger.Stop();
+		return S_OK;
 	}
+	CATCH_RETURN();
 
 	void FFmpegInteropMSS::ShutdownInternal()
 	{
 		if (m_mss != nullptr)
 		{
+			// Release the file stream
+			// This is critically important to do for the media source app service scenario! The remote app process may be suspended anytime after 
+			// this Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could 
+			// cause file related issues until the remote app process is terminated.
+			m_fileStream = nullptr;
+
 			// Unregister event handlers
 			// This is critically important to do for the media source app service scenario! If we don't unregister these event handlers, then
 			// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
 			// the remote app process being suspended. If the remote app process is suspended first, then COM may cause a hang until the 
 			// remote app process is terminated.
-			m_mss.Starting(m_startingEventToken);
-			m_mss.SampleRequested(m_sampleRequestedEventToken);
-			m_mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
-			m_mss.Closed(m_closedEventToken);
-
-			// Release the MSS and file stream
-			// This is critically important to do for the media source app service scenario! The remote app process may be suspended anytime after 
-			// this Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could 
-			// cause file related issues until the remote app process is terminated.
-			m_mss = nullptr;
-			m_fileStream = nullptr;
+			MediaStreamSource mss{ move(m_mss) };
+			mss.Starting(m_startingEventToken);
+			mss.SampleRequested(m_sampleRequestedEventToken);
+			mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
+			mss.Closed(m_closedEventToken);
 		}
 	}
 }

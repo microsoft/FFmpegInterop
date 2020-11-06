@@ -42,6 +42,5 @@ namespace FFmpegInterop
 		static FFmpegInteropMSS CreateFromUri(String uri, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
 
 		Windows.Media.Core.MediaStreamSource GetMediaStreamSource();
-		void Shutdown();
 	}
 }

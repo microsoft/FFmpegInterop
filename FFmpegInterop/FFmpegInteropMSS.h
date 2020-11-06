@@ -24,7 +24,9 @@
 namespace winrt::FFmpegInterop::implementation
 {
 	class FFmpegInteropMSS :
-		public FFmpegInteropMSST<FFmpegInteropMSS>
+		public FFmpegInteropMSST<
+			FFmpegInteropMSS,
+			IMFShutdown>
 	{
 	public:
 		static FFmpegInterop::FFmpegInteropMSS CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
@@ -34,7 +36,10 @@ namespace winrt::FFmpegInterop::implementation
 		FFmpegInteropMSS(_In_ const hstring& uri, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
 		Windows::Media::Core::MediaStreamSource GetMediaStreamSource() { return m_mss; }
-		void Shutdown();
+
+		// IMFShutdown
+		STDMETHODIMP GetShutdownStatus(_Out_ MFSHUTDOWN_STATUS* status) noexcept;
+		STDMETHODIMP Shutdown() noexcept;
 
 	private:
 		FFmpegInteropMSS(_In_opt_ const Windows::Media::Core::MediaStreamSource& mss);

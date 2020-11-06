@@ -495,16 +495,16 @@ namespace winrt::FFmpegInterop::implementation
 		logger.Stop();
 	}
 
-	STDMETHODIMP FFmpegInteropMSS::GetShutdownStatus(_Out_ MFSHUTDOWN_STATUS* status) noexcept
+	STDMETHODIMP FFmpegInteropMSS::GetShutdownStatus(_Out_ MFSHUTDOWN_STATUS* pStatus) noexcept
 	{
 		auto logger{ GetShutdownStatusActivity::Start() };
 
-		RETURN_HR_IF_NULL(E_POINTER, status);
+		RETURN_HR_IF_NULL(E_POINTER, pStatus);
 
 		lock_guard<mutex> lock{ m_lock };
 
 		RETURN_HR_IF(MF_E_INVALIDREQUEST, m_mss != nullptr);
-		*status = MFSHUTDOWN_COMPLETED;
+		*pStatus = MFSHUTDOWN_COMPLETED;
 
 		logger.Stop();
 		return S_OK;

@@ -38,7 +38,7 @@ namespace winrt::FFmpegInterop::implementation
 		Windows::Media::Core::MediaStreamSource GetMediaStreamSource() { return m_mss; }
 
 		// IMFShutdown
-		STDMETHODIMP GetShutdownStatus(_Out_ MFSHUTDOWN_STATUS* status) noexcept;
+		STDMETHODIMP GetShutdownStatus(_Out_ MFSHUTDOWN_STATUS* pStatus) noexcept;
 		STDMETHODIMP Shutdown() noexcept;
 
 	private:

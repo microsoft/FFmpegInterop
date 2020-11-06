@@ -75,6 +75,7 @@ extern "C"
 #include <limits>
 #include <codecvt> // TODO: Deprecated in C++17. Replace when an alternative is available.
 #include <cstdlib>
+#include <exception>
 
 // FFmpegInterop
 #include "Tracing.h"

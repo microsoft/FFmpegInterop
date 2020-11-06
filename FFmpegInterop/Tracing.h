@@ -53,12 +53,7 @@ namespace winrt::FFmpegInterop::implementation
 				} \
 				else \
 				{ \
-					/* Failure not logged by WIL error macro. We should ideally only hit this case for */ \
-					/* std::bad_alloc exceptions. Other scenarios that might hit this case like */ \
-					/* exceptions from invalid STL usage, unlogged errors, premature return without */ \
-					/* stopping this activity, etc should be addressed. Assert here to try to catch */ \
-					/* these scenarios during development. */ \
-					WINRT_ASSERT(failureInfo != nullptr); \
+					WINRT_ASSERT(std::uncaught_exceptions() > 0); \
 					\
 					TraceLoggingWriteTagged( \
 						m_activity, \

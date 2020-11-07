@@ -69,7 +69,6 @@ extern "C"
 #include <memory>
 #include <functional>
 #include <deque>
-#include <map>
 #include <mutex>
 #include <tuple>
 #include <limits>

@@ -110,7 +110,7 @@ namespace winrt::FFmpegInterop::implementation
 		m_lastDecodeFailed = false;
 	}
 
-	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedAudioSampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, Windows::Foundation::IInspectable>>, vector<pair<GUID, Windows::Foundation::IInspectable>>> UncompressedAudioSampleProvider::GetSampleData()
 	{
 		// Decode samples until we reach the minimum sample duration threshold or EOS
 		IBuffer sampleBuf{ nullptr };

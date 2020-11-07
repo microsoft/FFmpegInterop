@@ -420,7 +420,7 @@ namespace winrt::FFmpegInterop::implementation
 			TraceLoggingValue(sample.Duration().count(), "DurHNS"));
 	}
 
-	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> SampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, Windows::Foundation::IInspectable>>, vector<pair<GUID, Windows::Foundation::IInspectable>>> SampleProvider::GetSampleData()
 	{
 		AVPacket_ptr packet{ GetPacket() };
 
@@ -428,7 +428,7 @@ namespace winrt::FFmpegInterop::implementation
 		const int64_t dur{ packet->duration };
 
 		// Set sample properties
-		vector<pair<GUID, IInspectable>> properties;
+		vector<pair<GUID, Windows::Foundation::IInspectable>> properties;
 
 		if ((packet->flags & AV_PKT_FLAG_KEY) != 0)
 		{

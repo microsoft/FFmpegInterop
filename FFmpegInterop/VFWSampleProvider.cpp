@@ -54,7 +54,12 @@ namespace winrt::FFmpegInterop::implementation
 		// Initialize a media type from the video info header
 		com_ptr<IMFMediaType> mediaType;
 		THROW_IF_FAILED(MFCreateMediaType(mediaType.put()));
+#if 0
 		THROW_IF_FAILED(MFInitMediaTypeFromVideoInfoHeader(mediaType.get(), reinterpret_cast<VIDEOINFOHEADER*>(vihBuf.data()), static_cast<uint32_t>(vihBuf.size()), nullptr));
+#else
+		// MFInitMediaTypeFromVideoInfoHeader() needs to be made WACK compliant
+		THROW_HR(E_NOTIMPL);
+#endif
 
 		// Initialize the encoding properties from the media type
 		MediaPropertySet encPropSet{ encProp.Properties() };

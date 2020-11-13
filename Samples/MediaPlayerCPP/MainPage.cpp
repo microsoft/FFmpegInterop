@@ -73,7 +73,7 @@ fire_and_forget MainPage::OpenFile(_In_ const StorageFile& file)
 
 	IRandomAccessStream stream{ co_await file.OpenReadAsync() };
 
-	OpenMedia([&stream](const FFmpegInteropMSSConfig& config) -> FFmpegInteropMSS
+	OpenMedia([&stream](const FFmpegInteropMSSConfig& config) -> MediaStreamSource
 	{
 		return FFmpegInteropMSS::CreateFromStream(stream, nullptr, config);
 	});
@@ -95,13 +95,13 @@ void MainPage::OnUriBoxKeyUp(_In_ const IInspectable& sender, _In_ const KeyRout
 
 void MainPage::OpenUri(_In_ const hstring& uri)
 {
-	OpenMedia([&uri](const FFmpegInteropMSSConfig& config) -> FFmpegInteropMSS
+	OpenMedia([&uri](const FFmpegInteropMSSConfig& config) -> MediaStreamSource
 	{
 		return FFmpegInteropMSS::CreateFromUri(uri, nullptr, config);
 	});
 }
 
-void MainPage::OpenMedia(_In_ function<FFmpegInteropMSS(const FFmpegInteropMSSConfig&)> createFunc)
+void MainPage::OpenMedia(_In_ function<MediaStreamSource(const FFmpegInteropMSSConfig&)> createFunc)
 {
 	// Stop any media currently playing
 	mediaElement().Stop();
@@ -113,10 +113,10 @@ void MainPage::OpenMedia(_In_ function<FFmpegInteropMSS(const FFmpegInteropMSSCo
 		config.ForceAudioDecode(toggleSwitchAudioDecode().IsOn());
 		config.ForceVideoDecode(toggleSwitchVideoDecode().IsOn());
 		
-		FFmpegInteropMSS ffmpegInteropMss{ createFunc(config) };
+		MediaStreamSource mss{ createFunc(config) };
 
 		// Set the MSS as the media element's source
-		mediaElement().SetMediaStreamSource(ffmpegInteropMss.GetMediaStreamSource());
+		mediaElement().SetMediaStreamSource(mss);
 
 		// Close the control panel
 		splitter().IsPaneOpen(false);

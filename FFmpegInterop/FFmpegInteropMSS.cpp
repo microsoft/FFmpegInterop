@@ -65,64 +65,69 @@ namespace
 
 namespace winrt::FFmpegInterop::implementation
 {
-	FFmpegInterop::FFmpegInteropMSS FFmpegInteropMSS::CreateFromStream(_In_ const IRandomAccessStream& fileStream, _In_opt_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	MediaStreamSource FFmpegInteropMSS::CreateFromStream(_In_ const IRandomAccessStream& fileStream, _In_opt_ const MediaStreamSource& mssIn, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		auto logger{ CreateFromStreamActivity::Start() };
+
+		// Activate a new MSS instance if one was not provided
+		MediaStreamSource mss{ mssIn };
+		if (mss == nullptr)
+		{
+			IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
+			mss = mssFactory.ActivateInstance<MediaStreamSource>();
+		}
 
 		FFmpegInterop::FFmpegInteropMSS ffmpegInteropMSS{ make<FFmpegInteropMSS>(fileStream, mss, config) };
 
 		logger.Stop();
 
-		return ffmpegInteropMSS;
+		return mss;
 	}
 
-	FFmpegInterop::FFmpegInteropMSS FFmpegInteropMSS::CreateFromUri(_In_ const hstring& uri, _In_opt_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	MediaStreamSource FFmpegInteropMSS::CreateFromUri(_In_ const hstring& uri, _In_opt_ const MediaStreamSource& mssIn, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		auto logger{ CreateFromUriActivity::Start() };
+
+		// Activate a new MSS instance if one was not provided
+		MediaStreamSource mss{ mssIn };
+		if (mss == nullptr)
+		{
+			IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
+			mss = mssFactory.ActivateInstance<MediaStreamSource>();
+		}
 
 		FFmpegInterop::FFmpegInteropMSS ffmpegInteropMSS{ make<FFmpegInteropMSS>(uri, mss, config) };
 
 		logger.Stop();
 
-		return ffmpegInteropMSS;
+		return mss;
 	}
 
-	FFmpegInteropMSS::FFmpegInteropMSS(_In_opt_ const MediaStreamSource& mss) :
-		m_mss(mss),
+	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const MediaStreamSource& mss) :
+		m_weakMss(mss),
 		m_formatContext(avformat_alloc_context()),
 		m_reader(m_formatContext.get(), m_streamIdMap)
 	{
+		WINRT_ASSERT(mss != nullptr);
 		THROW_IF_NULL_ALLOC(m_formatContext);
-
-		// Activate a new MSS instance if one was not provided
-		if (m_mss == nullptr)
-		{
-			IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
-			m_mss = mssFactory.ActivateInstance<MediaStreamSource>();
-		}
 	}
 
-	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const IRandomAccessStream& fileStream, _In_opt_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
+	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
 		FFmpegInteropMSS(mss)
 	{
 		try
 		{
 			OpenFile(fileStream, config);
-			InitFFmpegContext(config);
+			InitFFmpegContext(mss, config);
 		}
 		catch (...)
 		{
-			if (m_mss != nullptr)
-			{
-				// Notify the MSS that an error occurred
-				m_mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
-			}
-
+			mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
 			throw;
 		}
 	}
 
-	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_opt_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
+	FFmpegInteropMSS::FFmpegInteropMSS(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config) :
 		FFmpegInteropMSS(mss)
 	{
 		try
@@ -131,16 +136,11 @@ namespace winrt::FFmpegInterop::implementation
 			string uriA{ conv.to_bytes(uri.c_str()) };
 
 			OpenFile(uriA.c_str(), config);
-			InitFFmpegContext(config);
+			InitFFmpegContext(mss, config);
 		}
 		catch (...)
 		{
-			if (m_mss != nullptr)
-			{
-				// Notify the MSS that an error occurred
-				m_mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
-			}
-
+			mss.NotifyError(MediaStreamSourceErrorStatus::UnsupportedMediaFormat);
 			throw;
 		}
 	}
@@ -198,7 +198,7 @@ namespace winrt::FFmpegInterop::implementation
 		m_formatContext.reset(exchange(formatContextRaw, nullptr));
 	}
 
-	void FFmpegInteropMSS::InitFFmpegContext(_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	void FFmpegInteropMSS::InitFFmpegContext(_In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		THROW_HR_IF_FFMPEG_FAILED(avformat_find_stream_info(m_formatContext.get(), nullptr));
 
@@ -228,7 +228,7 @@ namespace winrt::FFmpegInterop::implementation
 				if (hasAudio || preferredAudioStreamId == i || preferredAudioStreamId < 0)
 				{
 					// Add the stream to the MSS
-					m_mss.AddStreamDescriptor(streamDescriptor);
+					mss.AddStreamDescriptor(streamDescriptor);
 
 					// Check if this is the first audio stream added to the MSS
 					if (!hasAudio)
@@ -239,7 +239,7 @@ namespace winrt::FFmpegInterop::implementation
 						// Add any audio streams we already enumerated
 						for (auto& audioStreamDescriptor : pendingAudioStreamDescriptors)
 						{
-							m_mss.AddStreamDescriptor(move(audioStreamDescriptor));
+							mss.AddStreamDescriptor(move(audioStreamDescriptor));
 						}
 						pendingAudioStreamDescriptors.clear();
 					}
@@ -256,7 +256,7 @@ namespace winrt::FFmpegInterop::implementation
 				// FFmpeg identifies album/cover art from a music file as a video stream
 				if (stream->disposition == AV_DISPOSITION_ATTACHED_PIC)
 				{
-					SetMSSThumbnail(m_mss, stream);
+					SetMSSThumbnail(mss, stream);
 					continue;
 				}
 
@@ -265,7 +265,7 @@ namespace winrt::FFmpegInterop::implementation
 				if (hasVideo || preferredVideoStreamId == i || preferredVideoStreamId < 0)
 				{
 					// Add the stream to the MSS
-					m_mss.AddStreamDescriptor(streamDescriptor);
+					mss.AddStreamDescriptor(streamDescriptor);
 
 					// Check if this is the first video stream added to the MSS
 					if (!hasVideo)
@@ -276,7 +276,7 @@ namespace winrt::FFmpegInterop::implementation
 						// Add any video streams we already enumerated
 						for (auto& videoStreamDescriptor : pendingVideoStreamDescriptors)
 						{
-							m_mss.AddStreamDescriptor(move(videoStreamDescriptor));
+							mss.AddStreamDescriptor(move(videoStreamDescriptor));
 						}
 						pendingVideoStreamDescriptors.clear();
 					}
@@ -314,7 +314,7 @@ namespace winrt::FFmpegInterop::implementation
 				}
 
 				// Add the stream to the MSS
-				m_mss.AddStreamDescriptor(streamDescriptor);
+				mss.AddStreamDescriptor(streamDescriptor);
 
 				break;
 
@@ -338,26 +338,26 @@ namespace winrt::FFmpegInterop::implementation
 		if (m_formatContext->duration > 0)
 		{
 			// Set the duration
-			m_mss.Duration(TimeSpan{ ConvertFromAVTime(m_formatContext->duration, av_get_time_base_q(), HNS_PER_SEC) });
-			m_mss.CanSeek(true);
+			mss.Duration(TimeSpan{ ConvertFromAVTime(m_formatContext->duration, av_get_time_base_q(), HNS_PER_SEC) });
+			mss.CanSeek(true);
 		}
 		else
 		{
 			// Set buffer time to 0 for realtime streaming to reduce latency
-			m_mss.BufferTime(TimeSpan{ 0 });
+			mss.BufferTime(TimeSpan{ 0 });
 		}
 
 		// Populate metadata
 		if (m_formatContext->metadata != nullptr)
 		{
-			PopulateMSSMetadata(m_mss, m_formatContext->metadata);
+			PopulateMSSMetadata(mss, m_formatContext->metadata);
 		}
 
 		// Register event handlers. The delegates hold strong references to tie the lifetime of this object to the MSS.
-		m_startingEventToken = m_mss.Starting({ get_strong(), &FFmpegInteropMSS::OnStarting });
-		m_sampleRequestedEventToken = m_mss.SampleRequested({ get_strong(), &FFmpegInteropMSS::OnSampleRequested });
-		m_switchStreamsRequestedEventToken = m_mss.SwitchStreamsRequested({ get_strong(), &FFmpegInteropMSS::OnSwitchStreamsRequested });
-		m_closedEventToken = m_mss.Closed({ get_strong(), &FFmpegInteropMSS::OnClosed });
+		m_startingEventToken = mss.Starting({ get_strong(), &FFmpegInteropMSS::OnStarting });
+		m_sampleRequestedEventToken = mss.SampleRequested({ get_strong(), &FFmpegInteropMSS::OnSampleRequested });
+		m_switchStreamsRequestedEventToken = mss.SwitchStreamsRequested({ get_strong(), &FFmpegInteropMSS::OnSwitchStreamsRequested });
+		m_closedEventToken = mss.Closed({ get_strong(), &FFmpegInteropMSS::OnClosed });
 	}
 
 	void FFmpegInteropMSS::OnStarting(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceStartingEventArgs& args)
@@ -401,8 +401,7 @@ namespace winrt::FFmpegInterop::implementation
 			}
 			catch (...)
 			{
-				// Notify the MSS that an error occurred
-				m_mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+				m_weakMss.get().NotifyError(MediaStreamSourceErrorStatus::Other);
 			}
 		}
 		else
@@ -442,8 +441,7 @@ namespace winrt::FFmpegInterop::implementation
 			}
 			else
 			{
-				// Notify the MSS that an error occurred
-				m_mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+				m_weakMss.get().NotifyError(MediaStreamSourceErrorStatus::Other);
 			}
 		}
 	}
@@ -479,8 +477,7 @@ namespace winrt::FFmpegInterop::implementation
 		{
 			WINRT_ASSERT(false);
 
-			// Notify the MSS that an error occurred
-			m_mss.NotifyError(MediaStreamSourceErrorStatus::Other);
+			m_weakMss.get().NotifyError(MediaStreamSourceErrorStatus::Other);
 		}
 	}
 
@@ -490,60 +487,17 @@ namespace winrt::FFmpegInterop::implementation
 
 		lock_guard<mutex> lock{ m_lock };
 
-		ShutdownInternal();
+		// Release the file stream
+		m_fileStream = nullptr;
+
+		// Unregister event handlers
+		MediaStreamSource mss{ m_weakMss.get() };
+		WINRT_ASSERT(mss != nullptr);
+		mss.Starting(m_startingEventToken);
+		mss.SampleRequested(m_sampleRequestedEventToken);
+		mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
+		mss.Closed(m_closedEventToken);
 
 		logger.Stop();
-	}
-
-	STDMETHODIMP FFmpegInteropMSS::GetShutdownStatus(_Out_ MFSHUTDOWN_STATUS* pStatus) noexcept
-	{
-		auto logger{ GetShutdownStatusActivity::Start() };
-
-		RETURN_HR_IF_NULL(E_POINTER, pStatus);
-
-		lock_guard<mutex> lock{ m_lock };
-
-		RETURN_HR_IF(MF_E_INVALIDREQUEST, m_mss != nullptr);
-		*pStatus = MFSHUTDOWN_COMPLETED;
-
-		logger.Stop();
-		return S_OK;
-	}
-
-	STDMETHODIMP FFmpegInteropMSS::Shutdown() noexcept
-	try
-	{
-		auto logger{ ShutdownActivity::Start() };
-
-		lock_guard<mutex> lock{ m_lock };
-
-		ShutdownInternal();
-
-		logger.Stop();
-		return S_OK;
-	}
-	CATCH_RETURN();
-
-	void FFmpegInteropMSS::ShutdownInternal()
-	{
-		if (m_mss != nullptr)
-		{
-			// Release the file stream
-			// This is critically important to do for the media source app service scenario! The remote app process may be suspended anytime after 
-			// this Closed event is processed. If we don't release the file stream now, then we'll effectively leak the file handle which could 
-			// cause file related issues until the remote app process is terminated.
-			m_fileStream = nullptr;
-
-			// Unregister event handlers
-			// This is critically important to do for the media source app service scenario! If we don't unregister these event handlers, then
-			// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
-			// the remote app process being suspended. If the remote app process is suspended first, then COM may cause a hang until the 
-			// remote app process is terminated.
-			MediaStreamSource mss{ move(m_mss) };
-			mss.Starting(m_startingEventToken);
-			mss.SampleRequested(m_sampleRequestedEventToken);
-			mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
-			mss.Closed(m_closedEventToken);
-		}
 	}
 }

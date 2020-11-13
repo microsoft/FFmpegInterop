@@ -24,30 +24,21 @@
 namespace winrt::FFmpegInterop::implementation
 {
 	class FFmpegInteropMSS :
-		public FFmpegInteropMSST<
-			FFmpegInteropMSS,
-			IMFShutdown>
+		public FFmpegInteropMSST<FFmpegInteropMSS>
 	{
 	public:
-		static FFmpegInterop::FFmpegInteropMSS CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-		static FFmpegInterop::FFmpegInteropMSS CreateFromUri(_In_ const hstring& uri, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static Windows::Media::Core::MediaStreamSource CreateFromStream(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const Windows::Media::Core::MediaStreamSource& mssIn, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		static Windows::Media::Core::MediaStreamSource CreateFromUri(_In_ const hstring& uri, _In_opt_ const Windows::Media::Core::MediaStreamSource& mssIn, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
-		FFmpegInteropMSS(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-		FFmpegInteropMSS(_In_ const hstring& uri, _In_opt_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-
-		Windows::Media::Core::MediaStreamSource GetMediaStreamSource() { return m_mss; }
-
-		// IMFShutdown
-		STDMETHODIMP GetShutdownStatus(_Out_ MFSHUTDOWN_STATUS* pStatus) noexcept;
-		STDMETHODIMP Shutdown() noexcept;
+		FFmpegInteropMSS(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		FFmpegInteropMSS(_In_ const hstring& uri, _In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
 	private:
-		FFmpegInteropMSS(_In_opt_ const Windows::Media::Core::MediaStreamSource& mss);
+		FFmpegInteropMSS(_In_ const Windows::Media::Core::MediaStreamSource& mss);
 
 		void OpenFile(_In_ const Windows::Storage::Streams::IRandomAccessStream& fileStream, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 		void OpenFile(_In_z_ const char* uri, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-		void InitFFmpegContext(_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-		void ShutdownInternal();
+		void InitFFmpegContext(_In_ const Windows::Media::Core::MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 
 		void OnStarting(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceStartingEventArgs& args);
 		void OnSampleRequested(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceSampleRequestedEventArgs& args);
@@ -55,7 +46,7 @@ namespace winrt::FFmpegInterop::implementation
 		void OnClosed(_In_ const Windows::Media::Core::MediaStreamSource& sender, _In_ const Windows::Media::Core::MediaStreamSourceClosedEventArgs& args);
 
 		std::mutex m_lock;
-		Windows::Media::Core::MediaStreamSource m_mss; // We hold a circular reference to the provided MSS which we break when the Closed event is fired
+		weak_ref<Windows::Media::Core::MediaStreamSource> m_weakMss;
 		com_ptr<IStream> m_fileStream;
 		AVIOContext_ptr m_ioContext;
 		AVFormatContext_ptr m_formatContext;

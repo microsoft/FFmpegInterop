@@ -38,9 +38,7 @@ namespace FFmpegInterop
 	[default_interface]
 	runtimeclass FFmpegInteropMSS
 	{
-		static FFmpegInteropMSS CreateFromStream(Windows.Storage.Streams.IRandomAccessStream fileStream, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
-		static FFmpegInteropMSS CreateFromUri(String uri, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
-
-		Windows.Media.Core.MediaStreamSource GetMediaStreamSource();
+		static Windows.Media.Core.MediaStreamSource CreateFromStream(Windows.Storage.Streams.IRandomAccessStream fileStream, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
+		static Windows.Media.Core.MediaStreamSource CreateFromUri(String uri, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
 	}
 }

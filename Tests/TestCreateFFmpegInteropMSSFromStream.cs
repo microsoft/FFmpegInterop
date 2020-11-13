@@ -37,8 +37,7 @@ namespace UnitTest.Windows
             // FFmpegInteropMSS.CreateFromStream should throw if stream is null with default parameter
             try
             {
-                FFmpegInteropMSS ffmpegInteropMss = FFmpegInteropMSS.CreateFromStream(null, null, null);
-                ffmpegInteropMss.Shutdown();
+                FFmpegInteropMSS.CreateFromStream(null, null, null);
                 Assert.IsTrue(false);
             }
             catch (Exception)
@@ -55,8 +54,7 @@ namespace UnitTest.Windows
                     ForceVideoDecode = true
                 };
 
-                FFmpegInteropMSS ffmpegInteropMss = FFmpegInteropMSS.CreateFromStream(null, null, config);
-                ffmpegInteropMss.Shutdown();
+                FFmpegInteropMSS.CreateFromStream(null, null, config);
                 Assert.IsTrue(false);
             }
             catch (Exception)
@@ -75,8 +73,7 @@ namespace UnitTest.Windows
             // FFmpegInteropMSS.CreateFromStream should throw since test.txt is not a valid media file
             try
             {
-                FFmpegInteropMSS ffmpegInteropMss = FFmpegInteropMSS.CreateFromStream(stream, null, null);
-                ffmpegInteropMss.Shutdown();
+                FFmpegInteropMSS.CreateFromStream(stream, null, null);
                 Assert.IsTrue(false);
             }
             catch (Exception)
@@ -93,15 +90,12 @@ namespace UnitTest.Windows
             IRandomAccessStream stream = await file.OpenAsync(FileAccessMode.Read);
 
             // Create the MSS
-            FFmpegInteropMSS ffmpegInteropMss = FFmpegInteropMSS.CreateFromStream(stream, null, null);
-            MediaStreamSource mss = ffmpegInteropMss.GetMediaStreamSource();
+            MediaStreamSource mss = FFmpegInteropMSS.CreateFromStream(stream, null, null);
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.IsTrue(mss.CanSeek);
             Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
-
-            ffmpegInteropMss.Shutdown();
         }
 
         [TestMethod]
@@ -117,15 +111,12 @@ namespace UnitTest.Windows
                 ForceAudioDecode = true
             };
 
-            FFmpegInteropMSS ffmpegInteropMss = FFmpegInteropMSS.CreateFromStream(stream, null, config);
-            MediaStreamSource mss = ffmpegInteropMss.GetMediaStreamSource();
+            MediaStreamSource mss = FFmpegInteropMSS.CreateFromStream(stream, null, config);
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.IsTrue(mss.CanSeek);
             Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
-
-            ffmpegInteropMss.Shutdown();
         }
 
         [TestMethod]
@@ -141,15 +132,12 @@ namespace UnitTest.Windows
                 ForceVideoDecode = true
             };
 
-            FFmpegInteropMSS ffmpegInteropMss = FFmpegInteropMSS.CreateFromStream(stream, null, config);
-            MediaStreamSource mss = ffmpegInteropMss.GetMediaStreamSource();
+            MediaStreamSource mss = FFmpegInteropMSS.CreateFromStream(stream, null, config);
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.IsTrue(mss.CanSeek);
             Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
-
-            ffmpegInteropMss.Shutdown();
         }
 
         [TestMethod]
@@ -166,15 +154,12 @@ namespace UnitTest.Windows
                 ForceVideoDecode = true
             };
 
-            FFmpegInteropMSS ffmpegInteropMss = FFmpegInteropMSS.CreateFromStream(stream, null, config);
-            MediaStreamSource mss = ffmpegInteropMss.GetMediaStreamSource();
+            MediaStreamSource mss = FFmpegInteropMSS.CreateFromStream(stream, null, config);
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.IsTrue(mss.CanSeek);
             Assert.IsTrue(mss.BufferTime.TotalMilliseconds > 0);
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
-
-            ffmpegInteropMss.Shutdown();
         }
 
         [TestMethod]
@@ -190,8 +175,7 @@ namespace UnitTest.Windows
             options.Add("rtsp_flags", "prefer_tcp");
             options.Add("stimeout", "100000");
 
-            FFmpegInteropMSS ffmpegInteropMss = FFmpegInteropMSS.CreateFromStream(stream, null, config);
-            MediaStreamSource mss = ffmpegInteropMss.GetMediaStreamSource();
+            MediaStreamSource mss = FFmpegInteropMSS.CreateFromStream(stream, null, config);
 
             // Based on the provided media, check if the following properties are set correctly
             Assert.IsTrue(mss.CanSeek);
@@ -199,8 +183,6 @@ namespace UnitTest.Windows
             Assert.AreEqual(Constants.DownloadUriLength, mss.Duration.TotalMilliseconds);
 
             // TODO: Verify expected stream types (aac, h264)
-
-            ffmpegInteropMss.Shutdown();
         }
     }
 }

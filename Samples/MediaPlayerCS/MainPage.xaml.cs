@@ -99,7 +99,7 @@ namespace MediaPlayerCS
 			});
 		}
 
-		private void OpenMedia(Func<FFmpegInteropMSSConfig, FFmpegInteropMSS> createFunc)
+		private void OpenMedia(Func<FFmpegInteropMSSConfig, MediaStreamSource> createFunc)
 		{
 			// Stop any media currently playing
 			mediaElement.Stop();
@@ -113,10 +113,10 @@ namespace MediaPlayerCS
 					ForceVideoDecode = toggleSwitchVideoDecode.IsOn
 				};
 
-				FFmpegInteropMSS ffmepgInteropMss = createFunc(config);
+				MediaStreamSource mss = createFunc(config);
 
 				// Set the MSS as the media element's source
-				mediaElement.SetMediaStreamSource(ffmepgInteropMss.GetMediaStreamSource());
+				mediaElement.SetMediaStreamSource(mss);
 
 				// Close the control panel
 				splitter.IsPaneOpen = false;

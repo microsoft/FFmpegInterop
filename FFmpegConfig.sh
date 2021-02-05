@@ -11,7 +11,7 @@ common_settings=" \
     --enable-shared \
     --enable-cross-compile \
     --extra-cflags=\"-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00\" \
-    --extra-ldflags=\"-APPCONTAINER WindowsApp.lib\" \
+    --extra-ldflags=\"-APPCONTAINER WindowsApp.lib -PROFILE\" \
     "
 
 # Architecture specific configure settings

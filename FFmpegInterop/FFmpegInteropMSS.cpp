@@ -74,18 +74,6 @@ static int lock_manager(void **mtx, enum AVLockOp op);
 // Flag for ffmpeg global setup
 static bool isRegistered = false;
 
-void FFmpegInterop::FFmpegInteropMSS::ReleaseFileStream()
-{
-	mutexGuard.lock();
-	if (fileStreamData != nullptr)
-	{
-		fileStreamData->Release();
-		fileStreamData = nullptr;
-	}
-
-	mutexGuard.unlock();
-}
-
 // Initialize an FFmpegInteropObject
 FFmpegInteropMSS::FFmpegInteropMSS()
 	: avDict(nullptr)
@@ -111,7 +99,19 @@ FFmpegInteropMSS::FFmpegInteropMSS()
 
 FFmpegInteropMSS::~FFmpegInteropMSS()
 {
+	Shutdown();
+}
+
+void FFmpegInteropMSS::Shutdown()
+{
 	mutexGuard.lock();
+
+	if (fileStreamData != nullptr)
+	{
+		fileStreamData->Release();
+		fileStreamData = nullptr;
+	}
+
 	if (mss)
 	{
 		try
@@ -119,12 +119,13 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 			mss->Starting -= startingRequestedToken;
 			mss->SampleRequested -= sampleRequestedToken;
 			mss->SwitchStreamsRequested -= switchStreamsRequestedToken;
+			mss->Closed -= closedToken;
 		}
 		catch (...)
 		{
 			// C.36: A destructor may not fail
 		}
-		
+
 		mss = nullptr;
 	}
 
@@ -141,16 +142,15 @@ FFmpegInteropMSS::~FFmpegInteropMSS()
 	}
 
 	avcodec_close(avVideoCodecCtx);
+	avVideoCodecCtx = nullptr;
 	avcodec_close(avAudioCodecCtx);
+	avAudioCodecCtx = nullptr;
 	avformat_close_input(&avFormatCtx);
 	av_free(avIOCtx);
+	avIOCtx = nullptr;
 	av_dict_free(&avDict);
+	avDict = nullptr;
 
-	if (fileStreamData != nullptr)
-	{
-		fileStreamData->Release();
-		fileStreamData = nullptr;
-	}
 	mutexGuard.unlock();
 }
 
@@ -589,6 +589,7 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);
 		sampleRequestedToken = mss->SampleRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSampleRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSampleRequested);
 		switchStreamsRequestedToken = mss->SwitchStreamsRequested += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceSwitchStreamsRequestedEventArgs ^>(this, &FFmpegInteropMSS::OnSwitchStreamsRequested);
+		closedToken = mss->Closed += ref new TypedEventHandler<MediaStreamSource^, MediaStreamSourceClosedEventArgs^>(this, &FFmpegInteropMSS::OnClosed);
 	}
 
 	return hr;
@@ -974,6 +975,11 @@ void FFmpegInteropMSS::OnSwitchStreamsRequested(MediaStreamSource ^sender, Media
 		}
 	}
 	mutexGuard.unlock();
+}
+
+void FFmpegInteropMSS::OnClosed(MediaStreamSource^ sender, MediaStreamSourceClosedEventArgs^ args)
+{
+	Shutdown();
 }
 
 // Static function to read file stream and pass data to FFmpeg. Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context

@@ -100,7 +100,7 @@ namespace FFmpegInterop
 			};
 		};
 
-		void ReleaseFileStream();
+		void Shutdown();
 
 	internal:
 		int ReadPacket();
@@ -120,11 +120,13 @@ namespace FFmpegInterop
 		void OnStarting(MediaStreamSource ^sender, MediaStreamSourceStartingEventArgs ^args);
 		void OnSampleRequested(MediaStreamSource ^sender, MediaStreamSourceSampleRequestedEventArgs ^args);
 		void OnSwitchStreamsRequested(MediaStreamSource ^sender, MediaStreamSourceSwitchStreamsRequestedEventArgs ^args);
+		void OnClosed(MediaStreamSource^ sender, MediaStreamSourceClosedEventArgs^ args);
 
 		MediaStreamSource^ mss;
 		EventRegistrationToken startingRequestedToken;
 		EventRegistrationToken sampleRequestedToken;
 		EventRegistrationToken switchStreamsRequestedToken;
+		EventRegistrationToken closedToken;
 
 	internal:
 		AVDictionary* avDict;

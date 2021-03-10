@@ -42,6 +42,9 @@ using namespace Platform;
 using namespace Windows::Storage::Streams;
 using namespace Windows::Media::MediaProperties;
 using namespace std;
+using namespace Microsoft::WRL;
+using namespace Microsoft::WRL::Wrappers;
+using namespace Windows::Foundation;
 
 // Size of the buffer when reading a stream
 const int FILESTREAMBUFFERSZ = 16384;
@@ -132,6 +135,7 @@ void FFmpegInteropMSS::Shutdown()
 	// Clear our data
 	audioSampleProvider = nullptr;
 	videoSampleProvider = nullptr;
+	subtitleSampleProvider = nullptr;
 
 	if (m_pReader != nullptr)
 	{
@@ -552,9 +556,17 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		// Create the MSS if one was not provided
 		if (mss == nullptr)
 		{
-			mss = ref new MediaStreamSource(nullptr);
+			ComPtr<IActivationFactory> spMssFactory;
+			hr = GetActivationFactory(HStringReference(L"Windows.Media.Core.MediaStreamSource").Get(), &spMssFactory);
+			if (SUCCEEDED(hr))
+			{
+				hr = spMssFactory->ActivateInstance(reinterpret_cast<IInspectable**>(&mss));
+			}
 		}
+	}
 
+	if (SUCCEEDED(hr))
+	{
 		// Add streams to the MSS
 		if (videoStreamDescriptor)
 		{

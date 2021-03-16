@@ -162,7 +162,6 @@ HRESULT UncompressedAudioSampleProvider::InitResampler()
 
 	if (swr_init(m_pSwrCtx) < 0)
 	{
-		swr_free(&m_pSwrCtx);
 		return E_FAIL;
 	}
 

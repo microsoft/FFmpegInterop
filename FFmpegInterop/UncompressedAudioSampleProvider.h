@@ -34,12 +34,19 @@ namespace winrt::FFmpegInterop::implementation
 		std::tuple<Windows::Storage::Streams::IBuffer, int64_t, int64_t, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>, std::vector<std::pair<GUID, Windows::Foundation::IInspectable>>> GetSampleData() override;
 
 	private:
+		void InitResampler();
+
 		// Minimum duration (in ms) for uncompressed audio samples. 
 		// We'll compact shorter decoded audio samples until this threshold is reached.
 		static constexpr int64_t MIN_AUDIO_SAMPLE_DUR_MS{ 200 };
-
 		int64_t m_minAudioSampleDur{ 0 };
+
+		AVSampleFormat m_inputSampleFormat{ AV_SAMPLE_FMT_NONE };
+		uint64_t m_channelLayout{ 0 };
+		int m_sampleRate{ 0 };
+		AVFrame_ptr m_formatChangeFrame;
 		SwrContext_ptr m_swrContext;
+
 		bool m_lastDecodeFailed{ false };
 	};
 }

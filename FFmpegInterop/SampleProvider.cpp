@@ -61,6 +61,8 @@ namespace winrt::FFmpegInterop::implementation
 			}
 
 			MediaPropertySet properties{ audioEncProp.Properties() };
+			properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(
+				codecPar->channel_layout != 0 ? static_cast<uint32_t>(codecPar->channel_layout) : static_cast<uint32_t>(av_get_default_channel_layout(codecPar->channels))));
 
 			if (GUID subtype{ unbox_value<GUID>(properties.Lookup(MF_MT_SUBTYPE)) }; subtype == MFAudioFormat_PCM || subtype == MFAudioFormat_Float)
 			{

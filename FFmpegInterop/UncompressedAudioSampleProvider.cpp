@@ -28,33 +28,40 @@ namespace winrt::FFmpegInterop::implementation
 {
 	UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(_In_ const AVFormatContext* formatContext, _In_ AVStream* stream, _In_ Reader& reader, _In_ uint32_t allowedDecodeErrors) :
 		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors),
-		m_minAudioSampleDur(ConvertToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base))
+		m_minAudioSampleDur(ConvertToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base)),
+		m_inputSampleFormat(m_codecContext->sample_fmt),
+		m_channelLayout(m_codecContext->channel_layout != 0 ? m_codecContext->channel_layout : av_get_default_channel_layout(m_codecContext->channels)),
+		m_sampleRate(m_codecContext->sample_rate)
 	{
-		if (m_codecContext->sample_fmt != AV_SAMPLE_FMT_S16)
+		if (m_sampleRate != AV_SAMPLE_FMT_S16)
 		{
-			// Set up resampler to convert to AV_SAMPLE_FMT_S16 PCM format
-			int64_t inChannelLayout{ m_codecContext->channel_layout != 0 ? static_cast<int64_t>(m_codecContext->channel_layout) : av_get_default_channel_layout(m_codecContext->channels) };
-			int64_t outChannelLayout{ av_get_default_channel_layout(m_codecContext->channels) };
-
-			m_swrContext.reset(swr_alloc_set_opts(
-				m_swrContext.release(),
-				outChannelLayout,
-				AV_SAMPLE_FMT_S16,
-				m_codecContext->sample_rate,
-				inChannelLayout,
-				m_codecContext->sample_fmt,
-				m_codecContext->sample_rate,
-				0,
-				nullptr));
-			THROW_IF_NULL_ALLOC(m_swrContext);
-			THROW_HR_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
+			InitResampler();
 		}
+	}
+
+	void UncompressedAudioSampleProvider::InitResampler()
+	{
+		m_swrContext.reset(swr_alloc_set_opts(
+			m_swrContext.release(),
+			m_channelLayout,
+			AV_SAMPLE_FMT_S16,
+			m_sampleRate,
+			m_channelLayout,
+			m_inputSampleFormat,
+			m_sampleRate,
+			0,
+			nullptr));
+		THROW_IF_NULL_ALLOC(m_swrContext);
+		THROW_HR_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
 	}
 
 	void UncompressedAudioSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 	{
 		// We intentionally don't call SampleProvider::SetEncodingProperties() here as
 		// it would set encoding properties with values for the compressed audio type.
+
+		MediaPropertySet properties{ encProp.Properties() };
+		properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(m_channelLayout)));
 	}
 
 	void UncompressedAudioSampleProvider::Flush() noexcept
@@ -70,6 +77,7 @@ namespace winrt::FFmpegInterop::implementation
 		IBuffer sampleBuf{ nullptr };
 		int64_t pts{ -1 };
 		int64_t dur{ 0 };
+		vector<pair<GUID, IInspectable>> formatChanges;
 		bool firstDecodedSample{ true };
 		uint32_t decodeErrors{ 0 };
 		vector<uint8_t> compactedSampleBuf;
@@ -88,7 +96,7 @@ namespace winrt::FFmpegInterop::implementation
 			AVFrame_ptr frame;
 			try
 			{
-				frame = GetFrame();
+				frame = m_formatChangeFrame != nullptr ? move(m_formatChangeFrame) : GetFrame();
 				decodeErrors = 0;
 			}
 			catch (...)
@@ -154,6 +162,57 @@ namespace winrt::FFmpegInterop::implementation
 				{
 					// Try to decode a sample again
 					continue;
+				}
+			}
+
+			// Check for a dynamic format change
+			if (m_inputSampleFormat != frame->format ||
+				m_channelLayout != frame->channel_layout ||
+				m_sampleRate != frame->sample_rate)
+			{
+				if (firstDecodedSample)
+				{
+					// Update the input metadata and get the list of format changes
+					if (m_inputSampleFormat != frame->format)
+					{
+						m_inputSampleFormat = static_cast<AVSampleFormat>(frame->format);
+					}
+
+					uint64_t frameChannelLayout{ frame->channel_layout != 0 ? frame->channel_layout : av_get_default_channel_layout(frame->channels) };
+					if (m_channelLayout != frameChannelLayout)
+					{
+						// Check if the channel count also changed
+						if (av_get_channel_layout_nb_channels(m_channelLayout) != frame->channels)
+						{
+							formatChanges.emplace_back(MF_MT_AUDIO_NUM_CHANNELS, PropertyValue::CreateUInt32(frame->channels));
+						}
+
+						formatChanges.emplace_back(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(frameChannelLayout)));
+						m_channelLayout = frameChannelLayout;
+					}
+
+					if (m_sampleRate != frame->sample_rate)
+					{
+						formatChanges.emplace_back(MF_MT_AUDIO_SAMPLES_PER_SECOND, PropertyValue::CreateUInt32(frame->sample_rate));
+						m_sampleRate = frame->sample_rate;
+					}
+
+					//  Check if the resampler is needed
+					if (m_inputSampleFormat != AV_SAMPLE_FMT_S16)
+					{
+						InitResampler();
+					}
+					else
+					{
+						m_swrContext.reset();
+					}
+				}
+				else
+				{
+					// We already have compacted samples in the old format. Return the  
+					// decoded sample data we have and wait to trigger the format change.
+					m_formatChangeFrame = move(frame);
+					break;
 				}
 			}
 
@@ -225,6 +284,6 @@ namespace winrt::FFmpegInterop::implementation
 			}
 		}
 
-		return { move(sampleBuf), pts, dur, { }, { } };
+		return { move(sampleBuf), pts, dur, { }, move(formatChanges) };
 	}
 }

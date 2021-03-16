@@ -23,11 +23,6 @@
 #include <mferror.h>
 #include <wrl.h>
 
-extern "C"
-{
-#include <libavutil/opt.h>
-}
-
 // Disable debug string output on non-debug build
 #if !_DEBUG
 #define DebugMessage(x)

@@ -30,7 +30,9 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx)
 	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
-	, m_outputSampleFormat(avCodecCtx->sample_fmt)
+	, m_inputSampleFormat(avCodecCtx->sample_fmt)
+	, m_inputChannelLayout(m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels))
+	, m_inputSampleRate(avCodecCtx->sample_rate)
 	, m_outputChannelLayout(m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels))
 	, m_outputSampleRate(avCodecCtx->sample_rate)
 	, m_pSwrCtx(nullptr)
@@ -46,7 +48,7 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 		return hr;
 	}
 	
-	if (m_pAvCodecCtx->sample_fmt != AV_SAMPLE_FMT_S16)
+	if (m_inputSampleFormat != AV_SAMPLE_FMT_S16)
 	{
 		hr = InitResampler();
 		if (FAILED(hr))
@@ -81,37 +83,30 @@ HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWri
 	HRESULT hr = S_OK;
 
 	// Check if the format changed
-	bool initResampler = false;
-	if (m_pSwrCtx == nullptr)
+	uint64_t frameChannelLayout = m_pAvFrame->channel_layout ? m_pAvFrame->channel_layout : av_get_default_channel_layout(m_pAvFrame->channels);
+	if (m_pAvFrame->format != m_inputSampleFormat ||
+		frameChannelLayout != m_inputChannelLayout ||
+		m_pAvFrame->sample_rate != m_inputSampleRate)
 	{
-		initResampler =
-			m_outputSampleFormat != m_pAvCodecCtx->sample_fmt ||
-			m_outputChannelLayout != (m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels)) ||
-			m_outputSampleRate != m_pAvCodecCtx->sample_rate;
-	}
-	else
-	{
-		AVSampleFormat inputSampleFormat = AV_SAMPLE_FMT_NONE;
-		(void) av_opt_get_sample_fmt(m_pSwrCtx, "isf", 0, &inputSampleFormat);
-		int64_t inputChanneLayout = 0;
-		(void) av_opt_get_channel_layout(m_pSwrCtx, "icl", 0, &inputChanneLayout);
-		int64_t inputSampleRate = 0;
-		(void) av_opt_get_int(m_pSwrCtx, "isr", 0, &inputSampleRate);
+		m_inputSampleFormat = static_cast<AVSampleFormat>(m_pAvFrame->format);
+		m_inputChannelLayout = frameChannelLayout;
+		m_inputSampleRate = m_pAvFrame->sample_rate;
 
-		initResampler = 
-			inputSampleFormat != m_pAvCodecCtx->sample_fmt ||
-			inputChanneLayout != (m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels)) ||
-			inputSampleRate != m_pAvCodecCtx->sample_rate;
-	}
-
-	if (initResampler)
-	{
-		hr = InitResampler();
-		if (FAILED(hr))
+		// Check if resampler is needed
+		if (m_inputSampleFormat != AV_SAMPLE_FMT_S16 ||
+			m_inputChannelLayout != m_outputChannelLayout ||
+			m_inputSampleRate != m_outputSampleRate)
 		{
-			return hr;
+			hr = InitResampler();
+			if (FAILED(hr))
+			{
+				return hr;
+			}
 		}
-			
+		else
+		{
+			swr_free(&m_pSwrCtx);
+		}
 	}
 
 	Platform::Array<uint8_t>^ aBuffer = nullptr;
@@ -130,7 +125,13 @@ HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWri
 		}
 
 		int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, m_pAvFrame->nb_samples, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-		aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
+		if (resampledDataSize < 0)
+		{
+			av_freep(&resampledData);
+			return E_FAIL;
+		}
+
+		aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
 		av_freep(&resampledData);
 	}
 
@@ -148,9 +149,9 @@ HRESULT UncompressedAudioSampleProvider::InitResampler()
 		m_outputChannelLayout,
 		AV_SAMPLE_FMT_S16,
 		m_outputSampleRate,
-		m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels),
-		m_pAvCodecCtx->sample_fmt,
-		m_pAvCodecCtx->sample_rate,
+		m_inputChannelLayout,
+		m_inputSampleFormat,
+		m_inputSampleRate,
 		0,
 		NULL);
 

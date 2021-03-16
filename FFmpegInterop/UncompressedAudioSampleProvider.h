@@ -42,6 +42,11 @@ namespace FFmpegInterop
 		virtual HRESULT AllocateResources() override;
 
 	private:
+		HRESULT InitResampler();
+
+		AVSampleFormat m_outputSampleFormat;
+		uint64_t m_outputChannelLayout;
+		int m_outputSampleRate;
 		SwrContext* m_pSwrCtx;
 	};
 }

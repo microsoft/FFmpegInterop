@@ -523,30 +523,35 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 
 	if (SUCCEEDED(hr))
 	{
-		// Get the subtitle stream
-		for (unsigned int i = 0; i < avFormatCtx->nb_streams; i++)
+		// Subtitle streams use TimedMetadataStreamDescriptor which was added in 17134. Check if this type is present.
+		// Note: MSS didn't expose subtitle streams in media engine scenarios until 19041.
+		if (Windows::Foundation::Metadata::ApiInformation::IsTypePresent(L"Windows.Media.Core.TimedMetadataStreamDescriptor"))
 		{
-			if (avFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
+			// Get the subtitle stream
+			for (unsigned int i = 0; i < avFormatCtx->nb_streams; i++)
 			{
-				if (FAILED(CreateSubtitleStreamDescriptor(avFormatCtx->streams[i])))
+				if (avFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE)
 				{
-					continue;
+					if (FAILED(CreateSubtitleStreamDescriptor(avFormatCtx->streams[i])))
+					{
+						continue;
+					}
+
+					subtitleStreamIndex = i;
+
+					hr = subtitleSampleProvider->AllocateResources();
+					if (SUCCEEDED(hr))
+					{
+						m_pReader->SetSubtitleStream(subtitleStreamIndex, subtitleSampleProvider);
+					}
+
+					if (SUCCEEDED(hr))
+					{
+						hr = ConvertCodecName(avcodec_get_name(avFormatCtx->streams[i]->codecpar->codec_id), &subtitleCodecName);
+					}
+
+					break;
 				}
-
-				subtitleStreamIndex = i;
-
-				hr = subtitleSampleProvider->AllocateResources();
-				if (SUCCEEDED(hr))
-				{
-					m_pReader->SetSubtitleStream(subtitleStreamIndex, subtitleSampleProvider);
-				}
-
-				if (SUCCEEDED(hr))
-				{
-					hr = ConvertCodecName(avcodec_get_name(avFormatCtx->streams[i]->codecpar->codec_id), &subtitleCodecName);
-				}
-
-				break;
 			}
 		}
 	}

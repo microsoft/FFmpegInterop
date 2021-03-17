@@ -69,6 +69,7 @@ namespace winrt::FFmpegInterop::implementation
 		UncompressedSampleProvider::Flush();
 
 		m_lastDecodeFailed = false;
+		m_formatChangeFrame.reset();
 	}
 
 	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedAudioSampleProvider::GetSampleData()

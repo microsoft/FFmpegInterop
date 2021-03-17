@@ -24,7 +24,6 @@
 #include "MediaThumbnailData.h"
 
 using namespace Platform;
-using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Media::Core;
 
@@ -71,9 +70,9 @@ namespace FFmpegInterop
 				return subtitleStreamDescriptor;
 			};
 		};
-		property TimeSpan Duration
+		property Windows::Foundation::TimeSpan Duration
 		{
-			TimeSpan get()
+			Windows::Foundation::TimeSpan get()
 			{
 				return mediaDuration;
 			};
@@ -123,10 +122,10 @@ namespace FFmpegInterop
 		void OnClosed(MediaStreamSource^ sender, MediaStreamSourceClosedEventArgs^ args);
 
 		MediaStreamSource^ mss;
-		EventRegistrationToken startingRequestedToken;
-		EventRegistrationToken sampleRequestedToken;
-		EventRegistrationToken switchStreamsRequestedToken;
-		EventRegistrationToken closedToken;
+		Windows::Foundation::EventRegistrationToken startingRequestedToken;
+		Windows::Foundation::EventRegistrationToken sampleRequestedToken;
+		Windows::Foundation::EventRegistrationToken switchStreamsRequestedToken;
+		Windows::Foundation::EventRegistrationToken closedToken;
 
 	internal:
 		AVDictionary* avDict;
@@ -158,7 +157,7 @@ namespace FFmpegInterop
 		String^ videoCodecName;
 		String^ audioCodecName;
 		String^ subtitleCodecName;
-		TimeSpan mediaDuration;
+		Windows::Foundation::TimeSpan mediaDuration;
 		IStream* fileStreamData;
 		unsigned char* fileStreamBuffer;
 		FFmpegReader^ m_pReader;

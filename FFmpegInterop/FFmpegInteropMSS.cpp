@@ -26,6 +26,7 @@
 using namespace winrt;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Foundation::Collections;
+using namespace winrt::Windows::Foundation::Metadata;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
@@ -283,6 +284,16 @@ namespace winrt::FFmpegInterop::implementation
 				break;
 
 			case AVMEDIA_TYPE_SUBTITLE:
+				// Subtitle streams use TimedMetadataStreamDescriptor which was added in 17134. Check if this type is present.
+				// Note: MSS didn't expose subtitle streams in media engine scenarios until 19041.
+				if (!ApiInformation::IsTypePresent(L"Windows.Media.Core.TimedMetadataStreamDescriptor"))
+				{
+					TraceLoggingWrite(g_FFmpegInteropProvider, "NoSubtitleSupport", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+						TraceLoggingValue(stream->index, "StreamId"),
+						TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
+					continue;
+				}
+
 				try
 				{
 					tie(sampleProvider, streamDescriptor) = StreamFactory::CreateSubtitleStream(m_formatContext.get(), stream, m_reader);

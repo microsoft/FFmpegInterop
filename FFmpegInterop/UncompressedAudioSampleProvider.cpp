@@ -173,7 +173,7 @@ namespace winrt::FFmpegInterop::implementation
 			{
 				if (firstDecodedSample)
 				{
-					// Update the input metadata and get the list of format changes
+					// Get the list of format changes
 					if (m_inputSampleFormat != frame->format)
 					{
 						m_inputSampleFormat = static_cast<AVSampleFormat>(frame->format);

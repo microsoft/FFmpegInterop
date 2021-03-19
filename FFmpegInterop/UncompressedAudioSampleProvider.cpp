@@ -182,19 +182,29 @@ namespace winrt::FFmpegInterop::implementation
 					uint64_t frameChannelLayout{ frame->channel_layout != 0 ? frame->channel_layout : av_get_default_channel_layout(frame->channels) };
 					if (m_channelLayout != frameChannelLayout)
 					{
-						// Check if the channel count also changed
+						formatChanges.emplace_back(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(frameChannelLayout)));
 						if (av_get_channel_layout_nb_channels(m_channelLayout) != frame->channels)
 						{
 							formatChanges.emplace_back(MF_MT_AUDIO_NUM_CHANNELS, PropertyValue::CreateUInt32(frame->channels));
+							formatChanges.emplace_back(MF_MT_AUDIO_BLOCK_ALIGNMENT, 
+								PropertyValue::CreateUInt32(frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+							formatChanges.emplace_back(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 
+								PropertyValue::CreateUInt32(frame->sample_rate * frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
 						}
-
-						formatChanges.emplace_back(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(frameChannelLayout)));
+						
 						m_channelLayout = frameChannelLayout;
 					}
 
 					if (m_sampleRate != frame->sample_rate)
 					{
 						formatChanges.emplace_back(MF_MT_AUDIO_SAMPLES_PER_SECOND, PropertyValue::CreateUInt32(frame->sample_rate));
+						if (none_of(formatChanges.begin(), formatChanges.end(), 
+									[](const auto& val) { return val.first == MF_MT_AUDIO_SAMPLES_PER_SECOND; }))
+						{
+							formatChanges.emplace_back(MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
+								PropertyValue::CreateUInt32(frame->sample_rate * frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+						}
+
 						m_sampleRate = frame->sample_rate;
 					}
 
@@ -210,9 +220,10 @@ namespace winrt::FFmpegInterop::implementation
 				}
 				else
 				{
-					// We already have compacted samples in the old format. Return the  
-					// decoded sample data we have and wait to trigger the format change.
+					// We already have compacted samples in the old format. Return the decoded sample data
+					// we have and wait until the next sample request to trigger the format change.
 					m_formatChangeFrame = move(frame);
+					sampleBuf = make<FFmpegInteropBuffer>(move(compactedSampleBuf));
 					break;
 				}
 			}

@@ -30,6 +30,11 @@ UncompressedAudioSampleProvider::UncompressedAudioSampleProvider(
 	AVFormatContext* avFormatCtx,
 	AVCodecContext* avCodecCtx)
 	: UncompressedSampleProvider(reader, avFormatCtx, avCodecCtx)
+	, m_inputSampleFormat(avCodecCtx->sample_fmt)
+	, m_inputChannelLayout(m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels))
+	, m_inputSampleRate(avCodecCtx->sample_rate)
+	, m_outputChannelLayout(m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels))
+	, m_outputSampleRate(avCodecCtx->sample_rate)
 	, m_pSwrCtx(nullptr)
 {
 }
@@ -38,36 +43,17 @@ HRESULT UncompressedAudioSampleProvider::AllocateResources()
 {
 	HRESULT hr = S_OK;
 	hr = UncompressedSampleProvider::AllocateResources();
-	if (SUCCEEDED(hr))
+	if (FAILED(hr))
 	{
-		// Set default channel layout when the value is unknown (0)
-		int64 inChannelLayout = m_pAvCodecCtx->channel_layout ? m_pAvCodecCtx->channel_layout : av_get_default_channel_layout(m_pAvCodecCtx->channels);
-		int64 outChannelLayout = av_get_default_channel_layout(m_pAvCodecCtx->channels);
-
-		// Set up resampler to convert any PCM format (e.g. AV_SAMPLE_FMT_FLTP) to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element.
-		// Additional logic can be added to avoid resampling PCM data that is already in AV_SAMPLE_FMT_S16_PCM.
-		m_pSwrCtx = swr_alloc_set_opts(
-			NULL,
-			outChannelLayout,
-			AV_SAMPLE_FMT_S16,
-			m_pAvCodecCtx->sample_rate,
-			inChannelLayout,
-			m_pAvCodecCtx->sample_fmt,
-			m_pAvCodecCtx->sample_rate,
-			0,
-			NULL);
-
-		if (!m_pSwrCtx)
-		{
-			hr = E_OUTOFMEMORY;
-		}
+		return hr;
 	}
-
-	if (SUCCEEDED(hr))
+	
+	if (m_inputSampleFormat != AV_SAMPLE_FMT_S16)
 	{
-		if (swr_init(m_pSwrCtx) < 0)
+		hr = InitResampler();
+		if (FAILED(hr))
 		{
-			hr = E_FAIL;
+			return hr;
 		}
 	}
 
@@ -94,15 +80,90 @@ HRESULT UncompressedAudioSampleProvider::WriteAVPacketToStream(DataWriter^ dataW
 
 HRESULT UncompressedAudioSampleProvider::ProcessDecodedFrame(DataWriter^ dataWriter)
 {
-	// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element
-	uint8_t *resampledData = nullptr;
-	unsigned int aBufferSize = av_samples_alloc(&resampledData, NULL, m_pAvFrame->channels, m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
-	int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, aBufferSize, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
-	auto aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, (unsigned int)(resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16))));
+	HRESULT hr = S_OK;
+
+	// Check if the format changed
+	uint64_t frameChannelLayout = m_pAvFrame->channel_layout ? m_pAvFrame->channel_layout : av_get_default_channel_layout(m_pAvFrame->channels);
+	if (m_pAvFrame->format != m_inputSampleFormat ||
+		frameChannelLayout != m_inputChannelLayout ||
+		m_pAvFrame->sample_rate != m_inputSampleRate)
+	{
+		m_inputSampleFormat = static_cast<AVSampleFormat>(m_pAvFrame->format);
+		m_inputChannelLayout = frameChannelLayout;
+		m_inputSampleRate = m_pAvFrame->sample_rate;
+
+		// Check if resampler is needed
+		if (m_inputSampleFormat != AV_SAMPLE_FMT_S16 ||
+			m_inputChannelLayout != m_outputChannelLayout ||
+			m_inputSampleRate != m_outputSampleRate)
+		{
+			hr = InitResampler();
+			if (FAILED(hr))
+			{
+				return hr;
+			}
+		}
+		else
+		{
+			swr_free(&m_pSwrCtx);
+		}
+	}
+
+	Platform::Array<uint8_t>^ aBuffer = nullptr;
+	if (m_pSwrCtx == nullptr)
+	{
+		aBuffer = ref new Platform::Array<uint8_t>(m_pAvFrame->buf[0]->data, m_pAvFrame->buf[0]->size);
+	}
+	else
+	{
+		// Resample uncompressed frame to AV_SAMPLE_FMT_S16 PCM format
+		uint8_t *resampledData = nullptr;
+		int aBufferSize = av_samples_alloc(&resampledData, NULL, av_get_channel_layout_nb_channels(m_outputChannelLayout), m_pAvFrame->nb_samples, AV_SAMPLE_FMT_S16, 0);
+		if (aBufferSize < 0)
+		{
+			return E_FAIL;
+		}
+
+		int resampledDataSize = swr_convert(m_pSwrCtx, &resampledData, m_pAvFrame->nb_samples, (const uint8_t **)m_pAvFrame->extended_data, m_pAvFrame->nb_samples);
+		if (resampledDataSize < 0)
+		{
+			av_freep(&resampledData);
+			return E_FAIL;
+		}
+
+		aBuffer = ref new Platform::Array<uint8_t>(resampledData, min(aBufferSize, resampledDataSize * m_pAvFrame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+		av_freep(&resampledData);
+	}
+
 	dataWriter->WriteBytes(aBuffer);
-	av_freep(&resampledData);
-	av_frame_unref(m_pAvFrame);
 	av_frame_free(&m_pAvFrame);
+
+	return S_OK;
+}
+
+HRESULT UncompressedAudioSampleProvider::InitResampler()
+{
+	// Set up resampler to convert any PCM format (e.g. AV_SAMPLE_FMT_FLTP) to AV_SAMPLE_FMT_S16 PCM format that is expected by Media Element.
+	m_pSwrCtx = swr_alloc_set_opts(
+		m_pSwrCtx,
+		m_outputChannelLayout,
+		AV_SAMPLE_FMT_S16,
+		m_outputSampleRate,
+		m_inputChannelLayout,
+		m_inputSampleFormat,
+		m_inputSampleRate,
+		0,
+		NULL);
+
+	if (!m_pSwrCtx)
+	{
+		return E_OUTOFMEMORY;
+	}
+
+	if (swr_init(m_pSwrCtx) < 0)
+	{
+		return E_FAIL;
+	}
 
 	return S_OK;
 }

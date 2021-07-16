@@ -30,19 +30,10 @@ elif [ $arch == "x64" ]; then
         --arch=x86_64 \
         --prefix=../../Build/$arch \
         "
-elif [ $arch == "arm" ]; then
-    arch_settings="
-        --arch=arm \
-        --as=armasm \
-        --cpu=armv7 \
-        --enable-thumb \
-        --extra-cflags=\"-D__ARM_PCS_VFP\" \
-        --prefix=../../Build/$arch \
-        "
 elif [ $arch == "arm64" ]; then
     arch_settings="
         --arch=arm64 \
-        --as=armasm \
+        --as=armasm64 \
         --cpu=armv7 \
         --enable-thumb \
         --extra-cflags=\"-D__ARM_PCS_VFP\" \

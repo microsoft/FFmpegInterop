@@ -18,8 +18,6 @@ for %%a in (%*) do (
         set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="x64" (
         set build.archs=!build.archs!;%%a
-    ) else if /I "%%a"=="arm" (
-        set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="arm64" (
         set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="--settings" (
@@ -114,8 +112,6 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
         set vcvarsall_arch=x86
     ) else if /I %1==x64 (
         set vcvarsall_arch=x86_x64
-    ) else if /I %1==arm (
-        set vcvarsall_arch=x86_arm
     ) else if /I %1==arm64 (
         set vcvarsall_arch=x86_arm64
     ) else (
@@ -127,8 +123,6 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
         set vcvarsall_arch=x64_x86
     ) else if /I %1==x64 (
         set vcvarsall_arch=x64
-    ) else if /I %1==arm (
-        set vcvarsall_arch=x64_arm
     ) else if /I %1==arm64 (
         set vcvarsall_arch=x64_arm64
     ) else (
@@ -153,7 +147,7 @@ exit /B %ERRORLEVEL%
 echo Syntax:
 echo     %0 [arch...] [--settings "<FFmpeg configure settings>"]
 echo where:
-echo     [arch...]: x86 ^| amd64 ^| arm ^| arm64
+echo     [arch...]: x86 ^| amd64 ^| arm64
 echo:
 echo Examples:
 echo     %0                                     Build all architectures

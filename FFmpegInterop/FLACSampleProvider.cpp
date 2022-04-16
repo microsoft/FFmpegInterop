@@ -55,7 +55,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Remaining fields left unparsed as they are unneeded at this time
 	}
 
-	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> FLACSampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, Windows::Foundation::IInspectable>>, vector<pair<GUID, Windows::Foundation::IInspectable>>> FLACSampleProvider::GetSampleData()
 	{
 		if (m_isDiscontinuous)
 		{

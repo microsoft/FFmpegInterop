@@ -101,7 +101,7 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	}
 
-	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> NALUSampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, Windows::Foundation::IInspectable>>, vector<pair<GUID, Windows::Foundation::IInspectable>>> NALUSampleProvider::GetSampleData()
 	{
 		// Get the next sample
 		AVPacket_ptr packet{ GetPacket() };
@@ -114,7 +114,7 @@ namespace winrt::FFmpegInterop::implementation
 		auto [buf, naluLengths] = TransformSample(move(packet), isKeyFrame);
 
 		// Set sample properties
-		vector<pair<GUID, IInspectable>> properties;
+		vector<pair<GUID, Windows::Foundation::IInspectable>> properties;
 
 		if (isKeyFrame)
 		{

@@ -23,7 +23,7 @@ using namespace winrt::Windows::Foundation;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	inline IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propvar)
+	inline Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propvar)
 	{
 		switch (propvar.vt)
 		{
@@ -47,7 +47,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		case MF_ATTRIBUTE_IUNKNOWN:
 		{
-			IInspectable inspectable{ nullptr };
+			Windows::Foundation::IInspectable inspectable{ nullptr };
 			THROW_IF_FAILED(propvar.punkVal->QueryInterface(guid_of<decltype(inspectable)>(), put_abi(inspectable)));
 			return inspectable;
 		}

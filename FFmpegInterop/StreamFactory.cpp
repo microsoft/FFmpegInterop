@@ -111,11 +111,11 @@ namespace winrt::FFmpegInterop::implementation
 		case AV_CODEC_ID_AAC:
 			if (stream->codecpar->extradata_size == 0)
 			{
-				audioEncProp = AudioEncodingProperties::CreateAacAdts(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
+				audioEncProp = AudioEncodingProperties::CreateAacAdts(stream->codecpar->sample_rate, stream->codecpar->ch_layout.nb_channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
 			}
 			else
 			{
-				audioEncProp = AudioEncodingProperties::CreateAac(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
+				audioEncProp = AudioEncodingProperties::CreateAac(stream->codecpar->sample_rate, stream->codecpar->ch_layout.nb_channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
 			}
 
 			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
@@ -154,7 +154,7 @@ namespace winrt::FFmpegInterop::implementation
 			break;
 
 		case AV_CODEC_ID_MP3:
-			audioEncProp = AudioEncodingProperties::CreateMp3(stream->codecpar->sample_rate, stream->codecpar->channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
+			audioEncProp = AudioEncodingProperties::CreateMp3(stream->codecpar->sample_rate, stream->codecpar->ch_layout.nb_channels, static_cast<uint32_t>(stream->codecpar->bit_rate));
 			audioSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
@@ -198,7 +198,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		default:
 			constexpr uint32_t bitsPerSample{ 16 };
-			audioEncProp = AudioEncodingProperties::CreatePcm(stream->codecpar->sample_rate, stream->codecpar->channels, bitsPerSample);
+			audioEncProp = AudioEncodingProperties::CreatePcm(stream->codecpar->sample_rate, stream->codecpar->ch_layout.nb_channels, bitsPerSample);
 			audioSampleProvider = make_unique<UncompressedAudioSampleProvider>(formatContext, stream, reader, config != nullptr ? config.AllowedDecodeErrors() : FFmpegInteropMSSConfig::kAllowedDecodeErrorsDefault);
 			break;
 		}

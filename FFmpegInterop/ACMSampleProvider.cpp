@@ -46,11 +46,11 @@ namespace winrt::FFmpegInterop::implementation
 		waveFormatExtensible->SubFormat = MFAudioFormat_Base;
 		waveFormatExtensible->SubFormat.Data1 = codecPar->codec_tag;
 		waveFormatExtensible->Samples.wValidBitsPerSample = setValidBitsPerSample ? codecPar->bits_per_coded_sample : 0;
-		waveFormatExtensible->dwChannelMask = static_cast<uint32_t>(codecPar->channel_layout);
+		waveFormatExtensible->dwChannelMask = codecPar->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ? static_cast<uint32_t>(codecPar->ch_layout.u.mask) : 0;
 
 		WAVEFORMATEX& waveFormatEx{ waveFormatExtensible->Format };
 		waveFormatEx.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-		waveFormatEx.nChannels = codecPar->channels;
+		waveFormatEx.nChannels = codecPar->ch_layout.nb_channels;
 		waveFormatEx.nSamplesPerSec = codecPar->sample_rate;
 		waveFormatEx.nAvgBytesPerSec = static_cast<uint32_t>(codecPar->bit_rate / BITS_PER_BYTE);
 		waveFormatEx.nBlockAlign = codecPar->block_align;

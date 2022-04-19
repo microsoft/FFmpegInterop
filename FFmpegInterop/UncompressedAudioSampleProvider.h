@@ -42,7 +42,7 @@ namespace winrt::FFmpegInterop::implementation
 		int64_t m_minAudioSampleDur{ 0 };
 
 		AVSampleFormat m_inputSampleFormat{ AV_SAMPLE_FMT_NONE };
-		uint64_t m_channelLayout{ 0 };
+		AVChannelLayoutWrapper m_channelLayout;
 		int m_sampleRate{ 0 };
 		AVFrame_ptr m_formatChangeFrame;
 		SwrContext_ptr m_swrContext;

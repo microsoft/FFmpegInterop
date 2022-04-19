@@ -171,6 +171,64 @@ namespace winrt::FFmpegInterop::implementation
 	};
 	typedef std::unique_ptr<AVCodecParameters, AVCodecParametersDeleter> AVCodecParameters_ptr;
 
+	struct AVChannelLayoutWrapper :
+		public AVChannelLayout
+	{
+		AVChannelLayoutWrapper()
+		{
+			order = AV_CHANNEL_ORDER_UNSPEC;
+			nb_channels = 0;
+			u.mask = 0;
+			opaque = nullptr;
+		}
+
+		AVChannelLayoutWrapper(const AVChannelLayout& other)
+		{
+			THROW_HR_IF_FFMPEG_FAILED(av_channel_layout_copy(this, &other));
+		}
+
+		AVChannelLayoutWrapper(AVChannelLayoutWrapper&& other) :
+			AVChannelLayoutWrapper()
+		{
+			*this = std::move(other);
+		}
+
+		AVChannelLayoutWrapper(int channels)
+		{
+			av_channel_layout_default(this, channels);
+		}
+
+		AVChannelLayoutWrapper(uint64_t mask)
+		{
+			THROW_HR_IF_FFMPEG_FAILED(av_channel_layout_from_mask(this, mask));
+		}
+
+		AVChannelLayoutWrapper(const AVChannelLayoutWrapper&) = delete;
+
+		~AVChannelLayoutWrapper()
+		{
+			av_channel_layout_uninit(this);
+		}
+
+		AVChannelLayoutWrapper& operator=(const AVChannelLayout& other)
+		{
+			if (this != &other)
+			{
+				THROW_HR_IF_FFMPEG_FAILED(av_channel_layout_copy(this, &other));
+			}
+			return *this;
+		}
+
+		AVChannelLayoutWrapper& operator=(AVChannelLayoutWrapper&& other)
+		{
+			if (this != &other)
+			{
+				std::swap(*this, other);
+			}
+			return *this;
+		}
+	};
+
 	struct AVPacketDeleter
 	{
 		void operator()(_In_opt_ AVPacket* packet)

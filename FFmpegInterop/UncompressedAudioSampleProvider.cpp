@@ -30,7 +30,7 @@ namespace winrt::FFmpegInterop::implementation
 		UncompressedSampleProvider(formatContext, stream, reader, allowedDecodeErrors),
 		m_minAudioSampleDur(ConvertToAVTime(MIN_AUDIO_SAMPLE_DUR_MS, MS_PER_SEC, m_stream->time_base)),
 		m_inputSampleFormat(m_codecContext->sample_fmt),
-		m_channelLayout(m_codecContext->channel_layout != 0 ? m_codecContext->channel_layout : av_get_default_channel_layout(m_codecContext->channels)),
+		m_channelLayout(m_codecContext->ch_layout),
 		m_sampleRate(m_codecContext->sample_rate)
 	{
 		if (m_sampleRate != AV_SAMPLE_FMT_S16)
@@ -41,17 +41,19 @@ namespace winrt::FFmpegInterop::implementation
 
 	void UncompressedAudioSampleProvider::InitResampler()
 	{
-		m_swrContext.reset(swr_alloc_set_opts(
-			m_swrContext.release(),
-			m_channelLayout,
+		SwrContext* swrContext{ m_swrContext.release() };
+		THROW_HR_IF_FFMPEG_FAILED(swr_alloc_set_opts2(
+			&swrContext,
+			&m_channelLayout,
 			AV_SAMPLE_FMT_S16,
 			m_sampleRate,
-			m_channelLayout,
+			&m_channelLayout,
 			m_inputSampleFormat,
 			m_sampleRate,
 			0,
 			nullptr));
-		THROW_IF_NULL_ALLOC(m_swrContext);
+		m_swrContext.reset(exchange(swrContext, nullptr));
+
 		THROW_HR_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
 	}
 
@@ -61,7 +63,10 @@ namespace winrt::FFmpegInterop::implementation
 		// it would set encoding properties with values for the compressed audio type.
 
 		MediaPropertySet properties{ encProp.Properties() };
-		properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(m_channelLayout)));
+		if (m_channelLayout.order == AV_CHANNEL_ORDER_NATIVE)
+		{
+			properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(m_channelLayout.u.mask)));
+		}
 	}
 
 	void UncompressedAudioSampleProvider::Flush() noexcept
@@ -168,7 +173,7 @@ namespace winrt::FFmpegInterop::implementation
 
 			// Check for a dynamic format change
 			if (m_inputSampleFormat != frame->format ||
-				m_channelLayout != frame->channel_layout ||
+				av_channel_layout_compare(&m_channelLayout, &frame->ch_layout) != 0 ||
 				m_sampleRate != frame->sample_rate)
 			{
 				if (firstDecodedSample)
@@ -179,20 +184,23 @@ namespace winrt::FFmpegInterop::implementation
 						m_inputSampleFormat = static_cast<AVSampleFormat>(frame->format);
 					}
 
-					uint64_t frameChannelLayout{ frame->channel_layout != 0 ? frame->channel_layout : av_get_default_channel_layout(frame->channels) };
-					if (m_channelLayout != frameChannelLayout)
+					if (av_channel_layout_compare(&m_channelLayout, &frame->ch_layout) != 0)
 					{
-						formatChanges.emplace_back(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(frameChannelLayout)));
-						if (av_get_channel_layout_nb_channels(m_channelLayout) != frame->channels)
+						if (frame->ch_layout.order == AV_CHANNEL_ORDER_NATIVE)
 						{
-							formatChanges.emplace_back(MF_MT_AUDIO_NUM_CHANNELS, PropertyValue::CreateUInt32(frame->channels));
+							formatChanges.emplace_back(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(frame->ch_layout.u.mask)));
+						}
+
+						if (m_channelLayout.nb_channels != frame->ch_layout.nb_channels)
+						{
+							formatChanges.emplace_back(MF_MT_AUDIO_NUM_CHANNELS, PropertyValue::CreateUInt32(frame->ch_layout.nb_channels));
 							formatChanges.emplace_back(MF_MT_AUDIO_BLOCK_ALIGNMENT, 
-								PropertyValue::CreateUInt32(frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+								PropertyValue::CreateUInt32(frame->ch_layout.nb_channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
 							formatChanges.emplace_back(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 
-								PropertyValue::CreateUInt32(frame->sample_rate * frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+								PropertyValue::CreateUInt32(frame->sample_rate * frame->ch_layout.nb_channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
 						}
 						
-						m_channelLayout = frameChannelLayout;
+						m_channelLayout = frame->ch_layout;
 					}
 
 					if (m_sampleRate != frame->sample_rate)
@@ -202,7 +210,7 @@ namespace winrt::FFmpegInterop::implementation
 									[](const auto& val) { return val.first == MF_MT_AUDIO_SAMPLES_PER_SECOND; }))
 						{
 							formatChanges.emplace_back(MF_MT_AUDIO_AVG_BYTES_PER_SECOND,
-								PropertyValue::CreateUInt32(frame->sample_rate * frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
+								PropertyValue::CreateUInt32(frame->sample_rate * frame->ch_layout.nb_channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16)));
 						}
 
 						m_sampleRate = frame->sample_rate;
@@ -241,14 +249,14 @@ namespace winrt::FFmpegInterop::implementation
 			{
 				// Resample uncompressed frame to desired output format
 				uint8_t* buf{ nullptr };
-				int bufSize{ av_samples_alloc(&buf, nullptr, frame->channels, frame->nb_samples, AV_SAMPLE_FMT_S16, 0) };
+				int bufSize{ av_samples_alloc(&buf, nullptr, frame->ch_layout.nb_channels, frame->nb_samples, AV_SAMPLE_FMT_S16, 0) };
 				THROW_HR_IF_FFMPEG_FAILED(bufSize);
 
 				int resampledSamplesCount{ swr_convert(m_swrContext.get(), &buf, frame->nb_samples, const_cast<const uint8_t**>(frame->extended_data), frame->nb_samples) };
 				AVBlob_ptr resampledData{ exchange(buf, nullptr) };
 				THROW_HR_IF_FFMPEG_FAILED(resampledSamplesCount);
 
-				const uint32_t resampledDataSize{ static_cast<uint32_t>(resampledSamplesCount) * frame->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) };
+				const uint32_t resampledDataSize{ static_cast<uint32_t>(resampledSamplesCount) * frame->ch_layout.nb_channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16) };
 				WINRT_ASSERT(resampledDataSize <= static_cast<uint32_t>(bufSize));
 
 				curSampleBuf = make<FFmpegInteropBuffer>(move(resampledData), resampledDataSize);

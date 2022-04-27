@@ -81,7 +81,7 @@ namespace winrt::FFmpegInterop::implementation
 		videoProp.Insert(MF_MT_INTERLACE_MODE, PropertyValue::CreateUInt32(MFVideoInterlace_MixedInterlaceOrProgressive));
 	}
 
-	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, IInspectable>>, vector<pair<GUID, IInspectable>>> UncompressedVideoSampleProvider::GetSampleData()
+	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, Windows::Foundation::IInspectable>>, vector<pair<GUID, Windows::Foundation::IInspectable>>> UncompressedVideoSampleProvider::GetSampleData()
 	{
 		// Get the next decoded sample
 		AVFrame_ptr frame;
@@ -126,7 +126,7 @@ namespace winrt::FFmpegInterop::implementation
 		}
 
 		// Check for dynamic format changes
-		vector<pair<GUID, IInspectable>> formatChanges{ CheckForFormatChanges(frame.get()) };
+		vector<pair<GUID, Windows::Foundation::IInspectable>> formatChanges{ CheckForFormatChanges(frame.get()) };
 
 		// Get the sample buffer
 		IBuffer sampleBuf{ nullptr };
@@ -152,14 +152,14 @@ namespace winrt::FFmpegInterop::implementation
 		}
 
 		// Get the sample properties
-		vector<pair<GUID, IInspectable>> properties{ GetSampleProperties(frame.get()) };
+		vector<pair<GUID, Windows::Foundation::IInspectable>> properties{ GetSampleProperties(frame.get()) };
 
 		return { move(sampleBuf), frame->best_effort_timestamp, frame->pkt_duration, move(properties), move(formatChanges) };
 	}
 
-	vector<pair<GUID, IInspectable>> UncompressedVideoSampleProvider::CheckForFormatChanges(_In_ const AVFrame* frame)
+	vector<pair<GUID, Windows::Foundation::IInspectable>> UncompressedVideoSampleProvider::CheckForFormatChanges(_In_ const AVFrame* frame)
 	{
-		vector<pair<GUID, IInspectable>> formatChanges;
+		vector<pair<GUID, Windows::Foundation::IInspectable>> formatChanges;
 
 		// Check if the resolution changed
 		if (frame->width != m_outputWidth || frame->height != m_outputHeight)
@@ -184,9 +184,9 @@ namespace winrt::FFmpegInterop::implementation
 		return formatChanges;
 	}
 
-	vector<pair<GUID, IInspectable>> UncompressedVideoSampleProvider::GetSampleProperties(_In_ const AVFrame* frame)
+	vector<pair<GUID, Windows::Foundation::IInspectable>> UncompressedVideoSampleProvider::GetSampleProperties(_In_ const AVFrame* frame)
 	{
-		vector<pair<GUID, IInspectable>> properties;
+		vector<pair<GUID, Windows::Foundation::IInspectable>> properties;
 
 		if (frame->interlaced_frame)
 		{

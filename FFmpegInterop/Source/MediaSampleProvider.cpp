@@ -244,11 +244,16 @@ void MediaSampleProvider::Flush()
 		av_packet_unref(&PopPacket());
 	}
 	m_isDiscontinuous = true;
+	m_isEnabled = true;
 }
 
 void MediaSampleProvider::DisableStream()
 {
 	DebugMessage(L"DisableStream\n");
-	Flush();
+	while (!m_packetQueue.empty())
+	{
+		av_packet_unref(&PopPacket());
+	}
+	m_isDiscontinuous = true;
 	m_isEnabled = false;
 }

@@ -21,20 +21,22 @@
 
 namespace FFmpegInterop
 {
-	ref class H264SampleProvider :
+	ref class NALPacketSampleProvider :
 		public MediaSampleProvider
 	{
 	public:
-		virtual ~H264SampleProvider();
-
-	private:
-		HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter);
+		virtual ~NALPacketSampleProvider();
 
 	internal:
-		H264SampleProvider(
+		NALPacketSampleProvider(
 			FFmpegReader^ reader,
 			AVFormatContext* avFormatCtx,
 			AVCodecContext* avCodecCtx);
+		virtual HRESULT GetSPSAndPPSBuffer(DataWriter^ dataWriter, byte* buf, int length);
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
+		virtual HRESULT WriteNALPacket(DataWriter^ dataWriter, AVPacket* avPacket);
+
+	private:
+		bool m_bHasSentExtradata;
 	};
 }

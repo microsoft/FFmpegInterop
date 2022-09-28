@@ -102,7 +102,7 @@ HRESULT MediaSampleProvider::WriteAVPacketToStream(DataWriter^ dataWriter, AVPac
 {
 	// This is the simplest form of transfer. Copy the packet directly to the stream
 	// This works for most compressed formats
-	auto aBuffer = ref new Platform::Array<uint8_t>(avPacket->data, avPacket->size);
+	auto aBuffer = Platform::ArrayReference<uint8_t>(avPacket->data, avPacket->size);
 	dataWriter->WriteBytes(aBuffer);
 	return S_OK;
 }

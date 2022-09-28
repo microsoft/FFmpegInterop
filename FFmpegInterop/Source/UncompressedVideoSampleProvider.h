@@ -24,6 +24,7 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+using namespace Platform;
 
 namespace FFmpegInterop
 {
@@ -32,6 +33,10 @@ namespace FFmpegInterop
 	public:
 		virtual ~UncompressedVideoSampleProvider();
 		virtual MediaStreamSample^ GetNextSample() override;
+		property String^ OutputMediaSubtype;
+		property int DecoderWidth;
+		property int DecoderHeight;
+
 	internal:
 		UncompressedVideoSampleProvider(
 			FFmpegReader^ reader,
@@ -39,14 +44,17 @@ namespace FFmpegInterop
 			AVCodecContext* avCodecCtx);
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
 		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT AllocateResources() override;
 
 	private:
+		HRESULT InitializeScalerIfRequired(AVFrame* frame);
+
+		AVPixelFormat m_OutputPixelFormat;
 		SwsContext* m_pSwsCtx;
 		int m_rgVideoBufferLineSize[4];
 		uint8_t* m_rgVideoBufferData[4];
 		bool m_interlaced_frame;
 		bool m_top_field_first;
+		bool m_bIsInitialized;
 	};
 }
 

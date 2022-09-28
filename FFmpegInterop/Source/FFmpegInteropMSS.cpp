@@ -490,15 +490,11 @@ HRESULT FFmpegInteropMSS::InitFFmpegContext(bool forceAudioDecode, bool forceVid
 		}
 		if (mss)
 		{
+			mss->BufferTime = { 0 };
 			if (mediaDuration.Duration > 0)
 			{
 				mss->Duration = mediaDuration;
-				mss->CanSeek = true;
-			}
-			else
-			{
-				// Set buffer time to 0 for realtime streaming to reduce latency
-				mss->BufferTime = { 0 };
+ 				mss->CanSeek = true;
 			}
 
 			startingRequestedToken = mss->Starting += ref new TypedEventHandler<MediaStreamSource ^, MediaStreamSourceStartingEventArgs ^>(this, &FFmpegInteropMSS::OnStarting);

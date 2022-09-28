@@ -24,14 +24,21 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+using namespace Platform;
 
 namespace FFmpegInterop
 {
+	ref class FrameDataHolder;
+
 	ref class UncompressedVideoSampleProvider: UncompressedSampleProvider
 	{
 	public:
 		virtual ~UncompressedVideoSampleProvider();
 		virtual MediaStreamSample^ GetNextSample() override;
+		property String^ OutputMediaSubtype;
+		property int DecoderWidth;
+		property int DecoderHeight;
+
 	internal:
 		UncompressedVideoSampleProvider(
 			FFmpegReader^ reader,
@@ -39,14 +46,30 @@ namespace FFmpegInterop
 			AVCodecContext* avCodecCtx);
 		virtual HRESULT WriteAVPacketToStream(DataWriter^ writer, AVPacket* avPacket) override;
 		virtual HRESULT DecodeAVPacket(DataWriter^ dataWriter, AVPacket* avPacket, int64_t& framePts, int64_t& frameDuration) override;
-		virtual HRESULT AllocateResources() override;
+		AVPixelFormat GetOutputPixelFormat() { return m_OutputPixelFormat; }
 
 	private:
+		HRESULT InitializeScalerIfRequired();
+		HRESULT FillLinesAndBuffer(int* linesize, byte** data, AVBufferRef** buffer);
+		AVBufferRef* AllocateBuffer(int totalSize);
+		static int get_buffer2(AVCodecContext *avCodecContext, AVFrame *frame, int flags);
+		static void free_buffer(void *lpVoid);
+
+		AVBufferPool *m_pBufferPool;
+		AVPixelFormat m_OutputPixelFormat;
 		SwsContext* m_pSwsCtx;
-		int m_rgVideoBufferLineSize[4];
-		uint8_t* m_rgVideoBufferData[4];
 		bool m_interlaced_frame;
 		bool m_top_field_first;
+		bool m_bUseScaler;
+		IBuffer ^m_pDirectBuffer;
+	};
+
+	private ref class FrameDataHolder
+	{
+	internal:
+		int linesize[4];
+		uint8_t* data[4];
+		AVBufferRef* buffer;
 	};
 }
 

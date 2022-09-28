@@ -50,7 +50,6 @@ namespace FFmpegInterop
 		int m_streamIndex;
 		int64 m_startOffset;
 		int64 m_nextFramePts;
-		bool m_isEnabled;
 
 	internal:
 		// The FFmpeg context. Because they are complex types
@@ -60,6 +59,7 @@ namespace FFmpegInterop
 		AVFormatContext* m_pAvFormatCtx;
 		AVCodecContext* m_pAvCodecCtx;
 		bool m_isDiscontinuous;
+		bool m_isEnabled;
 
 	internal:
 		MediaSampleProvider(

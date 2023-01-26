@@ -50,7 +50,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\*.dll" />
-    <None Include="..\..\FFmpegInterop.pfx" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainPage.xaml" />

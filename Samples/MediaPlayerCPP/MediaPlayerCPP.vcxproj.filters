@@ -52,7 +52,6 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\FFmpegInterop.pfx" />
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec-58_ms.dll" />
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avdevice-58_ms.dll" />
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avfilter-7_ms.dll" />

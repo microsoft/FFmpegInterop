@@ -71,9 +71,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup>
-    <PackageCertificateKeyFile>..\..\FFmpegInterop.pfx</PackageCertificateKeyFile>
-  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -180,7 +177,6 @@
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swscale-5_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\..\FFmpegInterop.pfx" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

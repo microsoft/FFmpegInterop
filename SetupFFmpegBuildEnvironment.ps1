@@ -43,17 +43,8 @@ elseif (Get-Command tar -ErrorAction Ignore)
 }
 else
 {
-    if (-not (Get-Command Expand-7Zip -ErrorAction Ignore))
-    {
-        Write-Host 'Installing 7Zip4PowerShell...'
-        Install-Module -Name 7Zip4PowerShell -Scope CurrentUser -Force
-    }
-
-    Write-Host "Extracting $archive to $msys2_root with 7Zip4PowerShell..."
-    $uncompressed_archive = $archive.Replace('.xz', '')
-    Expand-7Zip $archive .\
-    Expand-7Zip $uncompressed_archive "$install_dir\"
-    Remove-Item $uncompressed_archive
+    Write-Error 'Please install 7z.exe or tar.exe and add to $env:PATH.'
+    exit 1
 }
 
 Remove-Item $archive

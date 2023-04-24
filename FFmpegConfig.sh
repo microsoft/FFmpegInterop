@@ -10,8 +10,8 @@ common_settings=" \
     --disable-dxva2 \
     --enable-shared \
     --enable-cross-compile \
-    --extra-cflags=\"-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00\" \
-    --extra-ldflags=\"-APPCONTAINER WindowsApp.lib -PROFILE\" \
+    --extra-cflags=\"-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00 -GUARD:CF\" \
+    --extra-ldflags=\"-APPCONTAINER WindowsApp.lib -PROFILE -GUARD:CF -DYNAMICBASE\" \
     "
 
 # Architecture specific configure settings

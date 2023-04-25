@@ -30,7 +30,7 @@ namespace winrt::FFmpegInterop::implementation
         bool ForceAudioDecode();
         void ForceAudioDecode(_In_ bool forceAudioDecode);
         bool ForceVideoDecode();
-        void ForceVideoDecode(bool forceVideoDecode);
+        void ForceVideoDecode(_In_ bool forceVideoDecode);
         uint32_t AllowedDecodeErrors();
         void AllowedDecodeErrors(_In_ uint32_t allowedDecodeErrors);
         Windows::Foundation::Collections::StringMap FFmpegOptions();

@@ -55,7 +55,7 @@ namespace winrt::FFmpegInterop::implementation
 		}
 	}
 
-	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_reads_(bufSize) AVBlob_ptr buf, _In_ uint32_t bufSize) :
+	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ AVBlob_ptr buf, _In_ uint32_t bufSize) :
 		m_length(bufSize),
 		m_buf(static_cast<uint8_t*>(buf.get()), [AVBlob_ptr{ buf.get() }](uint8_t*) noexcept { })
 	{

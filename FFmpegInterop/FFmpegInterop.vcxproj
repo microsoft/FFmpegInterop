@@ -107,8 +107,10 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
     </ClCompile>
     <Link>
+      <AdditionalOptions>/GUARD:CF %(AdditionalOptions)</AdditionalOptions>
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>

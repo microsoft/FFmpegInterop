@@ -187,7 +187,7 @@ namespace winrt::FFmpegInterop::implementation
 			THROW_HR_IF_FFMPEG_FAILED(av_channel_layout_copy(this, &other));
 		}
 
-		AVChannelLayoutWrapper(AVChannelLayoutWrapper&& other) :
+		AVChannelLayoutWrapper(AVChannelLayoutWrapper&& other) noexcept :
 			AVChannelLayoutWrapper()
 		{
 			*this = std::move(other);
@@ -219,7 +219,7 @@ namespace winrt::FFmpegInterop::implementation
 			return *this;
 		}
 
-		AVChannelLayoutWrapper& operator=(AVChannelLayoutWrapper&& other)
+		AVChannelLayoutWrapper& operator=(AVChannelLayoutWrapper&& other) noexcept
 		{
 			if (this != &other)
 			{

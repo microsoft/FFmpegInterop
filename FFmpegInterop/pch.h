@@ -53,6 +53,23 @@
 #include <wmcodecdsp.h>
 #include <amvideo.h>
 
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+DEFINE_GUID(MEDIASUBTYPE_DOLBY_TRUEHD, 0xeb27cec4, 0x163e, 0x4ca3, 0x8b, 0x74, 0x8e, 0x25, 0xf9, 0x1b, 0x51, 0x7e);
+DEFINE_GUID(MF_PROPERTY_HANDLER_SERVICE, 0xa3face02, 0x32b8, 0x41dd, 0x90, 0xe7, 0x5f, 0xef, 0x7c, 0x89, 0x91, 0xb5);
+DEFINE_GUID(MF_MT_CUSTOM_VIDEO_PRIMARIES, 0x47537213, 0x8cfb, 0x4722, 0xaa, 0x34, 0xfb, 0xc9, 0xe2, 0x4d, 0x77, 0xb8);
+
+typedef struct _MT_CUSTOM_VIDEO_PRIMARIES {
+    float fRx;
+    float fRy;
+    float fGx;
+    float fGy;
+    float fBx;
+    float fBy;
+    float fWx;
+    float fWy;
+} MT_CUSTOM_VIDEO_PRIMARIES;
+#endif // !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+
 // FFmpeg
 extern "C"
 {

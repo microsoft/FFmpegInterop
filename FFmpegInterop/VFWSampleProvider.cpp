@@ -35,6 +35,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void VFWSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
 	{
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 		// We intentionally don't call SampleProvider::SetEncodingProperties() here. We'll set all of the encoding properties we need.
 
 		// FFmpeg strips the bitmap info header from the codec private data. Recreate it.
@@ -73,5 +74,8 @@ namespace winrt::FFmpegInterop::implementation
 			// Add the property to the encoding property set
 			encPropSet.Insert(propGuid, CreatePropValueFromMFAttribute(propValue));
 		}
+#else
+		THROW_HR(E_NOTIMPL);
+#endif // WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	}
 }

@@ -67,6 +67,11 @@ namespace winrt::FFmpegInterop::implementation
 		{
 			properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(m_channelLayout.u.mask)));
 		}
+		else if (m_channelLayout.order != AV_CHANNEL_ORDER_UNSPEC)
+		{
+			// We don't currently support other channel orders
+			THROW_HR(MF_E_INVALIDMEDIATYPE);
+		}
 	}
 
 	void UncompressedAudioSampleProvider::Flush() noexcept
@@ -189,6 +194,11 @@ namespace winrt::FFmpegInterop::implementation
 						if (frame->ch_layout.order == AV_CHANNEL_ORDER_NATIVE)
 						{
 							formatChanges.emplace_back(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(frame->ch_layout.u.mask)));
+						}
+						else if (frame->ch_layout.order != AV_CHANNEL_ORDER_UNSPEC)
+						{
+							// We don't currently support other channel orders
+							THROW_HR(MF_E_INVALIDMEDIATYPE);
 						}
 
 						if (m_channelLayout.nb_channels != frame->ch_layout.nb_channels)

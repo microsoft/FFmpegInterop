@@ -66,6 +66,11 @@ namespace winrt::FFmpegInterop::implementation
 			{
 				properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(codecPar->ch_layout.u.mask)));
 			}
+			else if (codecPar->ch_layout.order != AV_CHANNEL_ORDER_UNSPEC)
+			{
+				// We don't currently support other channel orders
+				THROW_HR(MF_E_INVALIDMEDIATYPE);
+			}
 
 			if (GUID subtype{ unbox_value<GUID>(properties.Lookup(MF_MT_SUBTYPE)) }; subtype == MFAudioFormat_PCM || subtype == MFAudioFormat_Float)
 			{

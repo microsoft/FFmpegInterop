@@ -29,7 +29,7 @@ namespace winrt::FFmpegInterop::implementation
 		m_allowedDecodeErrors(allowedDecodeErrors)
 	{
 		// Create a new decoding context
-		AVCodec* codec{ avcodec_find_decoder(stream->codecpar->codec_id) };
+		const AVCodec* codec{ avcodec_find_decoder(stream->codecpar->codec_id) };
 		THROW_HR_IF_NULL(MF_E_INVALIDMEDIATYPE, codec);
 
 		m_codecContext.reset(avcodec_alloc_context3(codec));

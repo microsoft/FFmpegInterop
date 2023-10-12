@@ -76,6 +76,7 @@ typedef struct _MT_CUSTOM_VIDEO_PRIMARIES {
 // FFmpeg
 extern "C"
 {
+#include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/log.h>
 #include <libavutil/imgutils.h>

@@ -49,7 +49,7 @@ namespace winrt::FFmpegInterop::implementation
 		{
 			IAudioEncodingProperties audioEncProp{ encProp.as<IAudioEncodingProperties>() };
 			audioEncProp.SampleRate(codecPar->sample_rate);
-			audioEncProp.ChannelCount(codecPar->channels);
+			audioEncProp.ChannelCount(codecPar->ch_layout.nb_channels);
 			audioEncProp.Bitrate(static_cast<uint32_t>(codecPar->bit_rate));
 			audioEncProp.BitsPerSample(static_cast<uint32_t>(max(codecPar->bits_per_coded_sample, codecPar->bits_per_raw_sample)));
 
@@ -61,8 +61,16 @@ namespace winrt::FFmpegInterop::implementation
 			}
 
 			MediaPropertySet properties{ audioEncProp.Properties() };
-			properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(
-				codecPar->channel_layout != 0 ? static_cast<uint32_t>(codecPar->channel_layout) : static_cast<uint32_t>(av_get_default_channel_layout(codecPar->channels))));
+
+			if (codecPar->ch_layout.order == AV_CHANNEL_ORDER_NATIVE)
+			{
+				properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(codecPar->ch_layout.u.mask)));
+			}
+			else if (codecPar->ch_layout.order != AV_CHANNEL_ORDER_UNSPEC)
+			{
+				// We don't currently support other channel orders
+				THROW_HR(MF_E_INVALIDMEDIATYPE);
+			}
 
 			if (GUID subtype{ unbox_value<GUID>(properties.Lookup(MF_MT_SUBTYPE)) }; subtype == MFAudioFormat_PCM || subtype == MFAudioFormat_Float)
 			{

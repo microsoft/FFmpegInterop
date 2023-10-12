@@ -156,25 +156,25 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec-58_ms.dll">
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec-60_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avdevice-58_ms.dll">
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avdevice-60_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avfilter-7_ms.dll">
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avfilter-9_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avformat-58_ms.dll">
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avformat-60_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avutil-56_ms.dll">
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avutil-58_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swresample-3_ms.dll">
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swresample-4_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swscale-5_ms.dll">
+    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swscale-7_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="packages.config" />

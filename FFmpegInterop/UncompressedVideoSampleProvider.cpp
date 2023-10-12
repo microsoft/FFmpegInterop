@@ -154,7 +154,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Get the sample properties
 		vector<pair<GUID, Windows::Foundation::IInspectable>> properties{ GetSampleProperties(frame.get()) };
 
-		return { move(sampleBuf), frame->best_effort_timestamp, frame->pkt_duration, move(properties), move(formatChanges) };
+		return { move(sampleBuf), frame->best_effort_timestamp, frame->duration, move(properties), move(formatChanges) };
 	}
 
 	vector<pair<GUID, Windows::Foundation::IInspectable>> UncompressedVideoSampleProvider::CheckForFormatChanges(_In_ const AVFrame* frame)

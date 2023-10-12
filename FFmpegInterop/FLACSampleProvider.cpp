@@ -50,7 +50,7 @@ namespace winrt::FFmpegInterop::implementation
 		bitstreamReader.SkipN(24); // Min frame size
 		bitstreamReader.SkipN(24); // Max frame size
 		m_stream->codecpar->sample_rate = static_cast<int>(bitstreamReader.ReadN(20));
-		m_stream->codecpar->channels = static_cast<int>(bitstreamReader.ReadN(3)) + 1;
+		m_stream->codecpar->ch_layout.nb_channels = static_cast<int>(bitstreamReader.ReadN(3)) + 1;
 		m_stream->codecpar->bits_per_raw_sample = static_cast<int>(bitstreamReader.ReadN(5)) + 1;
 		// Remaining fields left unparsed as they are unneeded at this time
 	}

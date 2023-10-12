@@ -74,7 +74,7 @@ namespace winrt::FFmpegInterop::implementation
 {
 	void FFmpegInteropMSS::CreateFromStream(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
-		auto logger{ CreateFromStreamActivity::Start() };
+		auto logger{ FFmpegInteropProvider::CreateFromStream::Start() };
 
 		(void) make<FFmpegInteropMSS>(fileStream, mss, config);
 
@@ -83,7 +83,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void FFmpegInteropMSS::CreateFromUri(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
-		auto logger{ CreateFromUriActivity::Start() };
+		auto logger{ FFmpegInteropProvider::CreateFromUri::Start() };
 
 		(void) make<FFmpegInteropMSS>(uri, mss, config);
 
@@ -290,7 +290,7 @@ namespace winrt::FFmpegInterop::implementation
 				// Note: MSS didn't expose subtitle streams in media engine scenarios until 19041.
 				if (!ApiInformation::IsTypePresent(L"Windows.Media.Core.TimedMetadataStreamDescriptor"))
 				{
-					TraceLoggingWrite(g_FFmpegInteropProvider, "NoSubtitleSupport", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+					TraceLoggingProviderWrite(FFmpegInteropProvider, "NoSubtitleSupport", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 						TraceLoggingValue(stream->index, "StreamId"),
 						TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
 					continue;
@@ -303,7 +303,7 @@ namespace winrt::FFmpegInterop::implementation
 				catch (...)
 				{
 					// Unsupported subtitle stream. Just ignore.
-					TraceLoggingWrite(g_FFmpegInteropProvider, "UnsupportedSubtitleStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+					TraceLoggingProviderWrite(FFmpegInteropProvider, "UnsupportedSubtitleStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 						TraceLoggingValue(stream->index, "StreamId"),
 						TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
 					continue;
@@ -316,7 +316,7 @@ namespace winrt::FFmpegInterop::implementation
 
 			default:
 				// Ignore this stream
-				TraceLoggingWrite(g_FFmpegInteropProvider, "UnsupportedStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingProviderWrite(FFmpegInteropProvider, "UnsupportedStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(stream->index, "StreamId"),
 					TraceLoggingInt32(stream->codecpar->codec_type, "AVMediaType"),
 					TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
@@ -358,7 +358,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void FFmpegInteropMSS::OnStarting(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceStartingEventArgs& args)
 	{
-		auto logger{ OnStartingActivity::Start() };
+		auto logger{ FFmpegInteropProvider::OnStarting::Start() };
 
 		const MediaStreamSourceStartingRequest request{ args.Request() };
 		const IReference<TimeSpan> startPosition{ request.StartPosition() };
@@ -369,7 +369,7 @@ namespace winrt::FFmpegInterop::implementation
 			lock_guard<mutex> lock{ m_lock };
 
 			const TimeSpan hnsSeekTime{ startPosition.Value() };
-			TraceLoggingWrite(g_FFmpegInteropProvider, "Seek", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "Seek", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(hnsSeekTime.count(), "SeekTimeHNS"));
 			
 			try
@@ -403,14 +403,14 @@ namespace winrt::FFmpegInterop::implementation
 		}
 		else
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "Resume", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"));
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "Resume", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"));
 			logger.Stop();
 		}
 	}
 
 	void FFmpegInteropMSS::OnSampleRequested(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceSampleRequestedEventArgs& args)
 	{
-		auto logger{ OnSampleRequestedActivity::Start() };
+		auto logger{ FFmpegInteropProvider::OnSampleRequested::Start() };
 
 		const MediaStreamSourceSampleRequest request{ args.Request() };
 
@@ -446,7 +446,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void FFmpegInteropMSS::OnSwitchStreamsRequested(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceSwitchStreamsRequestedEventArgs& args)
 	{
-		auto logger{ OnSwitchStreamsRequestedActivity::Start() };
+		auto logger{ FFmpegInteropProvider::OnSwitchStreamsRequested::Start() };
 
 		const MediaStreamSourceSwitchStreamsRequest request{ args.Request() };
 		const IMediaStreamDescriptor oldStreamDescriptor{ request.OldStreamDescriptor() };
@@ -482,7 +482,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void FFmpegInteropMSS::OnClosed(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceClosedEventArgs& args)
 	{
-		auto logger{ OnClosedActivity::Start() };
+		auto logger{ FFmpegInteropProvider::OnClosed::Start() };
 
 		lock_guard<mutex> lock{ m_lock };
 

@@ -37,7 +37,7 @@ namespace winrt::FFmpegInterop::implementation
 			if (m_stream->codecpar->extradata[0] == 1)
 			{
 				// avcC config format
-				TraceLoggingWrite(g_FFmpegInteropProvider, "AVCCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingProviderWrite(FFmpegInteropProvider, "AVCCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(m_stream->index, "StreamId"));
 
 				m_isBitstreamAnnexB = false;
@@ -49,7 +49,7 @@ namespace winrt::FFmpegInterop::implementation
 			else
 			{
 				// Annex B format
-				TraceLoggingWrite(g_FFmpegInteropProvider, "AnnexBCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingProviderWrite(FFmpegInteropProvider, "AnnexBCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(m_stream->index, "StreamId"));
 
 				AnnexBParser parser{ m_stream->codecpar->extradata, static_cast<uint32_t>(m_stream->codecpar->extradata_size) };
@@ -58,7 +58,7 @@ namespace winrt::FFmpegInterop::implementation
 		}
 		else
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "EmptyCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "EmptyCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"));
 		}
 	}

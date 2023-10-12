@@ -40,7 +40,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Drop the packet if the stream is not being used.
 		THROW_HR_IF_FFMPEG_FAILED(av_read_frame(m_formatContext, packet.get()));
 
-		TraceLoggingWrite(g_FFmpegInteropProvider, "ReadPacket", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+		TraceLoggingProviderWrite(FFmpegInteropProvider, "ReadPacket", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 			TraceLoggingValue(packet->stream_index, "StreamId"),
 			TraceLoggingValue(packet->pts, "PTS"),
 			TraceLoggingValue(packet->duration, "Dur"),

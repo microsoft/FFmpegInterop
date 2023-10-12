@@ -291,7 +291,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void SampleProvider::Select() noexcept
 	{
-		TraceLoggingWrite(g_FFmpegInteropProvider, "StreamSelected", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+		TraceLoggingProviderWrite(FFmpegInteropProvider, "StreamSelected", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 			TraceLoggingValue(m_stream->index, "StreamId"));
 
 		WINRT_ASSERT(!m_isSelected);
@@ -301,7 +301,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void SampleProvider::Deselect() noexcept
 	{
-		TraceLoggingWrite(g_FFmpegInteropProvider, "StreamDeselected", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+		TraceLoggingProviderWrite(FFmpegInteropProvider, "StreamDeselected", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 			TraceLoggingValue(m_stream->index, "StreamId"));
 
 		WINRT_ASSERT(m_isSelected);
@@ -327,7 +327,7 @@ namespace winrt::FFmpegInterop::implementation
 
 			if (m_isSelected)
 			{
-				TraceLoggingWrite(g_FFmpegInteropProvider, "EndOfStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingProviderWrite(FFmpegInteropProvider, "EndOfStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(m_stream->index, "StreamId"));
 			}
 		}
@@ -349,7 +349,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void SampleProvider::GetSample(_Inout_ const MediaStreamSourceSampleRequest& request)
 	{
-		TraceLoggingWrite(g_FFmpegInteropProvider, "SampleRequested", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+		TraceLoggingProviderWrite(FFmpegInteropProvider, "SampleRequested", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 			TraceLoggingValue(m_stream->index, "StreamId"));
 
 		// Make sure this stream is selected
@@ -420,11 +420,11 @@ namespace winrt::FFmpegInterop::implementation
 				encodingProperties.Insert(key, value);
 			}
 
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DynamicFormatChange", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "DynamicFormatChange", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"));
 		}
 
-		TraceLoggingWrite(g_FFmpegInteropProvider, "SampleRequestFilled", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+		TraceLoggingProviderWrite(FFmpegInteropProvider, "SampleRequestFilled", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 			TraceLoggingValue(m_stream->index, "StreamId"),
 			TraceLoggingValue(sample.Timestamp().count(), "TimestampHNS"),
 			TraceLoggingValue(sample.Duration().count(), "DurHNS"));

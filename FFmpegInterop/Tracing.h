@@ -18,88 +18,28 @@
 
 #pragma once
 
+#define FFMPEG_INTEROP_PROVIDER_NAME "Microsoft.Windows.MediaFoundation.FFmpegInterop"
+// {3D64F3FC-1826-4F56-9688-AD139DAF7B1A}
+#define FFMPEG_INTEROP_PROVIDER_GUID (0x3d64f3fc, 0x1826, 0x4f56, 0x96, 0x88, 0xad, 0x13, 0x9d, 0xaf, 0x7b, 0x1a)
+
 namespace winrt::FFmpegInterop::implementation
 {
 	TRACELOGGING_DECLARE_PROVIDER(g_FFmpegInteropProvider);
 
-	#define TRACE_LOGGING_ACTIVITY_CLASS(FunctionName) _TRACE_LOGGING_ACTIVITY_CLASS(FunctionName ## Activity, FunctionName)
-	#define _TRACE_LOGGING_ACTIVITY_CLASS(ActivityClassName, FunctionName) \
-	class ActivityClassName \
-	{ \
-	public: \
-		ActivityClassName(_Inout_ ActivityClassName&& other) noexcept : \
-			m_failureCache(std::move(other.m_failureCache)), \
-			m_activity(std::move(other.m_activity)), \
-			m_stopped(std::exchange(other.m_stopped, true)) \
-		{ \
-			\
-		} \
-		\
-		~ActivityClassName() noexcept \
-		{ \
-			if (!m_stopped) \
-			{ \
-				const wil::FailureInfo* failureInfo = m_failureCache.GetFailure(); \
-				if (failureInfo != nullptr) \
-				{ \
-					TraceLoggingWriteTagged( \
-						m_activity, \
-						#FunctionName"Error", \
-						TraceLoggingLevel(TRACE_LEVEL_ERROR), \
-						TraceLoggingString(failureInfo->pszFile, "File"), \
-						TraceLoggingString(failureInfo->pszFunction, "Function"), \
-						TraceLoggingUInt32(failureInfo->uLineNumber, "Line"), \
-						TraceLoggingHexInt32(failureInfo->hr, "HResult")); \
-				} \
-				else \
-				{ \
-					/* Failure not logged by WIL error macro. We should ideally only hit this case for */ \
-					/* std::bad_alloc exceptions. Other scenarios that might hit this case like */ \
-					/* exceptions from invalid STL usage, unlogged errors, premature return without */ \
-					/* stopping this activity, etc should be addressed. Assert here to try to catch */ \
-					/* these scenarios during development. */ \
-					WINRT_ASSERT(failureInfo != nullptr); \
-					\
-					TraceLoggingWriteTagged( \
-						m_activity, \
-						#FunctionName"Error", \
-						TraceLoggingLevel(TRACE_LEVEL_ERROR), \
-						TraceLoggingString("Untraced error occurred", "ErrorMessage")); \
-				} \
-				\
-				TraceLoggingWriteStop(m_activity, #FunctionName"Stop"); \
-			} \
-		} \
-		\
-		static ActivityClassName Start() noexcept \
-		{ \
-			return ActivityClassName(); \
-		} \
-		\
-		void Stop() noexcept \
-		{ \
-			if (!m_stopped) \
-			{ \
-				TraceLoggingWriteStop(m_activity, #FunctionName"Stop"); \
-				m_stopped = true; \
-			} \
-		} \
-		\
-	private: \
-		ActivityClassName() noexcept \
-		{ \
-			TraceLoggingWriteStart(m_activity, #FunctionName"Start"); \
-		} \
-		\
-		wil::ThreadFailureCache m_failureCache; \
-		TraceLoggingActivity<g_FFmpegInteropProvider> m_activity; \
-		bool m_stopped{ false }; \
-	} \
+	class FFmpegInteropProvider : 
+		public wil::TraceLoggingProvider
+	{
+		IMPLEMENT_TRACELOGGING_CLASS_WITH_MICROSOFT_TELEMETRY(
+			FFmpegInteropProvider,
+			FFMPEG_INTEROP_PROVIDER_NAME,
+			FFMPEG_INTEROP_PROVIDER_GUID);
 
-	TRACE_LOGGING_ACTIVITY_CLASS(CreateFromStream);
-	TRACE_LOGGING_ACTIVITY_CLASS(CreateFromUri);
-	TRACE_LOGGING_ACTIVITY_CLASS(OnStarting);
-	TRACE_LOGGING_ACTIVITY_CLASS(OnSampleRequested);
-	TRACE_LOGGING_ACTIVITY_CLASS(OnSwitchStreamsRequested);
-	TRACE_LOGGING_ACTIVITY_CLASS(OnClosed);
+	public:
+		DEFINE_TRACELOGGING_ACTIVITY(CreateFromStream);
+		DEFINE_TRACELOGGING_ACTIVITY(CreateFromUri);
+		DEFINE_TRACELOGGING_ACTIVITY(OnStarting);
+		DEFINE_TRACELOGGING_ACTIVITY(OnSampleRequested);
+		DEFINE_TRACELOGGING_ACTIVITY(OnSwitchStreamsRequested);
+		DEFINE_TRACELOGGING_ACTIVITY(OnClosed);
+	};
 }

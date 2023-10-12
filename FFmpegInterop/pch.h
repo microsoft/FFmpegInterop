@@ -27,6 +27,7 @@
 // WIL
 #include <wil/cppwinrt.h>
 #include <wil/result.h>
+#include <wil/Tracelogging.h>
 
 // WinRT
 #include <winrt/base.h>

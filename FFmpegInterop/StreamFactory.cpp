@@ -96,13 +96,13 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		TraceLoggingWrite(g_FFmpegInteropProvider, "CreateAudioStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+		TraceLoggingProviderWrite(FFmpegInteropProvider, "CreateAudioStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
 			TraceLoggingValue(stream->index, "StreamId"),
 			TraceLoggingInt32(codecId, "AVCodecID"));
 
 		if (config != nullptr && config.ForceAudioDecode())
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "ForceAudioDecode", TraceLoggingLevel(TRACE_LEVEL_VERBOSE));
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "ForceAudioDecode", TraceLoggingLevel(TRACE_LEVEL_VERBOSE));
 			codecId = AV_CODEC_ID_NONE;
 		}
 
@@ -220,13 +220,13 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		TraceLoggingWrite(g_FFmpegInteropProvider, "CreateVideoStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+		TraceLoggingProviderWrite(FFmpegInteropProvider, "CreateVideoStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
 			TraceLoggingValue(stream->index, "StreamId"),
 			TraceLoggingInt32(codecId, "AVCodecID"));
 
 		if (config != nullptr && config.ForceVideoDecode())
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "ForceVideoDecode", TraceLoggingLevel(TRACE_LEVEL_VERBOSE));
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "ForceVideoDecode", TraceLoggingLevel(TRACE_LEVEL_VERBOSE));
 			codecId = AV_CODEC_ID_NONE;
 		}
 
@@ -320,7 +320,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		TraceLoggingWrite(g_FFmpegInteropProvider, "CreateSubtitleStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+		TraceLoggingProviderWrite(FFmpegInteropProvider, "CreateSubtitleStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
 			TraceLoggingValue(stream->index, "StreamId"),
 			TraceLoggingInt32(codecId, "AVCodecID"));
 

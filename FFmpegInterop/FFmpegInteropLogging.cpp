@@ -42,7 +42,7 @@ namespace winrt::FFmpegInterop::implementation
 		wchar_t lineW[LINE_SIZE];
 		if (MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, lineA, -1, lineW, LINE_SIZE) > 0)
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "FFmpegTrace", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "FFmpegTrace", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
 				TraceLoggingValue(lineW, "Message"));
 
 			// Raise a log event to any registered handlers

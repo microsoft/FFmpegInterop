@@ -21,9 +21,8 @@
 
 namespace winrt::FFmpegInterop::implementation
 {
-	// {3D64F3FC-1826-4F56-9688-AD139DAF7B1A}
 	TRACELOGGING_DEFINE_PROVIDER(
 		g_FFmpegInteropProvider,
-		"FFmpegInterop",
-		(0x3d64f3fc, 0x1826, 0x4f56, 0x96, 0x88, 0xad, 0x13, 0x9d, 0xaf, 0x7b, 0x1a));
+		FFMPEG_INTEROP_PROVIDER_NAME,
+		FFMPEG_INTEROP_PROVIDER_GUID);
 }

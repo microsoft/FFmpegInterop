@@ -37,7 +37,7 @@ namespace winrt::FFmpegInterop::implementation
 		// If we're at EOS now, complete any deferred sample request
 		if (m_isEOS && m_sampleRequestDeferral != nullptr)
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DeferredSubtitleSampleRequestFilledEOS", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "DeferredSubtitleSampleRequestFilledEOS", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
 				TraceLoggingValue(m_stream->index, "StreamId"));
 
 			m_sampleRequestDeferral.Complete();
@@ -53,7 +53,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Drop any outstanding sample request
 		if (m_sampleRequestDeferral != nullptr)
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DeferredSubtitleSampleRequestDropped", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "DeferredSubtitleSampleRequestDropped", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"));
 
 			m_sampleRequest = nullptr;
@@ -74,7 +74,7 @@ namespace winrt::FFmpegInterop::implementation
 			m_sampleRequest = nullptr;
 			m_sampleRequestDeferral = nullptr;
 
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DeferredSubtitleSampleRequestFilled", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "DeferredSubtitleSampleRequestFilled", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"));
 		}
 	}
@@ -97,7 +97,7 @@ namespace winrt::FFmpegInterop::implementation
 			m_sampleRequest = request;
 			m_sampleRequestDeferral = request.GetDeferral();
 
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DeferredSubtitleSampleRequest", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "DeferredSubtitleSampleRequest", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"));
 		}
 	}

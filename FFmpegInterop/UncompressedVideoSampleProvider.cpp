@@ -108,7 +108,7 @@ namespace winrt::FFmpegInterop::implementation
 					if (decodeErrors < m_allowedDecodeErrors)
 					{
 						decodeErrors++;
-						TraceLoggingWrite(g_FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+						TraceLoggingProviderWrite(FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 							TraceLoggingValue(m_stream->index, "StreamId"),
 							TraceLoggingValue(decodeErrors, "DecodeErrorCount"),
 							TraceLoggingValue(m_allowedDecodeErrors, "DecodeErrorLimit"));
@@ -164,7 +164,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Check if the resolution changed
 		if (frame->width != m_outputWidth || frame->height != m_outputHeight)
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "ResolutionChanged", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "ResolutionChanged", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"),
 				TraceLoggingValue(m_outputWidth, "OldWidth"),
 				TraceLoggingValue(m_outputHeight, "OldHeight"),

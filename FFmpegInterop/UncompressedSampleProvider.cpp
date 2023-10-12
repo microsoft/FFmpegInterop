@@ -92,7 +92,7 @@ namespace winrt::FFmpegInterop::implementation
 			if (decodeResult == AVERROR(EAGAIN))
 			{
 				// The decoder needs more data to produce a frame
-				TraceLoggingWrite(g_FFmpegInteropProvider, "DecoderNeedsMoreInput", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingProviderWrite(FFmpegInteropProvider, "DecoderNeedsMoreInput", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(m_stream->index, "StreamId"));
 
 				m_sendInput = true;
@@ -100,7 +100,7 @@ namespace winrt::FFmpegInterop::implementation
 			}
 			THROW_HR_IF_FFMPEG_FAILED(decodeResult);
 
-			TraceLoggingWrite(g_FFmpegInteropProvider, "FrameDecoded", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+			TraceLoggingProviderWrite(FFmpegInteropProvider, "FrameDecoded", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 				TraceLoggingValue(m_stream->index, "StreamId"));
 			return frame;
 		}

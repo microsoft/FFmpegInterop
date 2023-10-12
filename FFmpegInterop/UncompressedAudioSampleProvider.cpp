@@ -139,7 +139,7 @@ namespace winrt::FFmpegInterop::implementation
 					if (decodeErrors < m_allowedDecodeErrors)
 					{
 						decodeErrors++;
-						TraceLoggingWrite(g_FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+						TraceLoggingProviderWrite(FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 							TraceLoggingValue(m_stream->index, "StreamId"),
 							TraceLoggingValue(decodeErrors, "DecodeErrorCount"),
 							TraceLoggingValue(m_allowedDecodeErrors, "DecodeErrorLimit"));
@@ -306,7 +306,7 @@ namespace winrt::FFmpegInterop::implementation
 			else
 			{
 				// Continue compacting samples
-				TraceLoggingWrite(g_FFmpegInteropProvider, "CompactingUncompressedAudioSamples", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingProviderWrite(FFmpegInteropProvider, "CompactingUncompressedAudioSamples", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(m_stream->index, "StreamId"),
 					TraceLoggingValue(dur, "CompactedDur"));
 

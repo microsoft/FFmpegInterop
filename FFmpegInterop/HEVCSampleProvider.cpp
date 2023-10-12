@@ -36,7 +36,7 @@ namespace winrt::FFmpegInterop::implementation
 			if (m_stream->codecpar->extradata_size > 3 && (m_stream->codecpar->extradata[0] || m_stream->codecpar->extradata[1] || m_stream->codecpar->extradata[2] > 1))
 			{
 				// hvcC config format
-				TraceLoggingWrite(g_FFmpegInteropProvider, "HEVCCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingProviderWrite(FFmpegInteropProvider, "HEVCCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(m_stream->index, "StreamId"));
 
 				m_isBitstreamAnnexB = false;
@@ -48,7 +48,7 @@ namespace winrt::FFmpegInterop::implementation
 			else
 			{
 				// Annex B format
-				TraceLoggingWrite(g_FFmpegInteropProvider, "AnnexBCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
+				TraceLoggingProviderWrite(FFmpegInteropProvider, "AnnexBCodecPrivate", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
 					TraceLoggingValue(m_stream->index, "StreamId"));
 
 				AnnexBParser parser{ m_stream->codecpar->extradata, static_cast<uint32_t>(m_stream->codecpar->extradata_size) };

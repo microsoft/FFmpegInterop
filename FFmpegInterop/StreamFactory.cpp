@@ -96,13 +96,11 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		TraceLoggingProviderWrite(FFmpegInteropProvider, "CreateAudioStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
-			TraceLoggingValue(stream->index, "StreamId"),
-			TraceLoggingInt32(codecId, "AVCodecID"));
+		FFMPEG_INTEROP_TRACE("Stream %d: New audio stream. AVCodecID = %S", stream->index, avcodec_get_name(codecId));
 
 		if (config != nullptr && config.ForceAudioDecode())
 		{
-			TraceLoggingProviderWrite(FFmpegInteropProvider, "ForceAudioDecode", TraceLoggingLevel(TRACE_LEVEL_VERBOSE));
+			FFMPEG_INTEROP_TRACE("Forcing audio decode");
 			codecId = AV_CODEC_ID_NONE;
 		}
 
@@ -220,13 +218,11 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		TraceLoggingProviderWrite(FFmpegInteropProvider, "CreateVideoStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
-			TraceLoggingValue(stream->index, "StreamId"),
-			TraceLoggingInt32(codecId, "AVCodecID"));
+		FFMPEG_INTEROP_TRACE("Stream %d: New video stream. AVCodecID = %S", stream->index, avcodec_get_name(codecId));
 
 		if (config != nullptr && config.ForceVideoDecode())
 		{
-			TraceLoggingProviderWrite(FFmpegInteropProvider, "ForceVideoDecode", TraceLoggingLevel(TRACE_LEVEL_VERBOSE));
+			FFMPEG_INTEROP_TRACE("Forcing video decode");
 			codecId = AV_CODEC_ID_NONE;
 		}
 
@@ -320,9 +316,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		TraceLoggingProviderWrite(FFmpegInteropProvider, "CreateSubtitleStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
-			TraceLoggingValue(stream->index, "StreamId"),
-			TraceLoggingInt32(codecId, "AVCodecID"));
+		FFMPEG_INTEROP_TRACE("Stream %d: New subtitle stream. AVCodecID = %S", stream->index, avcodec_get_name(codecId));
 
 		switch (codecId)
 		{

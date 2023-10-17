@@ -291,8 +291,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void SampleProvider::Select() noexcept
 	{
-		TraceLoggingProviderWrite(FFmpegInteropProvider, "StreamSelected", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-			TraceLoggingValue(m_stream->index, "StreamId"));
+		FFMPEG_INTEROP_TRACE("Stream %d: Selected", m_stream->index);
 
 		WINRT_ASSERT(!m_isSelected);
 		m_isSelected = true;
@@ -301,8 +300,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void SampleProvider::Deselect() noexcept
 	{
-		TraceLoggingProviderWrite(FFmpegInteropProvider, "StreamDeselected", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-			TraceLoggingValue(m_stream->index, "StreamId"));
+		FFMPEG_INTEROP_TRACE("Stream %d: Deselected", m_stream->index);
 
 		WINRT_ASSERT(m_isSelected);
 		m_isSelected = false;
@@ -327,8 +325,7 @@ namespace winrt::FFmpegInterop::implementation
 
 			if (m_isSelected)
 			{
-				TraceLoggingProviderWrite(FFmpegInteropProvider, "EndOfStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-					TraceLoggingValue(m_stream->index, "StreamId"));
+				FFMPEG_INTEROP_TRACE("Stream %d: EOS", m_stream->index);
 			}
 		}
 	}
@@ -349,8 +346,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	void SampleProvider::GetSample(_Inout_ const MediaStreamSourceSampleRequest& request)
 	{
-		TraceLoggingProviderWrite(FFmpegInteropProvider, "SampleRequested", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-			TraceLoggingValue(m_stream->index, "StreamId"));
+		FFMPEG_INTEROP_TRACE("Stream %d: Sample requested", m_stream->index);
 
 		// Make sure this stream is selected
 		THROW_HR_IF(MF_E_INVALIDREQUEST, !m_isSelected);
@@ -420,14 +416,11 @@ namespace winrt::FFmpegInterop::implementation
 				encodingProperties.Insert(key, value);
 			}
 
-			TraceLoggingProviderWrite(FFmpegInteropProvider, "DynamicFormatChange", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-				TraceLoggingValue(m_stream->index, "StreamId"));
+			FFMPEG_INTEROP_TRACE("Stream %d: Dynamic format change", m_stream->index);
 		}
 
-		TraceLoggingProviderWrite(FFmpegInteropProvider, "SampleRequestFilled", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-			TraceLoggingValue(m_stream->index, "StreamId"),
-			TraceLoggingValue(sample.Timestamp().count(), "TimestampHNS"),
-			TraceLoggingValue(sample.Duration().count(), "DurHNS"));
+		FFMPEG_INTEROP_TRACE("Stream %d: Sample request filled. Timestamp = %I64d, Duration = %I64d",
+			m_stream->index, sample.Timestamp().count(), sample.Duration().count());
 	}
 
 	tuple<IBuffer, int64_t, int64_t, vector<pair<GUID, Windows::Foundation::IInspectable>>, vector<pair<GUID, Windows::Foundation::IInspectable>>> SampleProvider::GetSampleData()

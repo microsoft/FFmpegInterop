@@ -22,6 +22,7 @@
 #include "FFmpegInteropLogging.g.cpp"
 #include "LogEventArgs.h"
 
+using namespace std;
 using namespace winrt;
 using namespace winrt::Windows::Foundation;
 
@@ -31,23 +32,26 @@ namespace winrt::FFmpegInterop::implementation
 
 	void FFmpegInteropLogging::Log(_In_ void* avcl, _In_ int level, _In_ const char* fmt, _In_ va_list vl)
 	{
-		constexpr int LINE_SIZE{ 1024 };
+		// Get the required buffer size
+		int printPrefix{ 1 };
+		int lineSize = av_log_format_line2(avcl, level, fmt, vl, nullptr, 0, &printPrefix);
+		THROW_HR_IF_FFMPEG_FAILED(lineSize);
 
 		// Format the log line
-		char lineA[LINE_SIZE];
-		int printPrefix{ 1 };
-		av_log_format_line(avcl, level, fmt, vl, lineA, LINE_SIZE, &printPrefix);
+		auto line{ make_unique_for_overwrite<char[]>(lineSize + 1) };
+		int charWritten = av_log_format_line2(avcl, level, fmt, vl, line.get(), lineSize + 1, &printPrefix);
+		THROW_HR_IF_FFMPEG_FAILED(charWritten);
+		WINRT_ASSERT(lineSize == charWritten);
 
-		// Convert from UTF8 -> UTF16
-		wchar_t lineW[LINE_SIZE];
-		if (MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, lineA, -1, lineW, LINE_SIZE) > 0)
+		m_logEvent(nullptr, make<LogEventArgs>(static_cast<FFmpegInterop::LogLevel>(level), to_hstring(line.get())));
+
+		// Trim trailing whitespace
+		for (int i{ lineSize - 1 }; i >= 0 && isspace(line[i]); i--)
 		{
-			TraceLoggingProviderWrite(FFmpegInteropProvider, "FFmpegTrace", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
-				TraceLoggingValue(lineW, "Message"));
-
-			// Raise a log event to any registered handlers
-			m_logEvent(nullptr, make<LogEventArgs>(static_cast<FFmpegInterop::LogLevel>(level), hstring{ lineW }));
+			line[i] = '\0';
 		}
+
+		FFMPEG_INTEROP_TRACE("%S", line.get());
 	}
 
 	event_token FFmpegInteropLogging::Log(_In_ const EventHandler<FFmpegInterop::LogEventArgs>& handler)

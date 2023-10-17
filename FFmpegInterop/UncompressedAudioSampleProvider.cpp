@@ -139,10 +139,8 @@ namespace winrt::FFmpegInterop::implementation
 					if (decodeErrors < m_allowedDecodeErrors)
 					{
 						decodeErrors++;
-						TraceLoggingProviderWrite(FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-							TraceLoggingValue(m_stream->index, "StreamId"),
-							TraceLoggingValue(decodeErrors, "DecodeErrorCount"),
-							TraceLoggingValue(m_allowedDecodeErrors, "DecodeErrorLimit"));
+						FFMPEG_INTEROP_TRACE("Stream %d: Decode error. Total decoder errors = %d, Limit = %d",
+							m_stream->index, decodeErrors, m_allowedDecodeErrors);
 
 						if (firstDecodedSample)
 						{
@@ -306,9 +304,8 @@ namespace winrt::FFmpegInterop::implementation
 			else
 			{
 				// Continue compacting samples
-				TraceLoggingProviderWrite(FFmpegInteropProvider, "CompactingUncompressedAudioSamples", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-					TraceLoggingValue(m_stream->index, "StreamId"),
-					TraceLoggingValue(dur, "CompactedDur"));
+				FFMPEG_INTEROP_TRACE("Stream %d: Compacting uncompressed audio samples. Compacted Duration = %I64d",
+					m_stream->index, dur);
 
 				firstDecodedSample = false;
 			}

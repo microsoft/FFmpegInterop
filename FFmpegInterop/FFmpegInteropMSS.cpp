@@ -290,9 +290,8 @@ namespace winrt::FFmpegInterop::implementation
 				// Note: MSS didn't expose subtitle streams in media engine scenarios until 19041.
 				if (!ApiInformation::IsTypePresent(L"Windows.Media.Core.TimedMetadataStreamDescriptor"))
 				{
-					TraceLoggingProviderWrite(FFmpegInteropProvider, "NoSubtitleSupport", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-						TraceLoggingValue(stream->index, "StreamId"),
-						TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
+					FFMPEG_INTEROP_TRACE("Stream %d: No subtitle support. AVCodecID = %S",
+						stream->index, avcodec_get_name(stream->codecpar->codec_id));
 					continue;
 				}
 
@@ -303,9 +302,8 @@ namespace winrt::FFmpegInterop::implementation
 				catch (...)
 				{
 					// Unsupported subtitle stream. Just ignore.
-					TraceLoggingProviderWrite(FFmpegInteropProvider, "UnsupportedSubtitleStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-						TraceLoggingValue(stream->index, "StreamId"),
-						TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
+					FFMPEG_INTEROP_TRACE("Stream %d: Unsupported subtitle stream. AVCodecId = %S",
+						stream->index, avcodec_get_name(stream->codecpar->codec_id));
 					continue;
 				}
 
@@ -316,10 +314,8 @@ namespace winrt::FFmpegInterop::implementation
 
 			default:
 				// Ignore this stream
-				TraceLoggingProviderWrite(FFmpegInteropProvider, "UnsupportedStream", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-					TraceLoggingValue(stream->index, "StreamId"),
-					TraceLoggingInt32(stream->codecpar->codec_type, "AVMediaType"),
-					TraceLoggingInt32(stream->codecpar->codec_id, "AVCodecID"));
+				FFMPEG_INTEROP_TRACE("Stream %d: Unsupported. AVMediaType = %S, AVCodecID = %S",
+					stream->index, av_get_media_type_string(stream->codecpar->codec_type), avcodec_get_name(stream->codecpar->codec_id));
 				continue;
 			}
 
@@ -369,8 +365,7 @@ namespace winrt::FFmpegInterop::implementation
 			lock_guard<mutex> lock{ m_lock };
 
 			const TimeSpan hnsSeekTime{ startPosition.Value() };
-			TraceLoggingProviderWrite(FFmpegInteropProvider, "Seek", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-				TraceLoggingValue(hnsSeekTime.count(), "SeekTimeHNS"));
+			FFMPEG_INTEROP_TRACE("Seek to %I64d hns", hnsSeekTime.count());
 			
 			try
 			{
@@ -403,7 +398,7 @@ namespace winrt::FFmpegInterop::implementation
 		}
 		else
 		{
-			TraceLoggingProviderWrite(FFmpegInteropProvider, "Resume", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"));
+			FFMPEG_INTEROP_TRACE("Resume");
 			logger.Stop();
 		}
 	}

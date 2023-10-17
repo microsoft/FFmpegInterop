@@ -25,7 +25,7 @@
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Name="c08bc68a-b511-4abc-8b98-067f25611588"
+    Name="MediaPlayerCPP"
     Publisher="CN=FFmpegInterop"
     Version="1.0.0.0" />
 
@@ -46,7 +46,7 @@
   </Resources>
 
   <Applications>
-    <Application Id="App"
+    <Application Id="MediaPlayerCPP"
       Executable="$targetnametoken$.exe"
       EntryPoint="MediaPlayerCPP.App">
       <uap:VisualElements

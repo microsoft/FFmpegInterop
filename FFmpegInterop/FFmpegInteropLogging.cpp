@@ -30,7 +30,8 @@ namespace winrt::FFmpegInterop::implementation
 {
 	event<EventHandler<FFmpegInterop::LogEventArgs>> FFmpegInteropLogging::m_logEvent;
 
-	void FFmpegInteropLogging::Log(_In_ void* avcl, _In_ int level, _In_ const char* fmt, _In_ va_list vl)
+	void FFmpegInteropLogging::Log(_In_ void* avcl, _In_ int level, _In_ const char* fmt, _In_ va_list vl) noexcept
+	try
 	{
 		// Get the required buffer size
 		int printPrefix{ 1 };
@@ -53,8 +54,9 @@ namespace winrt::FFmpegInterop::implementation
 
 		FFMPEG_INTEROP_TRACE("%S", line.get());
 	}
+	CATCH_LOG_RETURN()
 
-	event_token FFmpegInteropLogging::Log(_In_ const EventHandler<FFmpegInterop::LogEventArgs>& handler)
+	event_token FFmpegInteropLogging::Log(_In_ const EventHandler<FFmpegInterop::LogEventArgs>& handler) noexcept
 	{
 		return m_logEvent.add(handler);
 	}

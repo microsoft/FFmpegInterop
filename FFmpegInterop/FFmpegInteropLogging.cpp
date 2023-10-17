@@ -41,7 +41,7 @@ namespace winrt::FFmpegInterop::implementation
 		auto line{ make_unique_for_overwrite<char[]>(lineSize + 1) };
 		int charWritten = av_log_format_line2(avcl, level, fmt, vl, line.get(), lineSize + 1, &printPrefix);
 		THROW_HR_IF_FFMPEG_FAILED(charWritten);
-		WINRT_ASSERT(lineSize == charWritten);
+		THROW_HR_IF(E_UNEXPECTED, lineSize != charWritten);
 
 		m_logEvent(nullptr, make<LogEventArgs>(static_cast<FFmpegInterop::LogLevel>(level), to_hstring(line.get())));
 

@@ -83,6 +83,8 @@ namespace winrt::FFmpegInterop::implementation
 			return MF_E_BUFFERTOOSMALL;
 		case AVERROR_EOF:
 			return MF_E_END_OF_STREAM;
+		case AVERROR_INVALIDDATA:
+			return MF_E_INVALID_FILE_FORMAT;
 		default:
 			return E_FAIL;
 		}

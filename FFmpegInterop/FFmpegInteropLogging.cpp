@@ -35,12 +35,12 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		// Get the required buffer size
 		int printPrefix{ 1 };
-		int lineSize = av_log_format_line2(avcl, level, fmt, vl, nullptr, 0, &printPrefix);
+		int lineSize{ av_log_format_line2(avcl, level, fmt, vl, nullptr, 0, &printPrefix) };
 		THROW_HR_IF_FFMPEG_FAILED(lineSize);
 
 		// Format the log line
 		auto line{ make_unique_for_overwrite<char[]>(lineSize + 1) };
-		int charWritten = av_log_format_line2(avcl, level, fmt, vl, line.get(), lineSize + 1, &printPrefix);
+		int charWritten{ av_log_format_line2(avcl, level, fmt, vl, line.get(), lineSize + 1, &printPrefix) };
 		THROW_HR_IF_FFMPEG_FAILED(charWritten);
 		THROW_HR_IF(E_UNEXPECTED, lineSize != charWritten);
 

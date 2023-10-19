@@ -41,9 +41,6 @@
 
 // Windows
 #include <Windows.h>
-#include <evntrace.h>
-#include <TraceLoggingProvider.h>
-#include <TraceLoggingActivity.h>
 #include <shcore.h>
 
 // MF

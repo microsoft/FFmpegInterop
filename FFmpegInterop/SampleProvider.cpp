@@ -419,7 +419,7 @@ namespace winrt::FFmpegInterop::implementation
 			FFMPEG_INTEROP_TRACE("Stream %d: Dynamic format change", m_stream->index);
 		}
 
-		FFMPEG_INTEROP_TRACE("Stream %d: Sample request filled. Timestamp = %I64d, Duration = %I64d",
+		FFMPEG_INTEROP_TRACE("Stream %d: Sample request filled. Timestamp = %I64d hns, Duration = %I64d hns",
 			m_stream->index, sample.Timestamp().count(), sample.Duration().count());
 	}
 

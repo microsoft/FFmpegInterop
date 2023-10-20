@@ -27,6 +27,7 @@
 // WIL
 #include <wil/cppwinrt.h>
 #include <wil/result.h>
+#include <wil/Tracelogging.h>
 
 // WinRT
 #include <winrt/base.h>
@@ -40,9 +41,6 @@
 
 // Windows
 #include <Windows.h>
-#include <evntrace.h>
-#include <TraceLoggingProvider.h>
-#include <TraceLoggingActivity.h>
 #include <shcore.h>
 
 // MF

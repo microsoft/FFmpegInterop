@@ -46,7 +46,7 @@ namespace MediaPlayerCS
 
         public static void Log(object sender, FFmpegInterop.LogEventArgs args)
         {
-            System.Diagnostics.Debug.WriteLine("FFmpeg ({0}): {1}", args.Level, args.Message);
+            System.Diagnostics.Debug.Write(args.Message);
         }
 
         /// <summary>

@@ -108,10 +108,8 @@ namespace winrt::FFmpegInterop::implementation
 					if (decodeErrors < m_allowedDecodeErrors)
 					{
 						decodeErrors++;
-						TraceLoggingWrite(g_FFmpegInteropProvider, "AllowedDecodeError", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-							TraceLoggingValue(m_stream->index, "StreamId"),
-							TraceLoggingValue(decodeErrors, "DecodeErrorCount"),
-							TraceLoggingValue(m_allowedDecodeErrors, "DecodeErrorLimit"));
+						FFMPEG_INTEROP_TRACE("Stream %d: Decode error. Total decoder errors = %d, Limit = %d",
+							m_stream->index, decodeErrors, m_allowedDecodeErrors);
 
 						m_isDiscontinuous = true;
 					}
@@ -164,12 +162,8 @@ namespace winrt::FFmpegInterop::implementation
 		// Check if the resolution changed
 		if (frame->width != m_outputWidth || frame->height != m_outputHeight)
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "ResolutionChanged", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-				TraceLoggingValue(m_stream->index, "StreamId"),
-				TraceLoggingValue(m_outputWidth, "OldWidth"),
-				TraceLoggingValue(m_outputHeight, "OldHeight"),
-				TraceLoggingValue(frame->width, "NewWidth"),
-				TraceLoggingValue(frame->height, "NewHeight"));
+			FFMPEG_INTEROP_TRACE("Stream %d: Resolution change. Old Width = %d, Old Height = %d, New Width = %d, New Height = %d",
+				m_stream->index, m_outputWidth, m_outputHeight, frame->width, frame->height);
 
 			m_outputWidth = frame->width;
 			m_outputHeight = frame->height;

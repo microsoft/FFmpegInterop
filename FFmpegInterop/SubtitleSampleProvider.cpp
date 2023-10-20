@@ -37,8 +37,7 @@ namespace winrt::FFmpegInterop::implementation
 		// If we're at EOS now, complete any deferred sample request
 		if (m_isEOS && m_sampleRequestDeferral != nullptr)
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DeferredSubtitleSampleRequestFilledEOS", TraceLoggingLevel(TRACE_LEVEL_VERBOSE),
-				TraceLoggingValue(m_stream->index, "StreamId"));
+			FFMPEG_INTEROP_TRACE("Stream %d: Deferred subtitle sample request filled due to EOS", m_stream->index);
 
 			m_sampleRequestDeferral.Complete();
 			m_sampleRequest = nullptr;
@@ -53,8 +52,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Drop any outstanding sample request
 		if (m_sampleRequestDeferral != nullptr)
 		{
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DeferredSubtitleSampleRequestDropped", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-				TraceLoggingValue(m_stream->index, "StreamId"));
+			FFMPEG_INTEROP_TRACE("Stream %d: Deferred subtitle sample request dropped", m_stream->index);
 
 			m_sampleRequest = nullptr;
 			m_sampleRequestDeferral = nullptr;
@@ -74,8 +72,7 @@ namespace winrt::FFmpegInterop::implementation
 			m_sampleRequest = nullptr;
 			m_sampleRequestDeferral = nullptr;
 
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DeferredSubtitleSampleRequestFilled", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-				TraceLoggingValue(m_stream->index, "StreamId"));
+			FFMPEG_INTEROP_TRACE("Stream %d: Deferred subtitle sample request filled", m_stream->index);
 		}
 	}
 
@@ -97,8 +94,7 @@ namespace winrt::FFmpegInterop::implementation
 			m_sampleRequest = request;
 			m_sampleRequestDeferral = request.GetDeferral();
 
-			TraceLoggingWrite(g_FFmpegInteropProvider, "DeferredSubtitleSampleRequest", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-				TraceLoggingValue(m_stream->index, "StreamId"));
+			FFMPEG_INTEROP_TRACE("Stream %d: Deferred subtitle sample request", m_stream->index);
 		}
 	}
 }

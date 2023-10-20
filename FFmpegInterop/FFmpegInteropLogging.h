@@ -25,9 +25,9 @@ namespace winrt::FFmpegInterop::implementation
 	class FFmpegInteropLogging
 	{
 	public:
-		static void Log(_In_ void* avcl, _In_ int level, _In_ const char* fmt, _In_ va_list vl);
+		static void Log(_In_ void* avcl, _In_ int level, _In_ const char* fmt, _In_ va_list vl) noexcept;
 
-		static event_token Log(_In_ const Windows::Foundation::EventHandler<FFmpegInterop::LogEventArgs>& handler);
+		static event_token Log(_In_ const Windows::Foundation::EventHandler<FFmpegInterop::LogEventArgs>& handler) noexcept;
 		static void Log(_In_ const event_token& token) noexcept;
 
 	private:

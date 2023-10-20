@@ -92,16 +92,14 @@ namespace winrt::FFmpegInterop::implementation
 			if (decodeResult == AVERROR(EAGAIN))
 			{
 				// The decoder needs more data to produce a frame
-				TraceLoggingWrite(g_FFmpegInteropProvider, "DecoderNeedsMoreInput", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-					TraceLoggingValue(m_stream->index, "StreamId"));
+				FFMPEG_INTEROP_TRACE("Stream %d: Decoder needs more input", m_stream->index);
 
 				m_sendInput = true;
 				continue;
 			}
 			THROW_HR_IF_FFMPEG_FAILED(decodeResult);
 
-			TraceLoggingWrite(g_FFmpegInteropProvider, "FrameDecoded", TraceLoggingLevel(TRACE_LEVEL_VERBOSE), TraceLoggingPointer(this, "this"),
-				TraceLoggingValue(m_stream->index, "StreamId"));
+			FFMPEG_INTEROP_TRACE("Stream %d: Frame decoded", m_stream->index);
 			return frame;
 		}
 	}

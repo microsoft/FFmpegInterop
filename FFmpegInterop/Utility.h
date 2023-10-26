@@ -113,6 +113,76 @@ namespace winrt::FFmpegInterop::implementation
 	// Helper function to create a PropertyValue from an MF attribute
 	extern winrt::Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propVar);
 
+	// Smart classes for managing MF objects
+	template <typename T>
+	class ShutdownWrapper
+	{
+	public:
+		ShutdownWrapper(_In_ const ShutdownWrapper& other) = delete;
+		ShutdownWrapper(_In_ ShutdownWrapper&& other) = default;
+
+		ShutdownWrapper(_In_opt_ T* ptr = nullptr) noexcept :
+			m_ptr(ptr)
+		{
+
+		}
+
+		ShutdownWrapper(_In_ const com_ptr<T>& ptr) noexcept :
+			m_ptr(ptr)
+		{
+
+		}
+
+		ShutdownWrapper(_In_ com_ptr<T>&& ptr) noexcept :
+			m_ptr(std::move(ptr))
+		{
+
+		}
+
+		~ShutdownWrapper() noexcept
+		{
+			if (m_ptr != nullptr)
+			{
+				(void) m_ptr->Shutdown();
+			}
+		}
+
+		ShutdownWrapper& operator=(_In_ const ShutdownWrapper& other) = delete;
+		ShutdownWrapper& operator=(_In_ ShutdownWrapper&& other) = default;
+
+		ShutdownWrapper& operator=(_In_opt_ T* ptr) noexcept
+		{
+			m_ptr = ptr;
+			return *this;
+		}
+
+		ShutdownWrapper& operator=(_In_ const com_ptr<T>& ptr) noexcept
+		{
+			m_ptr = ptr;
+			return *this;
+		}
+
+		ShutdownWrapper& operator=(_In_ com_ptr<T>&& ptr) noexcept
+		{
+			m_ptr = std::move(ptr);
+			return *this;
+		}
+
+
+		T* Get() const noexcept
+		{
+			return m_ptr.get();
+		}
+
+		void Reset() noexcept
+		{
+			m_ptr = nullptr;
+		}
+
+	private:
+		com_ptr<T> m_ptr;
+	};
+
 	// Smart classes for managing FFmpeg objects
 	struct AVBlobDeleter
 	{

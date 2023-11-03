@@ -73,7 +73,7 @@ namespace MediaPlayerCS
 
 			OpenMedia((mss, config) =>
 			{
-				FFmpegInteropMSS.CreateFromStream(stream, mss, config);
+				FFmpegInteropMSS.InitFromStream(stream, mss, config);
 			});
 		}
 
@@ -95,7 +95,7 @@ namespace MediaPlayerCS
 		{
 			OpenMedia((mss, config) =>
 			{
-				FFmpegInteropMSS.CreateFromUri(uri, mss, config);
+				FFmpegInteropMSS.InitFromUri(uri, mss, config);
 			});
 		}
 

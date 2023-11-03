@@ -75,7 +75,7 @@ fire_and_forget MainPage::OpenFile(_In_ const StorageFile& file)
 
 	OpenMedia([&stream](const MediaStreamSource& mss, const FFmpegInteropMSSConfig& config)
 	{
-		FFmpegInteropMSS::CreateFromStream(stream, mss, config);
+		FFmpegInteropMSS::InitFromStream(stream, mss, config);
 	});
 }
 
@@ -97,7 +97,7 @@ void MainPage::OpenUri(_In_ const hstring& uri)
 {
 	OpenMedia([&uri](const MediaStreamSource& mss, const FFmpegInteropMSSConfig& config)
 	{
-		FFmpegInteropMSS::CreateFromUri(uri, mss, config);
+		FFmpegInteropMSS::InitFromUri(uri, mss, config);
 	});
 }
 

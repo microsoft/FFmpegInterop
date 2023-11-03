@@ -85,7 +85,7 @@ namespace winrt::FFmpegInterop::implementation
 		MediaStreamSource mss{ mssFactory.ActivateInstance<MediaStreamSource>() };
 
         // Initialize the MSS
-        FFmpegInteropMSS::CreateFromStream(stream, mss, nullptr);
+        FFmpegInteropMSS::InitFromStream(stream, mss, nullptr);
 
         // We need to take care handling the MSS after this point. The MSS and FFmpegInteropMSS have circular
         // references on each other that need to be broken by calling Shutdown() on the MSS's IMFMediaSource.

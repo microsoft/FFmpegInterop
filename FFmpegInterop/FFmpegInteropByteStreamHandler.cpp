@@ -58,33 +58,40 @@ namespace winrt::FFmpegInterop::implementation
         // Verify we were asked for a media source
         RETURN_HR_IF(E_INVALIDARG, (dwFlags & 0xF) != MF_RESOLUTION_MEDIASOURCE);
 
-        auto mediaSource{ CreateMediaSource(pByteStream) };
+        // Queue a work item to create the media source
+        com_ptr<IMFByteStream> byteStream;
+        byteStream.copy_from(pByteStream);
 
         com_ptr<IMFAsyncResult> result;
-        RETURN_IF_FAILED(MFCreateAsyncResult(mediaSource.Get(), pCallback, pState, result.put()));
-        RETURN_IF_FAILED(MFPutWorkItemEx2(MFASYNC_CALLBACK_QUEUE_MULTITHREADED, 0, result.get()));
+        RETURN_IF_FAILED(MFCreateAsyncResult(pByteStream, pCallback, pState, result.put()));
+
+        auto cancelCookie{ MFPutWorkItem([
+            strong_this{ get_strong() },
+            byteStream = std::move(byteStream),
+            result = std::move(result)]()
+            {
+                strong_this->CreateMediaSource(byteStream.get(), result.get());
+            }) };
 
         if (ppCancelCookie != nullptr)
         {
-            *ppCancelCookie = result.detach();
+            *ppCancelCookie = cancelCookie.detach();
         }
 
-        mediaSource.Reset(); // Don't shutdown the media source
 		return S_OK;
 	}
     CATCH_RETURN();
 
-    ShutdownWrapper<IMFMediaSource> FFmpegInteropByteStreamHandler::CreateMediaSource(_In_ IMFByteStream* pByteStream)
+    void FFmpegInteropByteStreamHandler::CreateMediaSource(_In_ IMFByteStream* byteStream, _In_ IMFAsyncResult* result)
     {
         // Wrap the byte stream
         IRandomAccessStream stream{ nullptr };
-        THROW_IF_FAILED(MFCreateStreamOnMFByteStreamEx(pByteStream, guid_of<decltype(stream)>(), put_abi(stream)));
+        THROW_IF_FAILED(MFCreateStreamOnMFByteStreamEx(byteStream, guid_of<decltype(stream)>(), put_abi(stream)));
 
         // Create the MSS via its activation factory since its constructors don't accept nullptr
         IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
 		MediaStreamSource mss{ mssFactory.ActivateInstance<MediaStreamSource>() };
 
-        // Initialize the MSS
         FFmpegInteropMSS::InitFromStream(stream, mss, nullptr);
 
         // We need to take care handling the MSS after this point. The MSS and FFmpegInteropMSS have circular
@@ -92,7 +99,14 @@ namespace winrt::FFmpegInterop::implementation
         // Getting the MSS's IMFMediaSource can't fail, but theoretically if it did the MSS and FFmpegInteropMSS would leak.
         com_ptr<IMFMediaSource> mediaSource;
 		THROW_IF_FAILED(mss.as<IMFGetService>()->GetService(MF_MEDIASOURCE_SERVICE, __uuidof(mediaSource), mediaSource.put_void()));
-        return ShutdownWrapper<IMFMediaSource>{ std::move(mediaSource) };
+
+        // Store a mapping of the result to the media source.
+        // EndCreateObject() will use this mapping to return the media source to the caller.
+        // If for some reason ownership of the media source is never transferred to the caller,
+        // then during destruction the media source will be shutdown to prevent a leak.
+        m_map[result] = ShutdownWrapper<IMFMediaSource>{ std::move(mediaSource) };
+
+        THROW_IF_FAILED(MFInvokeCallback(result));
     }
 
     IFACEMETHODIMP FFmpegInteropByteStreamHandler::EndCreateObject(
@@ -115,12 +129,14 @@ namespace winrt::FFmpegInterop::implementation
         RETURN_HR_IF_NULL(E_INVALIDARG, pObjectType);
         RETURN_HR_IF_NULL(E_POINTER, ppObject);
 
-        // Check if object creation was canceled
-        RETURN_IF_FAILED(pResult->GetStatus());
-
         // Get the media source
-        com_ptr<::IUnknown> object;
-        RETURN_IF_FAILED(pResult->GetObject(ppObject));
+        auto iter{ m_map.find(pResult) };
+        RETURN_HR_IF(MF_E_INVALIDREQUEST, iter == m_map.end());
+        *ppObject = iter->second.Detach();
+        *pObjectType = MF_OBJECT_MEDIASOURCE;
+
+        // The caller is now responsible for shutting down the media source
+        m_map.erase(iter);
 
 		return S_OK;
 	}
@@ -133,19 +149,6 @@ namespace winrt::FFmpegInterop::implementation
 
         com_ptr<IMFAsyncResult> result;
         RETURN_IF_FAILED(pIUnknownCancelCookie->QueryInterface(result.put()));
-
-        // Check if object creation has already been canceled
-        RETURN_IF_FAILED(result->GetStatus());
-
-        // Get the media source
-        com_ptr<::IUnknown> object;
-        RETURN_IF_FAILED(result->GetObject(object.put()));
-
-        // Shutdown the media source
-        com_ptr<IMFMediaSource> mediaSource{ object.as<IMFMediaSource>() };
-        RETURN_IF_FAILED(mediaSource->Shutdown());
-
-        // Update the result status to indicate object creation was canceled
         RETURN_IF_FAILED(result->SetStatus(MF_E_OPERATION_CANCELLED));
 
 		return S_OK;

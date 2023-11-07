@@ -111,7 +111,71 @@ namespace winrt::FFmpegInterop::implementation
 	} while (false) \
 
 	// Helper function to create a PropertyValue from an MF attribute
-	extern winrt::Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propVar);
+	extern Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propVar);
+
+	class MFCallbackBase :
+		public implements<MFCallbackBase, IMFAsyncCallback>
+	{
+	public:
+		MFCallbackBase(DWORD flags = 0, DWORD queue = MFASYNC_CALLBACK_QUEUE_MULTITHREADED) noexcept :
+			m_flags(flags),
+			m_queue(queue)
+		{
+
+		}
+
+		DWORD GetQueue() const noexcept { return m_queue; }
+		DWORD GetFlags() const noexcept { return m_flags; }
+
+		// IMFAsyncCallback
+		IFACEMETHODIMP GetParameters(_Out_ DWORD* flags, _Out_ DWORD* queue) noexcept
+		{
+			*flags = m_flags;
+			*queue = m_queue;
+			return S_OK;
+		}
+
+	private:
+		DWORD m_flags = 0;
+		DWORD m_queue = 0;
+	};
+
+	class MFWorkItem :
+		public MFCallbackBase
+	{
+	public:
+		MFWorkItem(
+			_In_ std::move_only_function<void()> callback,
+			_In_ DWORD flags = 0,
+			_In_ DWORD queue = MFASYNC_CALLBACK_QUEUE_MULTITHREADED) : 
+			MFCallbackBase(flags, queue),
+			m_callback(std::move(callback))
+		{
+
+		}
+
+		// IMFAsyncCallback
+		IFACEMETHODIMP Invoke(_In_ IMFAsyncResult* result) noexcept override
+		try
+		{
+			RETURN_IF_FAILED(result->GetStatus());
+			m_callback();
+			return S_OK;
+		}
+		CATCH_RETURN();
+
+	private:
+		std::move_only_function<void()> m_callback;
+	};
+
+	inline com_ptr<IMFAsyncResult> MFPutWorkItem(_In_ std::move_only_function<void()> callback)
+	{
+		auto workItem{ make_self<MFWorkItem>(std::move(callback)) };
+		com_ptr<IMFAsyncResult> result;
+		THROW_IF_FAILED(MFCreateAsyncResult(nullptr, workItem.get(), nullptr, result.put()));
+		THROW_IF_FAILED(MFPutWorkItemEx2(workItem->GetQueue(), 0, result.get()));
+		return result;
+	}
 
 	// Smart classes for managing MF objects
 	template <typename T>
@@ -121,7 +185,9 @@ namespace winrt::FFmpegInterop::implementation
 		ShutdownWrapper(_In_ const ShutdownWrapper& other) = delete;
 		ShutdownWrapper(_In_ ShutdownWrapper&& other) = default;
 
-		ShutdownWrapper(_In_opt_ T* ptr = nullptr) noexcept :
+		ShutdownWrapper(_In_opt_ std::nullptr_t ptr = nullptr) noexcept { }
+
+		ShutdownWrapper(_In_opt_ T* ptr) noexcept :
 			m_ptr(ptr)
 		{
 
@@ -143,7 +209,7 @@ namespace winrt::FFmpegInterop::implementation
 		{
 			if (m_ptr != nullptr)
 			{
-				(void) m_ptr->Shutdown();
+				LOG_IF_FAILED(m_ptr->Shutdown());
 			}
 		}
 
@@ -172,6 +238,11 @@ namespace winrt::FFmpegInterop::implementation
 		T* Get() const noexcept
 		{
 			return m_ptr.get();
+		}
+
+		T* Detach() noexcept
+		{
+			return m_ptr.detach();
 		}
 
 		void Reset() noexcept

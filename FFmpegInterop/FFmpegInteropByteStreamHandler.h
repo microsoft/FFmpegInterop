@@ -50,8 +50,10 @@ namespace winrt::FFmpegInterop::implementation
         IFACEMETHOD(GetMaxNumberOfBytesRequiredForResolution)(_Out_ QWORD* pcb) noexcept;
 
     private:
-        ShutdownWrapper<IMFMediaSource> CreateMediaSource(_In_ IMFByteStream* pByteStream);
+        void CreateMediaSource(_In_ IMFByteStream* byteStream, _In_ IMFAsyncResult* result);
+
         com_ptr<IMFAttributes> m_attributes;
+        std::map<IMFAsyncResult*, ShutdownWrapper<IMFMediaSource>> m_map;
 	};
 }
 

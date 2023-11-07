@@ -21,9 +21,7 @@
 namespace winrt::FFmpegInterop::implementation
 {
     class MFAttributesImpl :
-        public implements<
-            MFAttributesImpl,
-            IMFAttributes>
+        public implements<MFAttributesImpl, IMFAttributes>
     {
     public:
         MFAttributesImpl()

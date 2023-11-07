@@ -72,18 +72,18 @@ namespace
 
 namespace winrt::FFmpegInterop::implementation
 {
-	void FFmpegInteropMSS::InitFromStream(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	void FFmpegInteropMSS::InitializeFromStream(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
-		auto logger{ FFmpegInteropProvider::InitFromStream::Start() };
+		auto logger{ FFmpegInteropProvider::InitializeFromStream::Start() };
 
 		(void) make<FFmpegInteropMSS>(fileStream, mss, config);
 
 		logger.Stop();
 	}
 
-	void FFmpegInteropMSS::InitFromUri(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	void FFmpegInteropMSS::InitializeFromUri(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
-		auto logger{ FFmpegInteropProvider::InitFromUri::Start() };
+		auto logger{ FFmpegInteropProvider::InitializeFromUri::Start() };
 
 		(void) make<FFmpegInteropMSS>(uri, mss, config);
 

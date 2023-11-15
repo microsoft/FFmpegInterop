@@ -42,6 +42,8 @@ namespace winrt::FFmpegInterop::implementation
         _In_opt_ ::IUnknown* pState) noexcept
     try
 	{
+		auto logger{ FFmpegInteropProvider::BeginCreateObject::Start() };
+
         if (ppCancelCookie != nullptr)
         {
             *ppCancelCookie = nullptr;
@@ -70,6 +72,12 @@ namespace winrt::FFmpegInterop::implementation
             byteStream = std::move(byteStream),
             result = std::move(result)]()
             {
+                // Always invoke the callback regardless of the outcome
+                auto invokeCallback{ wil::scope_exit([&result]()
+                {
+                    LOG_IF_FAILED(MFInvokeCallback(result.get()));
+                }) };
+
                 strong_this->CreateMediaSource(byteStream.get(), result.get());
             }) };
 
@@ -78,12 +86,16 @@ namespace winrt::FFmpegInterop::implementation
             *ppCancelCookie = cancelCookie.detach();
         }
 
-		return S_OK;
+		logger.Stop();
+        return S_OK;
 	}
     CATCH_RETURN();
 
     void FFmpegInteropByteStreamHandler::CreateMediaSource(_In_ IMFByteStream* byteStream, _In_ IMFAsyncResult* result)
+    try
     {
+		auto logger{ FFmpegInteropProvider::CreateMediaSource::Start() };
+
         // Wrap the byte stream
         IRandomAccessStream stream{ nullptr };
         THROW_IF_FAILED(MFCreateStreamOnMFByteStreamEx(byteStream, guid_of<decltype(stream)>(), put_abi(stream)));
@@ -106,7 +118,11 @@ namespace winrt::FFmpegInterop::implementation
         // then during destruction the media source will be shutdown to prevent a leak.
         m_map[result] = ShutdownWrapper<IMFMediaSource>{ std::move(mediaSource) };
 
-        THROW_IF_FAILED(MFInvokeCallback(result));
+		logger.Stop();
+    }
+    catch (...)
+    {
+        THROW_IF_FAILED(result->SetStatus(to_hresult()));
     }
 
     IFACEMETHODIMP FFmpegInteropByteStreamHandler::EndCreateObject(
@@ -115,6 +131,8 @@ namespace winrt::FFmpegInterop::implementation
         _COM_Outptr_ ::IUnknown** ppObject) noexcept
 	try
 	{
+		auto logger{ FFmpegInteropProvider::EndCreateObject::Start() };
+
         if (pObjectType != nullptr)
         {
             *pObjectType = MF_OBJECT_INVALID;
@@ -129,6 +147,8 @@ namespace winrt::FFmpegInterop::implementation
         RETURN_HR_IF_NULL(E_INVALIDARG, pObjectType);
         RETURN_HR_IF_NULL(E_POINTER, ppObject);
 
+        RETURN_IF_FAILED(pResult->GetStatus());
+
         // Get the media source
         auto iter{ m_map.find(pResult) };
         RETURN_HR_IF(MF_E_INVALIDREQUEST, iter == m_map.end());
@@ -138,6 +158,7 @@ namespace winrt::FFmpegInterop::implementation
         // The caller is now responsible for shutting down the media source
         m_map.erase(iter);
 
+		logger.Stop();
 		return S_OK;
 	}
     CATCH_RETURN();
@@ -145,12 +166,15 @@ namespace winrt::FFmpegInterop::implementation
     IFACEMETHODIMP FFmpegInteropByteStreamHandler::CancelObjectCreation(_In_ ::IUnknown* pIUnknownCancelCookie) noexcept
 	try
 	{
+		auto logger{ FFmpegInteropProvider::CancelObjectCreation::Start() };
+
         RETURN_HR_IF_NULL(E_INVALIDARG, pIUnknownCancelCookie);
 
         com_ptr<IMFAsyncResult> result;
         RETURN_IF_FAILED(pIUnknownCancelCookie->QueryInterface(result.put()));
         RETURN_IF_FAILED(result->SetStatus(MF_E_OPERATION_CANCELLED));
 
+		logger.Stop();
 		return S_OK;
 	}
     CATCH_RETURN();

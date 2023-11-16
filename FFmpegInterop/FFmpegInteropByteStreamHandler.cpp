@@ -28,7 +28,6 @@ namespace winrt::FFmpegInterop::implementation
 {
     FFmpegInteropByteStreamHandler::FFmpegInteropByteStreamHandler()
     {
-        // https://learn.microsoft.com/en-us/windows/win32/medfound/mf-bytestreamhandler-accepts-share-write#remarks
         THROW_IF_FAILED(SetUINT32(MF_BYTESTREAMHANDLER_ACCEPTS_SHARE_WRITE, 1));
     }
 

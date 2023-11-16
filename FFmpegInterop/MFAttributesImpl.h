@@ -227,7 +227,7 @@ namespace winrt::FFmpegInterop::implementation
             return S_OK;
         }
 
-    private:
+    protected:
         com_ptr<IMFAttributes> m_attributes;
     };
 }

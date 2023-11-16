@@ -52,7 +52,6 @@ namespace winrt::FFmpegInterop::implementation
     private:
         void CreateMediaSource(_In_ IMFByteStream* byteStream, _In_ IMFAsyncResult* result);
 
-        com_ptr<IMFAttributes> m_attributes;
         std::map<IMFAsyncResult*, ShutdownWrapper<IMFMediaSource>> m_map;
 	};
 }

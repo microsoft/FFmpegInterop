@@ -24,35 +24,35 @@ namespace winrt::FFmpegInterop::implementation
 {
 	class FFmpegInteropByteStreamHandler :
 		public FFmpegInteropByteStreamHandlerT<
-            FFmpegInteropByteStreamHandler,
-            IMFByteStreamHandler,
-            MFAttributesImpl>
+			FFmpegInteropByteStreamHandler,
+			IMFByteStreamHandler,
+			MFAttributesImpl>
 	{
 	public:
-        FFmpegInteropByteStreamHandler();
+		FFmpegInteropByteStreamHandler();
 
-        // IMFByteStreamHandler
-        IFACEMETHOD(BeginCreateObject)(
-            _In_ IMFByteStream* pByteStream,
-            _In_opt_ LPCWSTR pURL,
-            _In_ DWORD dwFlags,
-            _In_opt_ IPropertyStore* pPropertyStore,
-            _COM_Outptr_opt_ ::IUnknown** ppCancelCookie,
-            _In_ IMFAsyncCallback* pCallback,
-            _In_opt_ ::IUnknown* pState) noexcept;
+		// IMFByteStreamHandler
+		IFACEMETHOD(BeginCreateObject)(
+			_In_ IMFByteStream* pByteStream,
+			_In_opt_ LPCWSTR pURL,
+			_In_ DWORD dwFlags,
+			_In_opt_ IPropertyStore* pPropertyStore,
+			_COM_Outptr_opt_ ::IUnknown** ppCancelCookie,
+			_In_ IMFAsyncCallback* pCallback,
+			_In_opt_ ::IUnknown* pState) noexcept;
 
-        IFACEMETHOD(EndCreateObject)(
-            _In_ IMFAsyncResult* pResult,
-            _Out_ MF_OBJECT_TYPE* pObjectType,
-            _COM_Outptr_ ::IUnknown** ppObject) noexcept;
+		IFACEMETHOD(EndCreateObject)(
+			_In_ IMFAsyncResult* pResult,
+			_Out_ MF_OBJECT_TYPE* pObjectType,
+			_COM_Outptr_ ::IUnknown** ppObject) noexcept;
 
-        IFACEMETHOD(CancelObjectCreation)(_In_ ::IUnknown* pIUnknownCancelCookie) noexcept;
-        IFACEMETHOD(GetMaxNumberOfBytesRequiredForResolution)(_Out_ QWORD* pcb) noexcept;
+		IFACEMETHOD(CancelObjectCreation)(_In_ ::IUnknown* pIUnknownCancelCookie) noexcept;
+		IFACEMETHOD(GetMaxNumberOfBytesRequiredForResolution)(_Out_ QWORD* pcb) noexcept;
 
-    private:
-        void CreateMediaSource(_In_ IMFByteStream* byteStream, _In_ IMFAsyncResult* result);
+	private:
+		void CreateMediaSource(_In_ IMFByteStream* byteStream, _In_ IMFAsyncResult* result);
 
-        std::map<IMFAsyncResult*, ShutdownWrapper<IMFMediaSource>> m_map;
+		std::map<IMFAsyncResult*, ShutdownWrapper<IMFMediaSource>> m_map;
 	};
 }
 

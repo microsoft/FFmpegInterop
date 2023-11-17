@@ -136,8 +136,8 @@ namespace winrt::FFmpegInterop::implementation
 		}
 
 	private:
-		DWORD m_flags = 0;
-		DWORD m_queue = 0;
+		DWORD m_flags{ 0 };
+		DWORD m_queue{ 0 };
 	};
 
 	class MFWorkItem :

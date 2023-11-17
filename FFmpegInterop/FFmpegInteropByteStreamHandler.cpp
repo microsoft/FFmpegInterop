@@ -71,7 +71,6 @@ namespace winrt::FFmpegInterop::implementation
             byteStream = std::move(byteStream),
             result = std::move(result)]()
             {
-                // Always invoke the callback regardless of the outcome
                 auto invokeCallback{ wil::scope_exit([&result]()
                 {
                     LOG_IF_FAILED(MFInvokeCallback(result.get()));
@@ -95,7 +94,7 @@ namespace winrt::FFmpegInterop::implementation
     {
 		auto logger{ FFmpegInteropProvider::CreateMediaSource::Start() };
 
-        // Wrap the byte stream
+        // Wrap the byte stream into a random access stream
         IRandomAccessStream stream{ nullptr };
         THROW_IF_FAILED(MFCreateStreamOnMFByteStreamEx(byteStream, guid_of<decltype(stream)>(), put_abi(stream)));
 

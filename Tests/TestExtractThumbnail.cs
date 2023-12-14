@@ -38,7 +38,7 @@ namespace UnitTest.Windows
             MediaStreamSource mss = mssFactory.ActivateInstance() as MediaStreamSource;
 
             // Create the FFmpegInteropMSS from the provided stream
-            FFmpegInteropMSS.CreateFromStream(stream, mss, config);
+            FFmpegInteropMSS.InitializeFromStream(stream, mss, config);
 
             return mss;
         }

@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2019 Microsoft Corporation
+//	Copyright 2023 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -18,20 +18,9 @@
 
 namespace FFmpegInterop
 {
-	runtimeclass FFmpegInteropMSSConfig
-	{
-		FFmpegInteropMSSConfig();
-		
-		Boolean ForceAudioDecode;
-		Boolean ForceVideoDecode;
-		UInt32 AllowedDecodeErrors;
-		Windows.Foundation.Collections.StringMap FFmpegOptions{ get; };
-	}
-
 	[default_interface]
-	runtimeclass FFmpegInteropMSS
+	runtimeclass FFmpegInteropByteStreamHandler
 	{
-		static void InitializeFromStream(Windows.Storage.Streams.IRandomAccessStream fileStream, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
-		static void InitializeFromUri(String uri, Windows.Media.Core.MediaStreamSource mss, FFmpegInteropMSSConfig config);
+		FFmpegInteropByteStreamHandler();
 	}
 }

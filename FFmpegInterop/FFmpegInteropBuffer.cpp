@@ -88,12 +88,12 @@ namespace winrt::FFmpegInterop::implementation
 		m_buf.get_deleter() = move(deleter);
 	}
 
-	STDMETHODIMP_(uint32_t) FFmpegInteropBuffer::Capacity() const noexcept
+	IFACEMETHODIMP_(uint32_t) FFmpegInteropBuffer::Capacity() const noexcept
 	{
 		return m_length;
 	}
 
-	STDMETHODIMP_(uint32_t) FFmpegInteropBuffer::Length() const noexcept
+	IFACEMETHODIMP_(uint32_t) FFmpegInteropBuffer::Length() const noexcept
 	{
 		return m_length;
 	}
@@ -104,14 +104,14 @@ namespace winrt::FFmpegInterop::implementation
 		THROW_HR(CO_E_NOT_SUPPORTED);
 	}
 
-	STDMETHODIMP FFmpegInteropBuffer::Buffer(_Outptr_ uint8_t** buf) noexcept
+	IFACEMETHODIMP FFmpegInteropBuffer::Buffer(_Outptr_ uint8_t** buf) noexcept
 	{
 		RETURN_HR_IF_NULL(E_POINTER, buf);
 		*buf = m_buf.get();
 		return S_OK;
 	}
 
-	STDMETHODIMP FFmpegInteropBuffer::GetUnmarshalClass(
+	IFACEMETHODIMP FFmpegInteropBuffer::GetUnmarshalClass(
 		_In_ REFIID riid,
 		_In_opt_ void* pv,
 		_In_ DWORD dwDestContext,
@@ -126,7 +126,7 @@ namespace winrt::FFmpegInterop::implementation
 	}
 	CATCH_RETURN();
 
-	STDMETHODIMP FFmpegInteropBuffer::GetMarshalSizeMax(
+	IFACEMETHODIMP FFmpegInteropBuffer::GetMarshalSizeMax(
 		_In_ REFIID riid,
 		_In_opt_ void* pv,
 		_In_ DWORD dwDestContext,
@@ -141,7 +141,7 @@ namespace winrt::FFmpegInterop::implementation
 	}
 	CATCH_RETURN();
 
-	STDMETHODIMP FFmpegInteropBuffer::MarshalInterface(
+	IFACEMETHODIMP FFmpegInteropBuffer::MarshalInterface(
 		_In_ IStream* pStm,
 		_In_ REFIID riid,
 		_In_opt_ void* pv,
@@ -156,7 +156,7 @@ namespace winrt::FFmpegInterop::implementation
 	}
 	CATCH_RETURN();
 
-	STDMETHODIMP FFmpegInteropBuffer::UnmarshalInterface(_In_ IStream* pStm, _In_ REFIID riid, _Outptr_ void** ppv) noexcept
+	IFACEMETHODIMP FFmpegInteropBuffer::UnmarshalInterface(_In_ IStream* pStm, _In_ REFIID riid, _Outptr_ void** ppv) noexcept
 	try
 	{
 		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);
@@ -165,7 +165,7 @@ namespace winrt::FFmpegInterop::implementation
 	}
 	CATCH_RETURN();
 
-	STDMETHODIMP FFmpegInteropBuffer::ReleaseMarshalData(_In_ IStream* pStm) noexcept
+	IFACEMETHODIMP FFmpegInteropBuffer::ReleaseMarshalData(_In_ IStream* pStm) noexcept
 	try
 	{
 		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);
@@ -174,7 +174,7 @@ namespace winrt::FFmpegInterop::implementation
 	}
 	CATCH_RETURN();
 
-	STDMETHODIMP FFmpegInteropBuffer::DisconnectObject(_Reserved_ DWORD dwReserved) noexcept
+	IFACEMETHODIMP FFmpegInteropBuffer::DisconnectObject(_Reserved_ DWORD dwReserved) noexcept
 	try
 	{
 		call_once(m_marshalerInitFlag, &FFmpegInteropBuffer::InitMarshaler, this);

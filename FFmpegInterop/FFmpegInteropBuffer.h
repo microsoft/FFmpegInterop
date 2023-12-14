@@ -35,38 +35,38 @@ namespace winrt::FFmpegInterop::implementation
 		FFmpegInteropBuffer(_In_ std::vector<uint8_t>&& buf) noexcept;
 
 		// IBuffer
-		STDMETHODIMP_(uint32_t) Capacity() const noexcept;
-		STDMETHODIMP_(uint32_t) Length() const noexcept;
+		IFACEMETHOD_(uint32_t, Capacity)() const noexcept;
+		IFACEMETHOD_(uint32_t, Length)() const noexcept;
 		void Length(_In_ uint32_t length);
 
 		// IBufferByteAccess
-		STDMETHODIMP Buffer(_Outptr_ uint8_t** buf) noexcept;
+		IFACEMETHOD(Buffer)(_Outptr_ uint8_t** buf) noexcept;
 
 		// IMarshal
-		STDMETHODIMP GetUnmarshalClass(
+		IFACEMETHOD(GetUnmarshalClass)(
 			_In_ REFIID riid,
 			_In_opt_ void* pv,
 			_In_ DWORD dwDestContext,
 			_Reserved_ void* pvDestContext,
 			_In_ DWORD mshlflags,
 			_Out_ CLSID* pclsid) noexcept;
-		STDMETHODIMP GetMarshalSizeMax(
+		IFACEMETHOD(GetMarshalSizeMax)(
 			_In_ REFIID riid,
 			_In_opt_ void* pv,
 			_In_ DWORD dwDestContext,
 			_Reserved_ void* pvDestContext,
 			_In_ DWORD mshlflags,
 			_Out_ DWORD* pcbSize) noexcept;
-		STDMETHODIMP MarshalInterface(
+		IFACEMETHOD(MarshalInterface)(
 			_In_ IStream* pStm,
 			_In_ REFIID riid,
 			_In_opt_ void* pv,
 			_In_ DWORD dwDestContext,
 			_Reserved_ void* pvDestContext,
 			_In_ DWORD mshlflags) noexcept;
-		STDMETHODIMP UnmarshalInterface(_In_ IStream* pStm, _In_ REFIID riid, _Outptr_ void** ppv) noexcept;
-		STDMETHODIMP ReleaseMarshalData(_In_ IStream* pStm) noexcept;
-		STDMETHODIMP DisconnectObject(_Reserved_ DWORD dwReserved) noexcept;
+		IFACEMETHOD(UnmarshalInterface)(_In_ IStream* pStm, _In_ REFIID riid, _Outptr_ void** ppv) noexcept;
+		IFACEMETHOD(ReleaseMarshalData)(_In_ IStream* pStm) noexcept;
+		IFACEMETHOD(DisconnectObject)(_Reserved_ DWORD dwReserved) noexcept;
 
 	private:
 		void InitMarshaler();

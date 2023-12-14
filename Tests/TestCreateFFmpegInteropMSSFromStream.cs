@@ -38,7 +38,7 @@ namespace UnitTest.Windows
             MediaStreamSource mss = mssFactory.ActivateInstance() as MediaStreamSource;
 
             // Create the FFmpegInteropMSS from the provided stream
-            FFmpegInteropMSS.CreateFromStream(stream, mss, config);
+            FFmpegInteropMSS.InitializeFromStream(stream, mss, config);
 
             return mss;
         }
@@ -46,7 +46,7 @@ namespace UnitTest.Windows
         [TestMethod]
         public void CreateFromStream_Null()
         {
-            // FFmpegInteropMSS.CreateFromStream should throw if stream is null with default parameter
+            // FFmpegInteropMSS.InitializeFromStream should throw if stream is null with default parameter
             try
             {
                 CreateMSSFromStream(null, null);
@@ -57,7 +57,7 @@ namespace UnitTest.Windows
                 // Call threw as expected
             }
 
-            // FFmpegInteropMSS.CreateFromStream should return null if stream is null with non default parameter
+            // FFmpegInteropMSS.InitializeFromStream should return null if stream is null with non default parameter
             try
             {
                 var config = new FFmpegInteropMSSConfig
@@ -82,7 +82,7 @@ namespace UnitTest.Windows
             StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(uri);
             IRandomAccessStream stream = await file.OpenAsync(FileAccessMode.Read);
 
-            // FFmpegInteropMSS.CreateFromStream should throw since test.txt is not a valid media file
+            // FFmpegInteropMSS.InitializeFromStream should throw since test.txt is not a valid media file
             try
             {
                 CreateMSSFromStream(stream, null);

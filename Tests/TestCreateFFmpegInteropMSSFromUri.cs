@@ -34,7 +34,7 @@ namespace UnitTest.Windows
             MediaStreamSource mss = mssFactory.ActivateInstance() as MediaStreamSource;
 
             // Create the FFmpegInteropMSS from the provided URI
-            FFmpegInteropMSS.CreateFromUri(uri, mss, config);
+            FFmpegInteropMSS.InitializeFromUri(uri, mss, config);
 
             return mss;
         }

@@ -34,6 +34,7 @@
     <ClCompile Include="VFWSampleProvider.cpp" />
     <ClCompile Include="BitstreamReader.cpp" />
     <ClCompile Include="LogEventArgs.cpp" />
+    <ClCompile Include="FFmpegInteropByteStreamHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -61,6 +62,8 @@
     <ClInclude Include="VFWSampleProvider.h" />
     <ClInclude Include="BitstreamReader.h" />
     <ClInclude Include="LogEventArgs.h" />
+    <ClInclude Include="FFmpegInteropByteStreamHandler.h" />
+    <ClInclude Include="MFAttributesImpl.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="FFmpegInterop.def" />
@@ -69,5 +72,6 @@
   <ItemGroup>
     <Midl Include="FFmpegInteropMSS.idl" />
     <Midl Include="FFmpegInteropLogging.idl" />
+    <Midl Include="FFmpegInteropByteStreamHandler.idl" />
   </ItemGroup>
 </Project>

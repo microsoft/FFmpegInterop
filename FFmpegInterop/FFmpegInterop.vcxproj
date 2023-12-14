@@ -87,7 +87,7 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>28204</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)..\ffmpeg\Build\$(PlatformTarget)\include;$(ProjectDir);$(GeneratedFilesDir);$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -120,6 +120,7 @@
     <ClInclude Include="AV1SampleProvider.h" />
     <ClInclude Include="BitstreamReader.h" />
     <ClInclude Include="FFmpegInteropBuffer.h" />
+    <ClInclude Include="FFmpegInteropByteStreamHandler.h" />
     <ClInclude Include="FFmpegInteropLogging.h" />
     <ClInclude Include="FFmpegInteropMSS.h" />
     <ClInclude Include="FFmpegInteropMSSConfig.h" />
@@ -127,6 +128,7 @@
     <ClInclude Include="HEVCSampleProvider.h" />
     <ClInclude Include="LogEventArgs.h" />
     <ClInclude Include="Metadata.h" />
+    <ClInclude Include="MFAttributesImpl.h" />
     <ClInclude Include="MPEGSampleProvider.h" />
     <ClInclude Include="NALUSampleProvider.h" />
     <ClInclude Include="Reader.h" />
@@ -148,6 +150,7 @@
     <ClCompile Include="BitstreamReader.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="FFmpegInteropBuffer.cpp" />
+    <ClCompile Include="FFmpegInteropByteStreamHandler.cpp" />
     <ClCompile Include="FFmpegInteropLogging.cpp" />
     <ClCompile Include="FFmpegInteropMSS.cpp" />
     <ClCompile Include="FFmpegInteropMSSConfig.cpp" />
@@ -178,6 +181,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Midl Include="FFmpegInteropByteStreamHandler.idl" />
     <Midl Include="FFmpegInteropMSS.idl" />
     <Midl Include="FFmpegInteropLogging.idl" />
   </ItemGroup>

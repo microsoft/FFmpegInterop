@@ -35,8 +35,15 @@ namespace winrt::FFmpegInterop::implementation
 			FFMPEG_INTEROP_PROVIDER_GUID);
 
 	public:
-		DEFINE_TRACELOGGING_ACTIVITY(CreateFromStream);
-		DEFINE_TRACELOGGING_ACTIVITY(CreateFromUri);
+		// FFmpegInteropByteStreamHandler
+		DEFINE_TRACELOGGING_ACTIVITY(BeginCreateObject);
+		DEFINE_TRACELOGGING_ACTIVITY(CreateMediaSource);
+		DEFINE_TRACELOGGING_ACTIVITY(EndCreateObject);
+		DEFINE_TRACELOGGING_ACTIVITY(CancelObjectCreation);
+
+		// FFmpegInteropMSS
+		DEFINE_TRACELOGGING_ACTIVITY(InitializeFromStream);
+		DEFINE_TRACELOGGING_ACTIVITY(InitializeFromUri);
 		DEFINE_TRACELOGGING_ACTIVITY(OnStarting);
 		DEFINE_TRACELOGGING_ACTIVITY(OnSampleRequested);
 		DEFINE_TRACELOGGING_ACTIVITY(OnSwitchStreamsRequested);

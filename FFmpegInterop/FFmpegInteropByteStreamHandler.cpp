@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-//	Copyright 2015 Microsoft Corporation
+//	Copyright 2023 Microsoft Corporation
 //
 //	Licensed under the Apache License, Version 2.0 (the "License");
 //	you may not use this file except in compliance with the License.
@@ -68,8 +68,8 @@ namespace winrt::FFmpegInterop::implementation
 
 		auto cancelCookie{ MFPutWorkItem([
 			strong_this{ get_strong() },
-			byteStream = std::move(byteStream),
-			result = std::move(result)]()
+			byteStream{ std::move(byteStream) },
+			result{ std::move(result) }]()
 			{
 				auto invokeCallback{ wil::scope_exit([&result]()
 				{

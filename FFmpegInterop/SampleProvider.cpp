@@ -233,7 +233,7 @@ namespace winrt::FFmpegInterop::implementation
 			const AVPacketSideData* sideData{ av_packet_side_data_get(m_stream->codecpar->coded_side_data, m_stream->codecpar->nb_coded_side_data, AV_PKT_DATA_CONTENT_LIGHT_LEVEL) };
 			if (sideData != nullptr)
 			{
-				AVContentLightMetadata* contentLightMetadata{ reinterpret_cast<AVContentLightMetadata*>(sideData->data) };
+				auto contentLightMetadata{ reinterpret_cast<const AVContentLightMetadata*>(sideData->data) };
 				properties.Insert(MF_MT_MAX_LUMINANCE_LEVEL, PropertyValue::CreateUInt32(contentLightMetadata->MaxCLL));
 				properties.Insert(MF_MT_MAX_FRAME_AVERAGE_LUMINANCE_LEVEL, PropertyValue::CreateUInt32(contentLightMetadata->MaxFALL));
 			}
@@ -241,7 +241,7 @@ namespace winrt::FFmpegInterop::implementation
 			sideData = av_packet_side_data_get(m_stream->codecpar->coded_side_data, m_stream->codecpar->nb_coded_side_data, AV_PKT_DATA_MASTERING_DISPLAY_METADATA);
 			if (sideData != nullptr)
 			{
-				AVMasteringDisplayMetadata* masteringDisplayMetadata{ reinterpret_cast<AVMasteringDisplayMetadata*>(sideData->data) };
+				auto masteringDisplayMetadata{ reinterpret_cast<const AVMasteringDisplayMetadata*>(sideData->data) };
 				if (masteringDisplayMetadata->has_luminance)
 				{
 					constexpr uint32_t MASTERING_DISP_LUMINANCE_SCALE{ 10000 };

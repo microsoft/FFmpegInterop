@@ -182,10 +182,10 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		vector<pair<GUID, Windows::Foundation::IInspectable>> properties;
 
-		if (frame->interlaced_frame)
+		if ((frame->flags & AV_FRAME_FLAG_INTERLACED) != 0)
 		{
 			properties.emplace_back(MFSampleExtension_Interlaced, PropertyValue::CreateUInt32(true));
-			properties.emplace_back(MFSampleExtension_BottomFieldFirst, PropertyValue::CreateUInt32(!frame->top_field_first));
+			properties.emplace_back(MFSampleExtension_BottomFieldFirst, PropertyValue::CreateUInt32((frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST) == 0));
 			properties.emplace_back(MFSampleExtension_RepeatFirstField, PropertyValue::CreateUInt32(false));
 		}
 		else

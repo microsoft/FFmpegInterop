@@ -68,17 +68,12 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)'=='ARM'" Label="Configuration">
-    <LibraryPath>$(WindowsSDK_LibraryPath_ARM);$(UniversalCRT_LibraryPath_ARM);$(VC_LibraryPath_VC_ARM_OneCore);$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)'=='ARM64'" Label="Configuration">
-    <LibraryPath>$(WindowsSDK_LibraryPath_ARM64);$(UniversalCRT_LibraryPath_ARM64);$(VC_LibraryPath_VC_ARM64_OneCore);$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)'=='Win32'" Label="Configuration">
-    <LibraryPath>$(WindowsSDK_LibraryPath_x86);$(UniversalCRT_LibraryPath_x86);$(VC_LibraryPath_VC_x86_OneCore);$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Platform)'=='x64'" Label="Configuration">
-    <LibraryPath>$(WindowsSDK_LibraryPath_x64);$(UniversalCRT_LibraryPath_x64);$(VC_LibraryPath_VC_x64_OneCore);$(LibraryPath)</LibraryPath>
+  <PropertyGroup Condition="'$(UseUCRT)'=='true'" Label="Configuration">
+    <LibraryPath>$(WindowsLibPath);$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='ARM'">$(WindowsSDK_LibraryPath_ARM);$(UniversalCRT_LibraryPath_ARM);$(VC_LibraryPath_VC_ARM_OneCore);$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='ARM64'">$(WindowsSDK_LibraryPath_ARM64);$(UniversalCRT_LibraryPath_ARM64);$(VC_LibraryPath_VC_ARM64_OneCore);$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='Win32'">$(WindowsSDK_LibraryPath_x86);$(UniversalCRT_LibraryPath_x86);$(VC_LibraryPath_VC_x86_OneCore);$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='x64'">$(WindowsSDK_LibraryPath_x64);$(UniversalCRT_LibraryPath_x64);$(VC_LibraryPath_VC_x64_OneCore);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ItemDefinitionGroup>
@@ -129,24 +124,20 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='ARM'">
+  <ItemDefinitionGroup Condition="'$(UseUCRT)'=='true'">
     <Link>
-      <AdditionalLibraryDirectories>$(WindowsSDK_LibraryPath_ARM);$(UniversalCRT_LibraryPath_ARM);$(VC_LibraryPath_VC_ARM_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='ARM64'">
-    <Link>
-      <AdditionalLibraryDirectories>$(WindowsSDK_LibraryPath_ARM64);$(UniversalCRT_LibraryPath_ARM64);$(VC_LibraryPath_VC_ARM64_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
-    <Link>
-      <AdditionalLibraryDirectories>$(WindowsSDK_LibraryPath_x86);$(UniversalCRT_LibraryPath_x86);$(VC_LibraryPath_VC_x86_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
-    <Link>
-      <AdditionalLibraryDirectories>$(WindowsSDK_LibraryPath_x64);$(UniversalCRT_LibraryPath_x64);$(VC_LibraryPath_VC_x64_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>vcruntime.lib;kernel32.lib;msvcprt.lib;</IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies>onecore_apiset.lib;onecoreuap_apiset.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)'=='Debug'">ucrtd.lib;libvcruntimed.lib;msvcrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)'=='Release'">ucrt.lib;libvcruntime.lib;msvcrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>ucrtbase.dll;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Platform)'=='ARM'">$(WindowsSDK_LibraryPath_ARM);$(UniversalCRT_LibraryPath_ARM);$(VC_LibraryPath_VC_ARM_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Platform)'=='ARM64'">$(WindowsSDK_LibraryPath_ARM64);$(UniversalCRT_LibraryPath_ARM64);$(VC_LibraryPath_VC_ARM64_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Platform)'=='Win32'">$(WindowsSDK_LibraryPath_x86);$(UniversalCRT_LibraryPath_x86);$(VC_LibraryPath_VC_x86_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Platform)'=='x64'">$(WindowsSDK_LibraryPath_x64);$(UniversalCRT_LibraryPath_x64);$(VC_LibraryPath_VC_x64_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>/ALTERNATENAME:__imp___std_init_once_complete=__imp_InitOnceComplete %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/ALTERNATENAME:__imp___std_init_once_begin_initialize=__imp_InitOnceBeginInitialize %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

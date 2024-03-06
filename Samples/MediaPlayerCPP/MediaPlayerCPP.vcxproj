@@ -159,12 +159,6 @@
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec-60_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avdevice-60_ms.dll">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avfilter-9_ms.dll">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
     <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avformat-60_ms.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>

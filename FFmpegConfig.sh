@@ -56,6 +56,26 @@ fi
 # Extra configure settings supplied by user
 extra_settings="${2:-""}"
 
+# TODO: Check for UseUCRT flag
+# TODO: Clean up multiline strings
+# TODO: Remove any unnecessary libs
+windows_sdk_lib_path="${WindowsSdkDir}lib\\${WindowsSDKLibVersion}um\\${arch}" # WindowsSDK_LibraryPath_x64=%WindowsSdkDir%lib\%WindowsSDKLibVersion%um\$arch # TODO: Support all architectures
+ucrt_lib_path="${UniversalCRTSdkDir}lib\\${UCRTVersion}\\ucrt\\${arch}" # UniversalCRT_LibraryPath_x64=%UniversalCRTSdkDir%lib\%UCRTVersion%\ucrt\$arch # TODO: Support all architectures
+vc_lib_path="${VCToolsInstallDir}lib\\onecore\\${arch}" # VC_LibraryPath_VC_x64_OneCore=%VCToolsInstallDir%lib\onecore\$arch # TODO: Support all architectures
+ucrt_dll_path="${UniversalCRTSdkDir}redist\\${UCRTVersion}\\ucrt\\DLLs\\${arch}" # UniversalCRT_LibraryPath_x64=%UniversalCRTSdkDir%lib\%UCRTVersion%\ucrt\$arch # TODO: Support all architectures
+ucrt_base_dll="ucrtbase.dll" # TODO: -LIBPATH: or no flag? Support debug? 
+additional_dependencies="onecore_apiset.lib onecoreuap_apiset.lib"
+additional_dependencies+="ucrt.lib libvcruntime.lib msvcrt.lib msvcprt.lib" # TODO: Support debug?
+
+# TODO: Remove -VERBOSE
+common_settings+="\
+    --extra-ldflags='-VERBOSE -NODEFAULTLIB -LIBPATH:\"$vc_lib_path\" \
+        -LIBPATH:\"$windows_sdk_lib_path\" \
+        -LIBPATH:\"$ucrt_lib_path\" \
+        -LIBPATH:\"$vc_lib_path\" \
+        $additional_dependencies' \
+    "
+
 # Build FFmpeg
 pushd $dir/ffmpeg > /dev/null
 
@@ -75,4 +95,4 @@ if [ $result -ne 0 ]; then
     echo "ERROR: FFmpeg build for $arch failed with exit code $result" 1>&2
 fi
 
-exit $result
+# exit $result

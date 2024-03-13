@@ -110,35 +110,52 @@ echo Building FFmpeg for %1...
 
 :: Determine the correct architecture to pass to vcvarsall.bat
 if /I %PROCESSOR_ARCHITECTURE% == x86 (
+    set vsdevcmd_host_arch=x86
     if /I %1==x86 (
         set vcvarsall_arch=x86
+        set vsdevcmd_target_arch=x86
     ) else if /I %1==x64 (
         set vcvarsall_arch=x86_x64
+        set vsdevcmd_target_arch=x64
     ) else if /I %1==arm (
         set vcvarsall_arch=x86_arm
+        set vsdevcmd_target_arch=arm
     ) else if /I %1==arm64 (
         set vcvarsall_arch=x86_arm64
+        set vsdevcmd_target_arch=arm64
     ) else (
         echo ERROR: %1 is not a valid architecture 1>&2
         exit /B 1
     )
 ) else (
+    set vsdevcmd_host_arch=x64
     if /I %1==x86 (
         set vcvarsall_arch=x64_x86
+        set vsdevcmd_target_arch=x86
     ) else if /I %1==x64 (
         set vcvarsall_arch=x64
+        set vsdevcmd_target_arch=x64
     ) else if /I %1==arm (
         set vcvarsall_arch=x64_arm
+        set vsdevcmd_target_arch=arm
     ) else if /I %1==arm64 (
         set vcvarsall_arch=x64_arm64
+        set vsdevcmd_target_arch=arm64
     ) else (
         echo ERROR: %1 is not a valid architecture 1>&2
         exit /B 1
     )
 )
 
+:: Set VSCMD_DEBUG for more verbose debugging output
+set VSCMD_DEBUG=3
+
+:: TODO: Check for UseUCRT flag
+call "%VisualStudioDir%\Common7\Tools\vsdevcmd.bat" -arch=%vsdevcmd_target_arch% -host_arch=%vsdevcmd_host_arch% -app_platform=onecore
+@REM exit /B 0
+
 :: Call vcvarsall.bat to set up the build environment
-call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% uwp
+@REM call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% onecore
 
 :: Build FFmpeg
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh %*

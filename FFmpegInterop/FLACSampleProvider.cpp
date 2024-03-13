@@ -35,7 +35,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Check if the codec private data includes the FLAC marker and block header before the FLAC stream info
 		if (equal(FLAC_MARKER.begin(), FLAC_MARKER.end(), m_stream->codecpar->extradata))
 		{
-			THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, m_stream->codecpar->extradata_size < FLAC_MARKER.size() + FLAC_STREAMINFO_HEADER.size() + FLAC_STREAMINFO_SIZE);
+			THROW_HR_IF(MF_E_INVALID_FILE_FORMAT, static_cast<size_t>(m_stream->codecpar->extradata_size) < FLAC_MARKER.size() + FLAC_STREAMINFO_HEADER.size() + FLAC_STREAMINFO_SIZE);
 			m_flacStreamInfo = m_stream->codecpar->extradata + FLAC_MARKER.size() + FLAC_STREAMINFO_HEADER.size();
 		}
 		else

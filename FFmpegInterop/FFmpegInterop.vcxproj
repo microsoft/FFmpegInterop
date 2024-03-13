@@ -113,8 +113,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
-      <!-- TODO: Remove /VERBOSE-->
-      <AdditionalOptions>/VERBOSE /GUARD:CF %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/GUARD:CF %(AdditionalOptions)</AdditionalOptions>
       <Profile>true</Profile>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>

@@ -95,4 +95,5 @@ if [ $result -ne 0 ]; then
     echo "ERROR: FFmpeg build for $arch failed with exit code $result" 1>&2
 fi
 
+# TODO: Uncomment
 # exit $result

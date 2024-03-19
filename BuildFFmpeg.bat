@@ -4,17 +4,10 @@
 :: Parse the arguments to get the build configuration
 set settings_found=0
 set build.settings=
+set build.platform_type=
 
 for %%a in (%*) do (
-    if !settings_found! EQU 1 (
-        if not defined build.settings (
-            set build.settings=%%a
-            set settings_found=0
-        ) else (
-            echo ERROR: --settings was set more than once 1>&2
-            goto Usage
-        )
-    ) else if /I "%%a"=="x86" (
+    if /I "%%a"=="x86" (
         set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="x64" (
         set build.archs=!build.archs!;%%a
@@ -24,6 +17,24 @@ for %%a in (%*) do (
         set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="--settings" (
         set settings_found=1
+    ) else if !settings_found! EQU 1 (
+        if not defined build.settings (
+            set build.settings=%%a
+            set settings_found=0
+        ) else (
+            echo ERROR: --settings was set more than once 1>&2
+            goto Usage
+        )
+    ) else if /I "%%a"=="--platform-type" (
+        set platform_type_found=1
+    ) else if !platform_type_found! EQU 1 (
+        if not defined build.platform_type (
+            set build.platform_type=%%a
+            set platform_type_found=0
+        ) else (
+            echo ERROR: --platform_type was set more than once 1>&2
+            goto Usage
+        )
     ) else if /I "%%a"=="--help" (
         goto Usage
     ) else (
@@ -113,16 +124,12 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
     set vsdevcmd_host_arch=x86
     if /I %1==x86 (
         set vcvarsall_arch=x86
-        set vsdevcmd_target_arch=x86
     ) else if /I %1==x64 (
         set vcvarsall_arch=x86_x64
-        set vsdevcmd_target_arch=x64
     ) else if /I %1==arm (
         set vcvarsall_arch=x86_arm
-        set vsdevcmd_target_arch=arm
     ) else if /I %1==arm64 (
         set vcvarsall_arch=x86_arm64
-        set vsdevcmd_target_arch=arm64
     ) else (
         echo ERROR: %1 is not a valid architecture 1>&2
         exit /B 1
@@ -131,16 +138,12 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
     set vsdevcmd_host_arch=x64
     if /I %1==x86 (
         set vcvarsall_arch=x64_x86
-        set vsdevcmd_target_arch=x86
     ) else if /I %1==x64 (
         set vcvarsall_arch=x64
-        set vsdevcmd_target_arch=x64
     ) else if /I %1==arm (
         set vcvarsall_arch=x64_arm
-        set vsdevcmd_target_arch=arm
     ) else if /I %1==arm64 (
         set vcvarsall_arch=x64_arm64
-        set vsdevcmd_target_arch=arm64
     ) else (
         echo ERROR: %1 is not a valid architecture 1>&2
         exit /B 1
@@ -148,17 +151,10 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
 )
 
 :: Set VSCMD_DEBUG for more verbose debugging output
-:: TODO (brbeec):Comment out VSCMD_DEBUG
-set VSCMD_DEBUG=3
-
-:: TODO (brbeec):Check for UseUCRT flag
-:: TODO (brbeec):Do we need to call vsdevcmd.bat or can we call vcvarsall.bat without uwp?
-@REM call "%VisualStudioDir%\Common7\Tools\vsdevcmd.bat" -arch=%vsdevcmd_target_arch% -host_arch=%vsdevcmd_host_arch% -app_platform=onecore
-call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch%
+:: set VSCMD_DEBUG=3
 
 :: Call vcvarsall.bat to set up the build environment
-:: TODO (brbeec):Uncomment and check for UseUCRT flag
-@REM call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% uwp
+call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% %build.platform_type%
 
 :: Build FFmpeg
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh %*
@@ -171,7 +167,7 @@ exit /B %ERRORLEVEL%
 :Usage
 :: Display help message
 echo Syntax:
-echo     %0 [arch...] [--settings "<FFmpeg configure settings>"]
+echo     %0 [arch...] [--platform-type ^<store ^| uwp^>] [--settings "<FFmpeg configure settings>"]
 echo where:
 echo     [arch...]: x86 ^| amd64 ^| arm ^| arm64
 echo:
@@ -180,5 +176,6 @@ echo     %0                                     Build all architectures
 echo     %0 x64                                 Build x64
 echo     %0 x86 x64                             Build x86 and x64
 echo     %0 x64 --settings "--enable-debug"     Build x64 and set --enable-debug for FFmpeg configure
+echo     %0 x64 --platform-type uwp             Build x64 for UWP app
 
 exit /B 0

@@ -148,15 +148,16 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
 )
 
 :: Set VSCMD_DEBUG for more verbose debugging output
-:: TODO: Comment out VSCMD_DEBUG
+:: TODO (brbeec):Comment out VSCMD_DEBUG
 set VSCMD_DEBUG=3
 
-:: TODO: Check for UseUCRT flag
-:: TODO: Do we need to call vsdevcmd.bat or can we call vcvarsall.bat without uwp?
-call "%VisualStudioDir%\Common7\Tools\vsdevcmd.bat" -arch=%vsdevcmd_target_arch% -host_arch=%vsdevcmd_host_arch% -app_platform=onecore
+:: TODO (brbeec):Check for UseUCRT flag
+:: TODO (brbeec):Do we need to call vsdevcmd.bat or can we call vcvarsall.bat without uwp?
+@REM call "%VisualStudioDir%\Common7\Tools\vsdevcmd.bat" -arch=%vsdevcmd_target_arch% -host_arch=%vsdevcmd_host_arch% -app_platform=onecore
+call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch%
 
 :: Call vcvarsall.bat to set up the build environment
-:: TODO: Uncomment and check for UseUCRT flag
+:: TODO (brbeec):Uncomment and check for UseUCRT flag
 @REM call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% uwp
 
 :: Build FFmpeg

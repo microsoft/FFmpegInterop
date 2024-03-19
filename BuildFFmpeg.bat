@@ -121,7 +121,6 @@ echo Building FFmpeg for %1...
 
 :: Determine the correct architecture to pass to vcvarsall.bat
 if /I %PROCESSOR_ARCHITECTURE% == x86 (
-    set vsdevcmd_host_arch=x86
     if /I %1==x86 (
         set vcvarsall_arch=x86
     ) else if /I %1==x64 (
@@ -135,7 +134,6 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
         exit /B 1
     )
 ) else (
-    set vsdevcmd_host_arch=x64
     if /I %1==x86 (
         set vcvarsall_arch=x64_x86
     ) else if /I %1==x64 (

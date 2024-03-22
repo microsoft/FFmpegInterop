@@ -120,8 +120,7 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		try
 		{
-			wstring_convert<codecvt_utf8<wchar_t>> conv;
-			string uriA{ conv.to_bytes(uri.c_str()) };
+			string uriA{ to_string(uri) };
 
 			OpenFile(uriA.c_str(), config);
 			InitFFmpegContext(config);
@@ -161,18 +160,14 @@ namespace winrt::FFmpegInterop::implementation
 		AVDictionary_ptr options;
 		if (config != nullptr)
 		{
-			wstring_convert<codecvt_utf8<wchar_t>> conv;
 			StringMap ffmpegOptions{ config.FFmpegOptions() };
 			for (const auto& iter : ffmpegOptions)
 			{
-				hstring key{ iter.Key() };
-				string keyA{ conv.to_bytes(key.c_str()) };
-
-				hstring value{ iter.Value() };
-				string valueA{ conv.to_bytes(value.c_str()) };
+				string key{ to_string(iter.Key()) };
+				string value{ to_string(iter.Value()) };
 
 				AVDictionary* optionsRaw{ options.release() };
-				int result{ av_dict_set(&optionsRaw, keyA.c_str(), valueA.c_str(), 0) };
+				int result{ av_dict_set(&optionsRaw, key.c_str(), value.c_str(), 0) };
 				options.reset(exchange(optionsRaw, nullptr));
 				THROW_HR_IF_FFMPEG_FAILED(result);
 			}

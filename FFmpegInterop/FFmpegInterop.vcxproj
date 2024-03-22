@@ -67,16 +67,14 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(UseUCRT)'=='true'" Label="Configuration">
+    <LibraryPath>$(WindowsLibPath);$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='ARM'">$(WindowsSDK_LibraryPath_ARM);$(UniversalCRT_LibraryPath_ARM);$(VC_LibraryPath_VC_ARM_OneCore);$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='ARM64'">$(WindowsSDK_LibraryPath_ARM64);$(UniversalCRT_LibraryPath_ARM64);$(VC_LibraryPath_VC_ARM64_OneCore);$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='Win32'">$(WindowsSDK_LibraryPath_x86);$(UniversalCRT_LibraryPath_x86);$(VC_LibraryPath_VC_x86_OneCore);$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Platform)'=='x64'">$(WindowsSDK_LibraryPath_x64);$(UniversalCRT_LibraryPath_x64);$(VC_LibraryPath_VC_x64_OneCore);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -92,8 +90,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
-      <AdditionalDependencies>avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;mfplat.lib;mfuuid.lib;wmcodecdspuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\ffmpeg\Build\$(PlatformTarget)\bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;mfplat.lib;mfuuid.lib;wmcodecdspuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>FFmpegInterop.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
@@ -119,6 +117,18 @@
       <Profile>true</Profile>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(UseUCRT)'=='true'">
+    <Link>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <AdditionalLibraryDirectories Condition="'$(Platform)'=='ARM'">$(WindowsSDK_LibraryPath_ARM);$(UniversalCRT_LibraryPath_ARM);$(VC_LibraryPath_VC_ARM_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Platform)'=='ARM64'">$(WindowsSDK_LibraryPath_ARM64);$(UniversalCRT_LibraryPath_ARM64);$(VC_LibraryPath_VC_ARM64_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Platform)'=='Win32'">$(WindowsSDK_LibraryPath_x86);$(UniversalCRT_LibraryPath_x86);$(VC_LibraryPath_VC_x86_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Platform)'=='x64'">$(WindowsSDK_LibraryPath_x64);$(UniversalCRT_LibraryPath_x64);$(VC_LibraryPath_VC_x64_OneCore);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>onecore_apiset.lib;onecoreuap_apiset.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)'=='Debug'">ucrtd.lib;libvcruntimed.lib;msvcrtd.lib;msvcprtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)'=='Release'">ucrt.lib;libvcruntime.lib;msvcrt.lib;msvcprt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -70,18 +70,16 @@ namespace
 
 	void SetStreamDescriptorProperties(_In_ const AVStream* stream, _Inout_ const IMediaStreamDescriptor& streamDescriptor)
 	{
-		wstring_convert<codecvt_utf8<wchar_t>> conv;
-
 		const AVDictionaryEntry* titleTag{ av_dict_get(stream->metadata, "title", nullptr, 0) };
 		if (titleTag != nullptr)
 		{
-			streamDescriptor.Name(conv.from_bytes(titleTag->value));
+			streamDescriptor.Name(to_hstring(titleTag->value));
 		}
 
 		const AVDictionaryEntry* languageTag{ av_dict_get(stream->metadata, "language", nullptr, 0) };
 		if (languageTag != nullptr)
 		{
-			streamDescriptor.Language(conv.from_bytes(languageTag->value));
+			streamDescriptor.Language(to_hstring(languageTag->value));
 		}
 	}
 }

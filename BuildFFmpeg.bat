@@ -4,17 +4,10 @@
 :: Parse the arguments to get the build configuration
 set settings_found=0
 set build.settings=
+set build.platform_type=
 
 for %%a in (%*) do (
-    if !settings_found! EQU 1 (
-        if not defined build.settings (
-            set build.settings=%%a
-            set settings_found=0
-        ) else (
-            echo ERROR: --settings was set more than once 1>&2
-            goto Usage
-        )
-    ) else if /I "%%a"=="x86" (
+    if /I "%%a"=="x86" (
         set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="x64" (
         set build.archs=!build.archs!;%%a
@@ -24,6 +17,24 @@ for %%a in (%*) do (
         set build.archs=!build.archs!;%%a
     ) else if /I "%%a"=="--settings" (
         set settings_found=1
+    ) else if !settings_found! EQU 1 (
+        if not defined build.settings (
+            set build.settings=%%a
+            set settings_found=0
+        ) else (
+            echo ERROR: --settings was set more than once 1>&2
+            goto Usage
+        )
+    ) else if /I "%%a"=="--platform-type" (
+        set platform_type_found=1
+    ) else if !platform_type_found! EQU 1 (
+        if not defined build.platform_type (
+            set build.platform_type=%%a
+            set platform_type_found=0
+        ) else (
+            echo ERROR: --platform_type was set more than once 1>&2
+            goto Usage
+        )
     ) else if /I "%%a"=="--help" (
         goto Usage
     ) else (
@@ -137,8 +148,11 @@ if /I %PROCESSOR_ARCHITECTURE% == x86 (
     )
 )
 
+:: Set VSCMD_DEBUG for more verbose debugging output
+:: set VSCMD_DEBUG=3
+
 :: Call vcvarsall.bat to set up the build environment
-call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% uwp
+call "%VisualStudioDir%\VC\Auxiliary\Build\vcvarsall.bat" %vcvarsall_arch% %build.platform_type%
 
 :: Build FFmpeg
 %MSYS2_BIN% --login -x %~dp0FFmpegConfig.sh %*
@@ -151,7 +165,7 @@ exit /B %ERRORLEVEL%
 :Usage
 :: Display help message
 echo Syntax:
-echo     %0 [arch...] [--settings "<FFmpeg configure settings>"]
+echo     %0 [arch...] [--platform-type ^<store ^| uwp^>] [--settings "<FFmpeg configure settings>"]
 echo where:
 echo     [arch...]: x86 ^| amd64 ^| arm ^| arm64
 echo:
@@ -160,5 +174,6 @@ echo     %0                                     Build all architectures
 echo     %0 x64                                 Build x64
 echo     %0 x86 x64                             Build x86 and x64
 echo     %0 x64 --settings "--enable-debug"     Build x64 and set --enable-debug for FFmpeg configure
+echo     %0 x64 --platform-type uwp             Build x64 for UWP app
 
 exit /B 0

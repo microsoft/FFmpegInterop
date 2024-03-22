@@ -22,8 +22,6 @@
 #define NOMINMAX // Don't define min()/max() macros in Windows.h
 #endif
 
-#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
-
 // WIL
 #include <wil/cppwinrt.h>
 #include <wil/result.h>
@@ -92,7 +90,6 @@ extern "C"
 #include <mutex>
 #include <tuple>
 #include <limits>
-#include <codecvt> // TODO: Deprecated in C++17. Replace when an alternative is available.
 #include <cstdlib>
 
 // FFmpegInterop

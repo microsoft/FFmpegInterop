@@ -33,6 +33,14 @@ namespace winrt::FFmpegInterop::implementation
 	void FFmpegInteropLogging::Log(_In_ void* avcl, _In_ int level, _In_ const char* fmt, _In_ va_list vl) noexcept
 	try
 	{
+		bool hasLogEventDelegate{ m_logEvent };
+		bool isProviderEnabled{ FFmpegInteropProvider::IsEnabled(WINEVENT_LEVEL_VERBOSE) };
+
+		if (!hasLogEventDelegate && !isProviderEnabled)
+		{
+			return;
+		}
+
 		// Get the required buffer size
 		int printPrefix{ 1 };
 		int lineSize{ av_log_format_line2(avcl, level, fmt, vl, nullptr, 0, &printPrefix) };
@@ -44,15 +52,21 @@ namespace winrt::FFmpegInterop::implementation
 		THROW_HR_IF_FFMPEG_FAILED(charWritten);
 		THROW_HR_IF(E_UNEXPECTED, lineSize != charWritten);
 
-		m_logEvent(nullptr, make<LogEventArgs>(static_cast<FFmpegInterop::LogLevel>(level), to_hstring(line.get())));
-
-		// Trim trailing whitespace
-		for (int i{ lineSize - 1 }; i >= 0 && isspace(line[i]); i--)
+		if (hasLogEventDelegate)
 		{
-			line[i] = '\0';
+			m_logEvent(nullptr, make<LogEventArgs>(static_cast<FFmpegInterop::LogLevel>(level), to_hstring(line.get())));
 		}
 
-		FFMPEG_INTEROP_TRACE("%S", line.get());
+		if (isProviderEnabled)
+		{
+			// Trim trailing whitespace
+			for (int i{ lineSize - 1 }; i >= 0 && isspace(line[i]); i--)
+			{
+				line[i] = '\0';
+			}
+
+			FFMPEG_INTEROP_TRACE("%S", line.get());
+		}
 	}
 	CATCH_LOG_RETURN()
 

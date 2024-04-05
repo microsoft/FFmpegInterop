@@ -72,7 +72,7 @@ namespace winrt::FFmpegInterop::implementation
 		void InitMarshaler();
 
 		uint32_t m_length{ 0 };
-		std::unique_ptr<uint8_t, std::function<void(uint8_t*)>> m_buf;
+		std::unique_ptr<uint8_t, std::move_only_function<void(uint8_t*)>> m_buf;
 		com_ptr<IMarshal> m_marshaler;
 		std::once_flag m_marshalerInitFlag;
 	};

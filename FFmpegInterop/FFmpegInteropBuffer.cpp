@@ -29,18 +29,18 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		THROW_HR_IF(E_INVALIDARG, bufRef->size > numeric_limits<uint32_t>::max());
 
-		AVBufferRef* bufRefCopy{ av_buffer_ref(bufRef) };
+		AVBufferRef_ptr bufRefCopy{ av_buffer_ref(bufRef) };
 		THROW_IF_NULL_ALLOC(bufRefCopy);
-		m_buf.get_deleter() = [AVBufferRef_ptr{ bufRefCopy }](uint8_t*) noexcept { };
+		m_buf.get_deleter() = [bufRefCopy{ move(bufRefCopy) }](uint8_t*) noexcept { };
 	}
 
 	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ AVBufferRef_ptr bufRef) :
 		m_length(static_cast<uint32_t>(bufRef->size)),
-		m_buf(reinterpret_cast<uint8_t*>(bufRef->data), [AVBufferRef_ptr{ bufRef.get() }](uint8_t*) noexcept { })
+		m_buf(reinterpret_cast<uint8_t*>(bufRef->data))
 	{
-		size_t bufRefSize{ bufRef->size };
-		bufRef.release(); // The lambda has taken ownership
-		THROW_HR_IF(E_INVALIDARG, bufRefSize > numeric_limits<uint32_t>::max());
+		THROW_HR_IF(E_INVALIDARG, bufRef->size > numeric_limits<uint32_t>::max());
+
+		m_buf.get_deleter() = [bufRef{ move(bufRef) }](uint8_t*) noexcept { };
 	}
 
 	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ AVPacket_ptr packet) :
@@ -50,20 +50,21 @@ namespace winrt::FFmpegInterop::implementation
 		if (packet->buf != nullptr)
 		{
 			// Packet is ref counted. Take ownership of its buffer.
-			m_buf.get_deleter() = [AVBufferRef_ptr{ exchange(packet->buf, nullptr) }](uint8_t*) noexcept { };
+			AVBufferRef_ptr bufRef{ exchange(packet->buf, nullptr) };
+			m_buf.get_deleter() = [bufRef{ move(bufRef) }](uint8_t*) noexcept { };
 		}
 		else
 		{
 			// Packet is not ref counted. We need to keep it alive.
-			m_buf.get_deleter() = [AVPacket_ptr{ packet.release() }](uint8_t*) noexcept { };
+			m_buf.get_deleter() = [packet{ move(packet) }](uint8_t*) noexcept { };
 		}
 	}
 
 	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ AVBlob_ptr buf, _In_ uint32_t bufSize) :
 		m_length(bufSize),
-		m_buf(static_cast<uint8_t*>(buf.get()), [AVBlob_ptr{ buf.get() }](uint8_t*) noexcept { })
+		m_buf(static_cast<uint8_t*>(buf.get()))
 	{
-		buf.release(); // The lambda has taken ownership
+		m_buf.get_deleter() = [buf{ move(buf) }](uint8_t*) noexcept { };
 	}
 
 	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ vector<uint8_t>&& buf) noexcept :
@@ -72,14 +73,15 @@ namespace winrt::FFmpegInterop::implementation
 		// We need to move capture buf in the deleter lambda before setting m_buf, 
 		// since moving buf invalidates the pointer returned by buf.data().
 		uint8_t* p{ nullptr };
-		function<void(uint8_t*)> deleter = [pp = &p, buf = move(buf)](uint8_t*) mutable noexcept
-		{
-			if (pp != nullptr)
+		move_only_function<void(uint8_t*)> deleter = 
+			[pp = &p, buf{ move(buf) }](uint8_t*) mutable noexcept
 			{
-				*pp = const_cast<uint8_t*>(buf.data());
-				pp = nullptr;
-			}
-		};
+				if (pp != nullptr)
+				{
+					*pp = const_cast<uint8_t*>(buf.data());
+					pp = nullptr;
+				}
+			};
 
 		// Call lambda to set p
 		deleter(nullptr);

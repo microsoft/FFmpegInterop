@@ -24,8 +24,8 @@ using namespace std;
 namespace winrt::FFmpegInterop::implementation
 {
 	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ AVBufferRef* bufRef) :
-		m_length(static_cast<uint32_t>(bufRef->size)),
-		m_buf(reinterpret_cast<uint8_t*>(bufRef->data))
+		m_buf(reinterpret_cast<uint8_t*>(bufRef->data)),
+		m_length(static_cast<uint32_t>(bufRef->size))
 	{
 		THROW_HR_IF(E_INVALIDARG, bufRef->size > numeric_limits<uint32_t>::max());
 
@@ -35,8 +35,8 @@ namespace winrt::FFmpegInterop::implementation
 	}
 
 	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ AVBufferRef_ptr bufRef) :
-		m_length(static_cast<uint32_t>(bufRef->size)),
-		m_buf(reinterpret_cast<uint8_t*>(bufRef->data))
+		m_buf(reinterpret_cast<uint8_t*>(bufRef->data)),
+		m_length(static_cast<uint32_t>(bufRef->size))
 	{
 		THROW_HR_IF(E_INVALIDARG, bufRef->size > numeric_limits<uint32_t>::max());
 
@@ -44,8 +44,8 @@ namespace winrt::FFmpegInterop::implementation
 	}
 
 	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ AVPacket_ptr packet) :
-		m_length(packet->size),
-		m_buf(packet->data)
+		m_buf(packet->data),
+		m_length(packet->size)
 	{
 		if (packet->buf != nullptr)
 		{
@@ -61,8 +61,8 @@ namespace winrt::FFmpegInterop::implementation
 	}
 
 	FFmpegInteropBuffer::FFmpegInteropBuffer(_In_ AVBlob_ptr buf, _In_ uint32_t bufSize) :
-		m_length(bufSize),
-		m_buf(static_cast<uint8_t*>(buf.get()))
+		m_buf(static_cast<uint8_t*>(buf.get())),
+		m_length(bufSize)
 	{
 		m_buf.get_deleter() = [buf{ move(buf) }](uint8_t*) noexcept { };
 	}
@@ -83,7 +83,7 @@ namespace winrt::FFmpegInterop::implementation
 				}
 			};
 
-		// Call lambda to set p
+		// Call deleter lambda to set p
 		deleter(nullptr);
 
 		m_buf.reset(p);

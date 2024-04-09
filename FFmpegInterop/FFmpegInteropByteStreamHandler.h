@@ -55,7 +55,7 @@ namespace winrt::FFmpegInterop::implementation
 		std::map<IMFAsyncResult*, ShutdownWrapper<IMFMediaSource>> m_map;
 	};
 
-	// Byte stream wrapper that prevents the underlying byte stream from being closed until permitted
+	// Byte stream wrapper that prevents the underlying byte stream from being closed unless permitted
 	class ByteStreamProxy :
 		public implements<
 			ByteStreamProxy,

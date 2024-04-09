@@ -86,7 +86,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Call deleter lambda to set p
 		deleter(nullptr);
 
-		m_buf.reset(p);
+		m_buf.reset(exchange(p, nullptr));
 		m_buf.get_deleter() = move(deleter);
 	}
 

@@ -94,9 +94,13 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		auto logger{ FFmpegInteropProvider::CreateMediaSource::Start() };
 
+		// Wrap the byte stream in a proxy to prevent it from being closed if we fail to resolve the media source,
+		// so that the source resolver can rollover and attempt other byte stream handlers.
+		auto byteStreamProxy{ make_self<ByteStreamProxy>(byteStream) };
+
 		// Wrap the byte stream into a random access stream
 		IRandomAccessStream stream{ nullptr };
-		THROW_IF_FAILED(MFCreateStreamOnMFByteStreamEx(byteStream, guid_of<decltype(stream)>(), put_abi(stream)));
+		THROW_IF_FAILED(MFCreateStreamOnMFByteStreamEx(byteStreamProxy.get(), guid_of<decltype(stream)>(), put_abi(stream)));
 
 		// Create the MSS via its activation factory since its constructors don't accept nullptr
 		IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
@@ -115,6 +119,9 @@ namespace winrt::FFmpegInterop::implementation
 		// If for some reason ownership of the media source is never transferred to the caller,
 		// then during destruction the media source will be shutdown to prevent a leak.
 		m_map[result] = ShutdownWrapper<IMFMediaSource>{ std::move(mediaSource) };
+
+		// Allow the byte stream to be closed when the media source shuts down
+		byteStreamProxy->AllowClosing(true);
 
 		logger.Stop();
 	}

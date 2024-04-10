@@ -30,8 +30,8 @@ namespace winrt::FFmpegInterop::implementation
 	public:
 		FFmpegInteropBuffer(_In_ AVBufferRef* bufRef);
 		FFmpegInteropBuffer(_In_ AVBufferRef_ptr bufRef);
-		FFmpegInteropBuffer(_In_ AVPacket_ptr packet);
-		FFmpegInteropBuffer(_In_ AVBlob_ptr buf, _In_ uint32_t bufSize);
+		FFmpegInteropBuffer(_In_ AVPacket_ptr packet) noexcept;
+		FFmpegInteropBuffer(_In_ AVBlob_ptr buf, _In_ uint32_t bufSize) noexcept;
 		FFmpegInteropBuffer(_In_ std::vector<uint8_t>&& buf) noexcept;
 
 		// IBuffer
@@ -71,8 +71,8 @@ namespace winrt::FFmpegInterop::implementation
 	private:
 		void InitMarshaler();
 
+		std::unique_ptr<uint8_t, std::move_only_function<void(uint8_t*)>> m_buf;
 		uint32_t m_length{ 0 };
-		std::unique_ptr<uint8_t, std::function<void(uint8_t*)>> m_buf;
 		com_ptr<IMarshal> m_marshaler;
 		std::once_flag m_marshalerInitFlag;
 	};

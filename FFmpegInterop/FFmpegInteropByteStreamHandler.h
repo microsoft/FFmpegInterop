@@ -63,7 +63,7 @@ namespace winrt::FFmpegInterop::implementation
 			IMFGetService>
 	{
 	public:
-		ByteStreamProxy(_In_ IMFByteStream* byteStream)
+		ByteStreamProxy(_In_ IMFByteStream* byteStream) noexcept
 		{
 			m_byteStream.copy_from(byteStream);
 		}
@@ -178,8 +178,6 @@ namespace winrt::FFmpegInterop::implementation
 			_In_ REFIID riid,
 			_COM_Outptr_ void** ppv) noexcept
 		{
-			RETURN_HR_IF_NULL(E_POINTER, ppv);
-
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 			if (guidService == MF_WRAPPED_OBJECT)
 			{

@@ -94,7 +94,7 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		auto logger{ FFmpegInteropProvider::CreateMediaSource::Start() };
 
-		// Wrap the byte stream in a proxy to prevent it from being closed if we fail to resolve the media source,
+		// Wrap the byte stream in a proxy to prevent it from being closed if we fail to create and initialize the MSS,
 		// so that the source resolver can rollover and attempt other byte stream handlers.
 		auto byteStreamProxy{ make_self<ByteStreamProxy>(byteStream) };
 

@@ -59,8 +59,7 @@ namespace winrt::FFmpegInterop::implementation
 	class ByteStreamProxy :
 		public implements<
 			ByteStreamProxy,
-			IMFByteStream,
-			IMFGetService>
+			IMFByteStream>
 	{
 	public:
 		ByteStreamProxy(_In_ IMFByteStream* byteStream) noexcept
@@ -170,22 +169,6 @@ namespace winrt::FFmpegInterop::implementation
 		{
 			RETURN_HR_IF_EXPECTED(S_FALSE, !m_fAllowClosing);
 			return m_byteStream->Close();
-		}
-
-		// IMFGetService
-		IFACEMETHOD(GetService)(
-			_In_ REFGUID guidService,
-			_In_ REFIID riid,
-			_COM_Outptr_ void** ppv) noexcept
-		{
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-			if (guidService == MF_WRAPPED_OBJECT)
-			{
-				return m_byteStream->QueryInterface(riid, ppv);
-			}
-#endif // WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-
-			RETURN_HR(MF_E_UNSUPPORTED_SERVICE);
 		}
 
 	private:

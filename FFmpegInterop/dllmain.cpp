@@ -34,6 +34,7 @@ BOOL WINAPI DllMain(_In_ HINSTANCE hInstance, _In_ DWORD dwReason, _In_opt_ LPVO
 #ifdef _DEBUG
 		// Register custom FFmpeg logging callback
 		av_log_set_callback(&FFmpegInteropLogging::Log);
+		av_log_set_level(AV_LOG_TRACE);
 #else
 		// Disable FFmpeg logging
 		av_log_set_callback(nullptr);

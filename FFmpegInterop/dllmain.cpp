@@ -31,11 +31,24 @@ BOOL WINAPI DllMain(_In_ HINSTANCE hInstance, _In_ DWORD dwReason, _In_opt_ LPVO
 		// Register TraceLogging provider
 		TraceLoggingRegister(g_FFmpegInteropProvider);
 
-		// Register FFmpegInteropLogging callback
+#ifdef _DEBUG
+		// Register custom FFmpeg logging callback
 		av_log_set_callback(&FFmpegInteropLogging::Log);
+		av_log_set_level(AV_LOG_TRACE);
+#else
+		// Disable FFmpeg logging
+		av_log_set_callback(nullptr);
+		av_log_set_level(AV_LOG_QUIET);
+#endif // _DEBUG
 	}
 	else if (dwReason == DLL_PROCESS_DETACH)
 	{
+#ifdef _DEBUG
+		// Restore the default FFmpeg logging callback
+		// This is not thread safe! This could leave log_callback in av_vlog() dangling after this DLL is unloaded.
+		av_log_set_callback(av_log_default_callback);
+#endif // _DEBUG
+
 		// Unregister TraceLogging provider
 		TraceLoggingUnregister(g_FFmpegInteropProvider);
 	}

@@ -182,6 +182,11 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		vector<pair<GUID, Windows::Foundation::IInspectable>> properties;
 
+		if ((frame->flags & AV_FRAME_FLAG_KEY) != 0)
+		{
+			properties.emplace_back(MFSampleExtension_CleanPoint, PropertyValue::CreateUInt32(true));
+		}
+
 		if ((frame->flags & AV_FRAME_FLAG_INTERLACED) != 0)
 		{
 			properties.emplace_back(MFSampleExtension_Interlaced, PropertyValue::CreateUInt32(true));

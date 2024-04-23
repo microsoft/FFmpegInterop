@@ -11,7 +11,7 @@ common_settings=" \
     --enable-shared \
     --enable-cross-compile \
     --extra-cflags=\"-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00 -GUARD:CF\" \
-    --extra-ldflags=\"-APPCONTAINER WindowsApp.lib -PROFILE -GUARD:CF -DYNAMICBASE\" \
+    --extra-ldflags=\"-APPCONTAINER WindowsApp.lib -PROFILE -GUARD:CF -DYNAMICBASE -NODEFAULTLIB:kernel32.lib -DEFAULTLIB:onecore.lib\" \
     "
 
 # Architecture specific configure settings

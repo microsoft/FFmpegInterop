@@ -1,7 +1,84 @@
 #!/bin/bash
 dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-# Common configure settings for all architectures
+# Parse the options
+options=$(getopt -o "" --long arch:,app-platform:,settings:,crt: -n "$0" -- "$@")
+if [ $? -ne 0 ]; then
+    echo "ERROR: Invalid option(s)"
+    exit 1
+fi
+
+eval set -- "$options"
+
+while true; do
+    case "$1" in
+        --arch)
+            arch=$2
+            shift 2
+            ;;
+        --app-platform)
+            case "${2,,}" in
+                desktop)
+                    app_platform_settings="--extra-cflags=\"-DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP\""
+                    ;;
+                onecore)
+                    app_platform_settings=" \
+                        --extra-cflags=\"-DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00\" \
+                        --extra-ldflags=\"-APPCONTAINER WindowsApp.lib -NODEFAULTLIB:kernel32.lib -DEFAULTLIB:onecore.lib\""
+                    ;;
+                uwp)
+                    app_platform_settings=" \
+                        --extra-cflags=\"-DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00\" \
+                        --extra-ldflags=\"-APPCONTAINER WindowsApp.lib\""
+                    ;;
+                *)
+                    echo "Error: Invalid value for --app-platform: $2. Expected: desktop, onecore, or uwp"
+                    exit 1
+                    ;;
+            esac
+            shift 2
+            ;;
+        --crt)
+            case "${2,,}" in
+                dynamic)
+                    crt_settings="--extra-cflags=\"-MD\""
+                    ;;
+                hybrid)
+                    # The hybrid CRT is a technique using the Universal CRT AND the static CRT to get functional coverage
+                    # without the overhead of the static CRT or the external dependency of the dynamic CRT.
+                    #
+                    # Learn more about the hybrid CRT:
+                    # - https://github.com/microsoft/WindowsAppSDK/blob/main/docs/Coding-Guidelines/HybridCRT.md
+                    # - https://www.youtube.com/watch?v=bNHGU6xmUzE&t=977s
+                    crt_settings="--extra-cflags=\"-MT\" --extra-ldflags=\"-NODEFAULTLIB:libucrt.lib -DEFAULTLIB:ucrt.lib\""
+                    ;;
+                static)
+                    crt_settings="--extra-cflags=\"-MT\""
+                    ;;
+                *)
+                    echo "Error: Invalid value for --crt: $2. Expected: dynamic, hybrid, or static"
+                    exit 1
+                    ;;
+            esac
+            shift 2
+            ;;
+        --settings)
+            user_settings=$2
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "ERROR: Invalid option: -$1" 1>&2
+            exit 1
+            ;;
+    esac
+done
+
+# TODO: Enable additonal optimizations
+# Common settings
 common_settings=" \
     --toolchain=msvc \
     --target-os=win32 \
@@ -10,13 +87,11 @@ common_settings=" \
     --disable-dxva2 \
     --enable-shared \
     --enable-cross-compile \
-    --extra-cflags=\"-MD -DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00 -GUARD:CF\" \
-    --extra-ldflags=\"-APPCONTAINER WindowsApp.lib -PROFILE -GUARD:CF -DYNAMICBASE -NODEFAULTLIB:kernel32.lib -DEFAULTLIB:onecore.lib\" \
+    --extra-cflags=\"-GUARD:CF\" \
+    --extra-ldflags=\"-PROFILE -GUARD:CF -DYNAMICBASE\" \
     "
 
-# Architecture specific configure settings
-arch="${1,,}"
-
+# Architecture-specific settings
 if [ -z $arch ]; then
     echo "ERROR: No architecture set" 1>&2
     exit 1
@@ -53,9 +128,6 @@ else
     exit 1
 fi
 
-# Extra configure settings supplied by user
-extra_settings="${2:-""}"
-
 # Build FFmpeg
 pushd $dir/ffmpeg > /dev/null
 
@@ -63,7 +135,7 @@ rm -rf Output/$arch
 mkdir -p Output/$arch
 cd Output/$arch
 
-eval ../../configure $common_settings $arch_settings $extra_settings &&
+eval ../../configure $common_settings $arch_settings $app_platform_settings $crt_settings $onecore_settings $user_settings &&
 make -j`nproc` &&
 make install
 

@@ -3,7 +3,51 @@
 # Copyright (C) Microsoft. All rights reserved.
 #########################################################
 
-# TODO: Add help
+<#
+.SYNOPSIS
+Builds FFmpeg for the specified architecture(s).
+
+.DESCRIPTION
+Builds FFmpeg for the specified architecture(s).
+
+.PARAMETER Architectures
+Specifies the architecture(s) to build FFmpeg for (x86, x64, arm, and/or arm64).
+
+.PARAMETER AppPlatform
+Specifies the target application platform (desktop, onecore, or uwp).
+
+.PARAMETER CRT
+Specifies what versions of the C runtime libraries to link against (dynamic, hybrid, or static).
+
+See the following resources for more information about the CRT and STL libraries:
+- https://learn.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features
+- https://learn.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library
+
+See the following resources for more information about the hybrid CRT:
+- https://github.com/microsoft/WindowsAppSDK/blob/main/docs/Coding-Guidelines/HybridCRT.md
+- https://www.youtube.com/watch?v=bNHGU6xmUzE&t=977s
+
+.PARAMETER Settings
+Specifies options to pass to FFmpeg's configure script.
+
+.INPUTS
+None. You cannot pipe objects to BuildFFmpeg.ps1.
+
+.OUTPUTS
+None. BuildFFmpeg.ps1 does not generate any output.
+
+.EXAMPLE
+BuildFFmpeg.ps1 -Architectures x86,x64,arm64 -AppPlatform uwp -CRT dynamic -Settings "--enable-small"
+
+.LINK
+https://learn.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features
+
+.LINK
+https://github.com/microsoft/WindowsAppSDK/blob/main/docs/Coding-Guidelines/HybridCRT.md
+
+.LINK
+https://www.youtube.com/watch?v=bNHGU6xmUzE&t=977s
+#>
 
 [CmdletBinding()]
 param(

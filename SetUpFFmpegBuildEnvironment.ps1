@@ -1,9 +1,27 @@
+#!/usr/bin/env powershell
 ###################################################
 # Copyright (C) Microsoft. All rights reserved.
-# 
-# Setup the FFmpeg build environment.
-# https://trac.ffmpeg.org/wiki/CompilationGuide/WinRT
 ###################################################
+
+<#
+.SYNOPSIS
+Sets up the FFmpeg build environment.
+
+.DESCRIPTION
+Sets up the FFmpeg build environment.
+
+.INPUTS
+None. You cannot pipe objects to SetUpFFmpegBuildEnvironment.ps1.
+
+.OUTPUTS
+None. SetUpFFmpegBuildEnvironment.ps1 does not generate any output.
+
+.EXAMPLE
+SetUpFFmpegBuildEnvironment.ps1
+
+.LINK
+https://trac.ffmpeg.org/wiki/CompilationGuide/WinRT
+#>
 
 $install_dir = 'C:'
 $msys2_root = "$install_dir\msys64"

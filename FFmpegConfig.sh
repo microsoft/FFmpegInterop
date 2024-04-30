@@ -77,7 +77,6 @@ while true; do
     esac
 done
 
-# TODO: Enable additonal optimizations
 # Common settings
 common_settings=" \
     --toolchain=msvc \
@@ -87,8 +86,8 @@ common_settings=" \
     --disable-dxva2 \
     --enable-shared \
     --enable-cross-compile \
-    --extra-cflags=\"-GUARD:CF\" \
-    --extra-ldflags=\"-PROFILE -GUARD:CF -DYNAMICBASE\" \
+    --extra-cflags=\"-GUARD:CF -Gy -Gw\" \
+    --extra-ldflags=\"-PROFILE -GUARD:CF -DYNAMICBASE -LTCG -OPT:ICF -OPT:REF\" \
     "
 
 # Architecture-specific settings

@@ -277,7 +277,6 @@ namespace winrt::FFmpegInterop::implementation
 			videoSampleProvider = make_unique<SampleProvider>(formatContext, stream, reader);
 			break;
 
-		case AV_CODEC_ID_AYUV:
 		case AV_CODEC_ID_DVVIDEO:
 		case AV_CODEC_ID_H263:
 		case AV_CODEC_ID_MSMPEG4V1:

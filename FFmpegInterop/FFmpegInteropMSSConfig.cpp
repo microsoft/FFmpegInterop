@@ -24,6 +24,16 @@ using namespace winrt::Windows::Foundation::Collections;
 
 namespace winrt::FFmpegInterop::implementation
 {
+    bool FFmpegInteropMSSConfig::IsMediaSourceAppService()
+    {
+        return m_isMediaSourceAppService;
+    }
+
+    void FFmpegInteropMSSConfig::IsMediaSourceAppService(_In_ bool isMediaSourceAppService)
+    {
+        m_isMediaSourceAppService = isMediaSourceAppService;
+    }
+
     bool FFmpegInteropMSSConfig::ForceAudioDecode()
     {
         return m_forceAudioDecode;

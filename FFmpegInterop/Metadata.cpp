@@ -24,24 +24,31 @@ using namespace winrt;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Storage::Streams;
 using namespace std;
+using namespace wil;
 
 namespace winrt::FFmpegInterop::implementation
 {
-	void PopulateMSSMetadata(_In_ const MediaStreamSource& mss, _In_ const AVDictionary* metadata)
+	com_ptr<IPropertyStore> GetPropertyHandler(_In_ const MediaStreamSource& mss)
 	{
-		// Get the MSS property handler
 		com_ptr<IMFGetService> mediaSource;
 		THROW_IF_FAILED(mss.as<IMFGetService>()->GetService(MF_MEDIASOURCE_SERVICE, __uuidof(mediaSource), mediaSource.put_void()));
 
 		com_ptr<IPropertyStore> propHandler;
 		THROW_IF_FAILED(mediaSource->GetService(MF_PROPERTY_HANDLER_SERVICE, __uuidof(propHandler), propHandler.put_void()));
 
-		// TODO: Populate the property handler with the metadata
+		return propHandler;
 	}
 
-	void SetMSSThumbnail(_In_ const MediaStreamSource& mss, _In_ const AVStream* thumbnailStream)
+	void PopulateMetadata(_In_ const MediaStreamSource& mss, _In_ const AVDictionary* metadata)
 	{
-		// Write the thumbnail to a stream
+		com_ptr<IPropertyStore> propHandler{ GetPropertyHandler(mss) };
+
+		// TODO (osgvsowi/21032904): Populate the property handler with the metadata
+	}
+
+	void SetThumbnail(_In_ const MediaStreamSource& mss, _In_ const AVStream* thumbnailStream)
+	{
+		// Write the thumbnail to an in-memory stream
 		AVPacket_ptr packet{ av_packet_clone(&thumbnailStream->attached_pic) };
 		THROW_IF_NULL_ALLOC(packet);
 
@@ -50,7 +57,23 @@ namespace winrt::FFmpegInterop::implementation
 		InMemoryRandomAccessStream randomAccessStream;
 		randomAccessStream.WriteAsync(buf).get();
 
-		// Set the thumbnail property on the MSS
-		mss.Thumbnail(RandomAccessStreamReference::CreateFromStream(randomAccessStream));
+		com_ptr<IStream> stream;
+		THROW_IF_FAILED(CreateStreamOverRandomAccessStream(
+			static_cast<::IUnknown*>(get_abi(randomAccessStream)),
+			__uuidof(stream),
+			stream.put_void()));
+
+		// Set the thumbnail property on the MSS property handler.
+		// We set the thumbnail on the MSS property handler directly instead of using the MediaStreamSource.Thumbnail
+		// property to avoid a potential race condition. The MSS populates the the thumbnail property for its property
+		// handler asynchronously after the MediaStreamSource.Thumbnail property is set. However, internally MF and its
+		// consumers typically use Win32 interfaces (i.e. IPropertyStore) rather than WinRT interfaces (i.e. IMediaStreamSource),
+		// and may try to get the thumbnail property from the property handler before the MSS has set it.
+		unique_prop_variant thumbnailProp;
+		thumbnailProp.vt = VT_STREAM;
+		thumbnailProp.pStream = stream.detach();
+
+		com_ptr<IPropertyStore> propHandler{ GetPropertyHandler(mss) };
+		THROW_IF_FAILED(propHandler->SetValue(PKEY_ThumbnailStream, thumbnailProp));
 	}
 }

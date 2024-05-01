@@ -40,6 +40,7 @@
 // Windows
 #include <Windows.h>
 #include <shcore.h>
+#include <propkey.h>
 
 // MF
 #include <mfidl.h>

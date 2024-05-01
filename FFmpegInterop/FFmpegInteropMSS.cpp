@@ -247,7 +247,16 @@ namespace winrt::FFmpegInterop::implementation
 				// FFmpeg identifies album/cover art from a music file as a video stream
 				if (stream->disposition == AV_DISPOSITION_ATTACHED_PIC)
 				{
-					SetMSSThumbnail(m_mss, stream);
+					// Don't set a thumbnail on the MSS in media source app service scenarios. The remote stream 
+					// reference could outlive the app service connection. If the remote stream reference is released
+					// after the app service has been suspended, then the remote release will block until the app
+					// service is terminated. This could cause the client app (e.g. File Explorer) to become
+					// unresponsive during this time. 
+					if (!config.IsMediaSourceAppService())
+					{
+						SetThumbnail(m_mss, stream);
+					}
+
 					continue;
 				}
 
@@ -337,7 +346,7 @@ namespace winrt::FFmpegInterop::implementation
 		// Populate metadata
 		if (m_formatContext->metadata != nullptr)
 		{
-			PopulateMSSMetadata(m_mss, m_formatContext->metadata);
+			PopulateMetadata(m_mss, m_formatContext->metadata);
 		}
 
 		// Register event handlers. The delegates hold strong references to tie the lifetime of this object to the MSS.

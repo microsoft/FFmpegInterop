@@ -18,9 +18,17 @@
 
 #pragma once
 
+namespace winrt::FFmpegInterop
+{
+	struct FFmpegInteropMSSConfig;
+}
+
 namespace winrt::FFmpegInterop::implementation
 {
 	com_ptr<IPropertyStore> GetPropertyHandler(_In_ const Windows::Media::Core::MediaStreamSource& mss);
 	void PopulateMetadata(_In_ const Windows::Media::Core::MediaStreamSource& mss, _In_ const AVDictionary* metadata);
-	void SetThumbnail(_In_ const Windows::Media::Core::MediaStreamSource& mss, _In_ const AVStream* thumbnailStream);
+	void SetThumbnail(
+		_In_ const Windows::Media::Core::MediaStreamSource& mss,
+		_In_ const AVStream* thumbnailStream, 
+		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 }

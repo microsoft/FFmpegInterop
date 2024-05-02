@@ -18,6 +18,7 @@
 
 #include "pch.h"
 #include "Metadata.h"
+#include "FFmpegInteropMSSConfig.h"
 
 using namespace winrt::FFmpegInterop::implementation;
 using namespace winrt;
@@ -46,8 +47,21 @@ namespace winrt::FFmpegInterop::implementation
 		// TODO (osgvsowi/21032904): Populate the property handler with the metadata
 	}
 
-	void SetThumbnail(_In_ const MediaStreamSource& mss, _In_ const AVStream* thumbnailStream)
+	void SetThumbnail(
+		_In_ const MediaStreamSource& mss,
+		_In_ const AVStream* thumbnailStream,
+		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
+		// Don't set a thumbnail on the MSS in media source app service scenarios. The remote stream 
+		// reference could outlive the app service connection. If the remote stream reference is released
+		// after the app service has been suspended, then the remote release will block until the app
+		// service is terminated. This could cause the client app (e.g. File Explorer) to become
+		// unresponsive during this time. 
+		if (config != nullptr && !config.IsMediaSourceAppService())
+		{
+			return;
+		}
+
 		// Write the thumbnail to an in-memory stream
 		AVPacket_ptr packet{ av_packet_clone(&thumbnailStream->attached_pic) };
 		THROW_IF_NULL_ALLOC(packet);

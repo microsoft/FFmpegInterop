@@ -94,7 +94,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		FFMPEG_INTEROP_TRACE("Stream %d: New audio stream. AVCodec Name = %S", stream->index, avcodec_get_name(codecId));
+		FFMPEG_INTEROP_TRACE("Stream %d: New audio stream. AVCodec Name = %hs", stream->index, avcodec_get_name(codecId));
 
 		if (config != nullptr && config.ForceAudioDecode())
 		{
@@ -216,7 +216,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		FFMPEG_INTEROP_TRACE("Stream %d: New video stream. AVCodec Name = %S", stream->index, avcodec_get_name(codecId));
+		FFMPEG_INTEROP_TRACE("Stream %d: New video stream. AVCodec Name = %hs", stream->index, avcodec_get_name(codecId));
 
 		if (config != nullptr && config.ForceVideoDecode())
 		{
@@ -313,7 +313,7 @@ namespace winrt::FFmpegInterop::implementation
 		bool setFormatUserData{ false };
 
 		AVCodecID codecId{ stream->codecpar->codec_id };
-		FFMPEG_INTEROP_TRACE("Stream %d: New subtitle stream. AVCodec Name = %S", stream->index, avcodec_get_name(codecId));
+		FFMPEG_INTEROP_TRACE("Stream %d: New subtitle stream. AVCodec Name = %hs", stream->index, avcodec_get_name(codecId));
 
 		switch (codecId)
 		{

@@ -285,7 +285,7 @@ namespace winrt::FFmpegInterop::implementation
 				// Note: MSS didn't expose subtitle streams in media engine scenarios until 19041.
 				if (!ApiInformation::IsTypePresent(L"Windows.Media.Core.TimedMetadataStreamDescriptor"))
 				{
-					FFMPEG_INTEROP_TRACE("Stream %d: No subtitle support. AVCodec Name = %S",
+					FFMPEG_INTEROP_TRACE("Stream %d: No subtitle support. AVCodec Name = %hs",
 						stream->index, avcodec_get_name(stream->codecpar->codec_id));
 					continue;
 				}
@@ -297,7 +297,7 @@ namespace winrt::FFmpegInterop::implementation
 				catch (...)
 				{
 					// Unsupported subtitle stream. Just ignore.
-					FFMPEG_INTEROP_TRACE("Stream %d: Unsupported subtitle stream. AVCodec Name = %S",
+					FFMPEG_INTEROP_TRACE("Stream %d: Unsupported subtitle stream. AVCodec Name = %hs",
 						stream->index, avcodec_get_name(stream->codecpar->codec_id));
 					continue;
 				}
@@ -309,7 +309,7 @@ namespace winrt::FFmpegInterop::implementation
 
 			default:
 				// Ignore this stream
-				FFMPEG_INTEROP_TRACE("Stream %d: Unsupported. AVMediaType = %S, AVCodec Name = %S",
+				FFMPEG_INTEROP_TRACE("Stream %d: Unsupported. AVMediaType = %hs, AVCodec Name = %hs",
 					stream->index, av_get_media_type_string(stream->codecpar->codec_type), avcodec_get_name(stream->codecpar->codec_id));
 				continue;
 			}

@@ -105,7 +105,7 @@ namespace winrt::FFmpegInterop::implementation
 		if (__status < 0) \
 		{ \
 		 	char buf[AV_ERROR_MAX_STRING_SIZE]{0}; \
-			FFMPEG_INTEROP_TRACE("FFmpeg failed: %S", av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, __status)); \
+			FFMPEG_INTEROP_TRACE("FFmpeg failed: %hs", av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, __status)); \
 			THROW_HR_MSG(averror_to_hresult(__status), #status); \
 		} \
 	} while (false) \

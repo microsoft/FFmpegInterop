@@ -65,7 +65,7 @@ namespace winrt::FFmpegInterop::implementation
 				line[i] = '\0';
 			}
 
-			FFMPEG_INTEROP_TRACE("%S", line.get());
+			FFMPEG_INTEROP_TRACE("%hs", line.get());
 		}
 	}
 	CATCH_LOG_RETURN()

@@ -40,11 +40,97 @@ namespace winrt::FFmpegInterop::implementation
 		return propHandler;
 	}
 
-	void PopulateMetadata(_In_ const MediaStreamSource& mss, _In_ const AVDictionary* metadata)
+	void PopulateMetadata(
+		_In_ const MediaStreamSource& mss,
+		_In_ const AVFormatContext* formatContext,
+		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
-		com_ptr<IPropertyStore> propHandler{ GetPropertyHandler(mss) };
+		PopulateMetadata(mss, formatContext->metadata, config);
 
-		// TODO (osgvsowi/21032904): Populate the property handler with the metadata
+		// TODO (brbeec): Add container-specific metadata?
+	}
+
+	void PopulateMetadata(
+		_In_ const MediaStreamSource& mss,
+		_In_ const AVStream* stream,
+		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	{
+		PopulateMetadata(mss, stream->metadata, config);
+
+		// TODO (brbeec): Add stream-specific metadata?
+	}
+
+	void PopulateMetadata(
+		_In_ const MediaStreamSource& mss,
+		_In_opt_ const AVDictionary* metadata,
+		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
+	{
+		if (metadata == nullptr)
+		{
+			// Nothing to do
+			return;
+		}
+
+		com_ptr<IPropertyStore> propHandler{ GetPropertyHandler(mss) };
+		bool isMediaSourceAppService{ config != nullptr && config.IsMediaSourceAppService() };
+
+		const AVDictionaryEntry* tag{ nullptr };
+		while(tag = av_dict_iterate(metadata, tag))
+		{
+			FFMPEG_INTEROP_TRACE("Property: Key = %hs, Value = %hs", tag->key, tag->value);
+
+			// Check if we have a mapping for property
+			auto iter{ c_metadataPropertiesMap.find(tolower(tag->key)) };
+			if (iter != c_metadataPropertiesMap.end())
+			{
+				const PropertyKey& propKey{ iter->second };
+				unique_prop_variant prop;
+				prop.vt = propKey.type;
+
+				// TODO (brbeec): Is this needed?
+				if (isMediaSourceAppService)
+				{
+					// Don't set property values that are object pointers in media source app service scenarios. The remote
+					// stream reference could outlive the app service connection. If the remote stream reference is
+					// released after the app  service has been suspended, then the remote release will block until the
+					// app service is terminated. This could cause the client app (e.g. File Explorer) to become
+					// unresponsive during this time.
+					switch (propKey.type)
+					{
+					case VT_LPWSTR:
+						continue;
+					}
+				}
+
+				// Convert/parse the property value
+				try
+				{
+					switch (propKey.type)
+					{
+					case VT_LPWSTR:
+						prop.pwszVal = to_cotaskmem_string(tag->value).release();
+						break;
+
+					case VT_UI4:
+						prop.ulVal = stoul(tag->value);
+						break;
+
+					default:
+						// Unhandled property type
+						WINRT_ASSERT(false);
+						break;
+					}
+
+					THROW_IF_FAILED(propHandler->SetValue(propKey.key, prop));
+				}
+				catch (...)
+				{
+					LOG_CAUGHT_EXCEPTION_MSG("Failed to convert/parse/set the property value");
+					continue;
+				}
+
+			}
+		}
 	}
 
 	void SetThumbnail(
@@ -52,11 +138,10 @@ namespace winrt::FFmpegInterop::implementation
 		_In_ const AVStream* thumbnailStream,
 		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
-		// Don't set a thumbnail on the MSS in media source app service scenarios. The remote stream 
-		// reference could outlive the app service connection. If the remote stream reference is released
-		// after the app service has been suspended, then the remote release will block until the app
-		// service is terminated. This could cause the client app (e.g. File Explorer) to become
-		// unresponsive during this time. 
+		// Don't set a thumbnail on the MSS in media source app service scenarios. The remote stream reference could
+		// outlive the app service connection. If the remote stream reference is released after the app  service has
+		// been suspended, then the remote release will block until the app service is terminated. This could cause the
+		// client app (e.g. File Explorer) to become unresponsive during this time. 
 		if (config != nullptr && !config.IsMediaSourceAppService())
 		{
 			return;
@@ -77,7 +162,6 @@ namespace winrt::FFmpegInterop::implementation
 			__uuidof(stream),
 			stream.put_void()));
 
-		// Set the thumbnail property on the MSS property handler.
 		// We set the thumbnail on the MSS property handler directly instead of using the MediaStreamSource.Thumbnail
 		// property to avoid a potential race condition. The MSS populates the the thumbnail property for its property
 		// handler asynchronously after the MediaStreamSource.Thumbnail property is set. However, internally MF and its

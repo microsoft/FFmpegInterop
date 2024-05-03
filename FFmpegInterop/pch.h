@@ -41,6 +41,7 @@
 #include <Windows.h>
 #include <shcore.h>
 #include <propkey.h>
+#include <propvarutil.h>
 
 // MF
 #include <mfidl.h>

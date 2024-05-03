@@ -193,14 +193,18 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		THROW_HR_IF_FFMPEG_FAILED(avformat_find_stream_info(m_formatContext.get(), nullptr));
 
-		int preferredAudioStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) };
-		int preferredVideoStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0) };
-		bool hasAudio{ false };
-		bool hasVideo{ false };
+		int audioStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) };
+		int videoStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0) };
+		int thumnbailStreamId{ -1 };
 		vector<IMediaStreamDescriptor> pendingAudioStreamDescriptors;
 		vector<IMediaStreamDescriptor> pendingVideoStreamDescriptors;
 
-		for (unsigned int i{ 0 }; i < m_formatContext->nb_streams; i++)
+		if (m_formatContext->streams[videoStreamId]->disposition == AV_DISPOSITION_ATTACHED_PIC)
+		{
+			videoStreamId = -1;
+		}
+
+		for (int i{ 0 }; i < static_cast<int>(m_formatContext->nb_streams); i++)
 		{
 			AVStream* stream{ m_formatContext->streams[i] };
 
@@ -216,15 +220,15 @@ namespace winrt::FFmpegInterop::implementation
 			case AVMEDIA_TYPE_AUDIO:
 				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateAudioStream(m_formatContext.get(), stream, m_reader, config);
 
-				if (hasAudio || preferredAudioStreamId == i || preferredAudioStreamId < 0)
+				if (i >= audioStreamId)
 				{
 					// Add the stream to the MSS
 					m_mss.AddStreamDescriptor(streamDescriptor);
 
 					// Check if this is the first audio stream added to the MSS
-					if (!hasAudio)
+					if (i == audioStreamId || audioStreamId < 0)
 					{
-						hasAudio = true;
+						audioStreamId = i;
 						sampleProvider->Select(); // The first audio stream is selected by default
 
 						// Add any audio streams we already enumerated
@@ -247,21 +251,30 @@ namespace winrt::FFmpegInterop::implementation
 				// FFmpeg identifies album/cover art from a music file as a video stream
 				if (stream->disposition == AV_DISPOSITION_ATTACHED_PIC)
 				{
-					SetThumbnail(m_mss, stream, config);
+					if (thumnbailStreamId < 0)
+					{
+						try
+						{
+							SetThumbnail(m_mss, stream, config);
+							thumnbailStreamId = i;
+						}
+						CATCH_LOG_MSG("Failed to set thumbnail");
+					}
+
 					continue;
 				}
 
 				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateVideoStream(m_formatContext.get(), stream, m_reader, config);
 
-				if (hasVideo || preferredVideoStreamId == i || preferredVideoStreamId < 0)
+				if (i >= videoStreamId)
 				{
 					// Add the stream to the MSS
 					m_mss.AddStreamDescriptor(streamDescriptor);
 
 					// Check if this is the first video stream added to the MSS
-					if (!hasVideo)
+					if (i == videoStreamId || videoStreamId < 0)
 					{
-						hasVideo = true;
+						videoStreamId = i;
 						sampleProvider->Select(); // The first video stream is selected by default
 
 						// Add any video streams we already enumerated
@@ -335,10 +348,17 @@ namespace winrt::FFmpegInterop::implementation
 		}
 
 		// Populate metadata
-		if (m_formatContext->metadata != nullptr)
+		if (audioStreamId >= 0)
 		{
-			PopulateMetadata(m_mss, m_formatContext->metadata);
+			PopulateMetadata(m_mss, m_formatContext->streams[audioStreamId], config);
 		}
+
+		if (videoStreamId >= 0)
+		{
+			PopulateMetadata(m_mss, m_formatContext->streams[videoStreamId], config);
+		}
+
+		PopulateMetadata(m_mss, m_formatContext.get(), config);
 
 		// Register event handlers. The delegates hold strong references to tie the lifetime of this object to the MSS.
 		m_startingEventToken = m_mss.Starting({ get_strong(), &FFmpegInteropMSS::OnStarting });

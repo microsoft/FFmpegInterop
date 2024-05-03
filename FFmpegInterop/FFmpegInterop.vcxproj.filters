@@ -30,7 +30,6 @@
     <ClCompile Include="NALUSampleProvider.cpp" />
     <ClCompile Include="HEVCSampleProvider.cpp" />
     <ClCompile Include="ACMSampleProvider.cpp" />
-    <ClCompile Include="Utility.cpp" />
     <ClCompile Include="VFWSampleProvider.cpp" />
     <ClCompile Include="BitstreamReader.cpp" />
     <ClCompile Include="LogEventArgs.cpp" />

@@ -68,12 +68,12 @@ namespace winrt::FFmpegInterop::implementation
 		int size{ MultiByteToWideChar(CP_UTF8, 0, view.data(), static_cast<int32_t>(view.size()), nullptr, 0) };
 		THROW_LAST_ERROR_IF(size == 0);
 
-        // Allocate the buffer and convert the string
+		// Allocate the buffer and convert the string
 		wil::unique_cotaskmem_string result{ wil::make_cotaskmem_string(nullptr, size) };
 		int charsWritten{ MultiByteToWideChar(CP_UTF8, 0, view.data(), static_cast<int32_t>(view.size()), result.get(), size) };
 		THROW_HR_IF(E_UNEXPECTED, charsWritten != size);
 
-        return result;
+		return result;
 	};
 
 	constexpr uint8_t BITS_PER_BYTE{ 8 };
@@ -133,40 +133,7 @@ namespace winrt::FFmpegInterop::implementation
 	} while (false) \
 
 	// Helper function to create a PropertyValue from an MF attribute
-	inline Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propvar)
-	{
-		switch (propvar.vt)
-		{
-		case MF_ATTRIBUTE_UINT32:
-			return Windows::Foundation::PropertyValue::CreateUInt32(propvar.ulVal);
-
-		case MF_ATTRIBUTE_UINT64:
-			return Windows::Foundation::PropertyValue::CreateUInt64(propvar.uhVal.QuadPart);
-
-		case MF_ATTRIBUTE_DOUBLE:
-			return Windows::Foundation::PropertyValue::CreateDouble(propvar.dblVal);
-
-		case MF_ATTRIBUTE_GUID:
-			return Windows::Foundation::PropertyValue::CreateGuid(*propvar.puuid);
-
-		case MF_ATTRIBUTE_STRING:
-			return Windows::Foundation::PropertyValue::CreateString(propvar.pwszVal);
-
-		case MF_ATTRIBUTE_BLOB:
-			return Windows::Foundation::PropertyValue::CreateUInt8Array({ propvar.blob.pBlobData, propvar.blob.pBlobData + propvar.blob.cbSize });
-
-		case MF_ATTRIBUTE_IUNKNOWN:
-		{
-			Windows::Foundation::IInspectable inspectable{ nullptr };
-			THROW_IF_FAILED(propvar.punkVal->QueryInterface(guid_of<decltype(inspectable)>(), put_abi(inspectable)));
-			return inspectable;
-		}
-
-		default:
-			WINRT_ASSERT(false);
-			THROW_HR(E_UNEXPECTED);
-		}
-	}
+	extern Windows::Foundation::IInspectable CreatePropValueFromMFAttribute(_In_ const PROPVARIANT& propVar);
 
 	class MFCallbackBase :
 		public implements<MFCallbackBase, IMFAsyncCallback>

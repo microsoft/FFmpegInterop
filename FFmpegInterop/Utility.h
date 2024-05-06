@@ -61,7 +61,7 @@ namespace winrt::FFmpegInterop::implementation
 	}
 
 	template <typename T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
-	wil::unique_cotaskmem_string to_cotaskmem_string(_In_ const T& str)
+	inline wil::unique_cotaskmem_string to_cotaskmem_string(_In_ const T& str)
 	{
 		// Get the required buffer size
 		const std::string_view view{ str };

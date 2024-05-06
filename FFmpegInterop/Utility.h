@@ -63,14 +63,17 @@ namespace winrt::FFmpegInterop::implementation
 	template <typename T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
 	inline wil::unique_cotaskmem_string to_cotaskmem_string(_In_ const T& str)
 	{
+		const std::string_view strView{ str };
+		const size_t originalSizeInBytes{ strView.size() * sizeof(char) };
+		THROW_HR_IF(HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW), originalSizeInBytes > std::numeric_limits<int32_t>::max());
+
 		// Get the required buffer size
-		const std::string_view view{ str };
-		int size{ MultiByteToWideChar(CP_UTF8, 0, view.data(), static_cast<int32_t>(view.size()), nullptr, 0) };
+		int size{ MultiByteToWideChar(CP_UTF8, 0, strView.data(), static_cast<int32_t>(originalSizeInBytes), nullptr, 0) };
 		THROW_LAST_ERROR_IF(size == 0);
 
 		// Allocate the buffer and convert the string
 		wil::unique_cotaskmem_string result{ wil::make_cotaskmem_string(nullptr, size) };
-		int charsWritten{ MultiByteToWideChar(CP_UTF8, 0, view.data(), static_cast<int32_t>(view.size()), result.get(), size) };
+		int charsWritten{ MultiByteToWideChar(CP_UTF8, 0, strView.data(), static_cast<int32_t>(originalSizeInBytes), result.get(), size) };
 		THROW_HR_IF(E_UNEXPECTED, charsWritten != size);
 
 		return result;

@@ -57,7 +57,7 @@ namespace winrt::FFmpegInterop::implementation
 		{
 			FFMPEG_INTEROP_TRACE("Property: Key = %hs, Value = %hs", tag->key, tag->value);
 
-			// Check if we have a mapping for property
+			// Check if we have a mapping for the property
 			auto iter{ c_metadataPropertiesMap.find(tolower(tag->key)) };
 			if (iter != c_metadataPropertiesMap.end())
 			{
@@ -133,7 +133,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		com_ptr<IStream> thumbnailStream;
 		THROW_IF_FAILED(CreateStreamOverRandomAccessStream(
-			static_cast<::IUnknown*>(get_abi(randomAccessStream)),
+			winrt::get_unknown(randomAccessStream),
 			__uuidof(thumbnailStream),
 			thumbnailStream.put_void()));
 

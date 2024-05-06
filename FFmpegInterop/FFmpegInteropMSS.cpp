@@ -137,7 +137,7 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		// Convert async IRandomAccessStream to sync IStream
 		THROW_HR_IF_NULL(E_INVALIDARG, fileStream);
-		THROW_IF_FAILED(CreateStreamOverRandomAccessStream(static_cast<::IUnknown*>(get_abi(fileStream)), __uuidof(m_fileStream), m_fileStream.put_void()));
+		THROW_IF_FAILED(CreateStreamOverRandomAccessStream(winrt::get_unknown(fileStream), __uuidof(m_fileStream), m_fileStream.put_void()));
 
 		// Setup FFmpeg custom IO to access file as stream. This is necessary when accessing any file outside of app installation directory and appdata folder.
 		// Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context

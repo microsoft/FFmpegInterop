@@ -78,21 +78,10 @@ namespace winrt::FFmpegInterop::implementation
 
 	void PopulateMetadata(
 		_In_ const Windows::Media::Core::MediaStreamSource& mss,
-		_In_ const AVFormatContext* formatContext,
-		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-
-	void PopulateMetadata(
-		_In_ const Windows::Media::Core::MediaStreamSource& mss,
-		_In_ const AVStream* stream,
-		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
-
-	void PopulateMetadata(
-		_In_ const Windows::Media::Core::MediaStreamSource& mss,
-		_In_ const AVDictionary* metadata,
-		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
+		_In_opt_ const AVDictionary* metadata);
 
 	void SetThumbnail(
 		_In_ const Windows::Media::Core::MediaStreamSource& mss,
-		_In_ const AVStream* thumbnailStream,
+		_In_ const AVStream* stream,
 		_In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config);
 }

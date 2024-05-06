@@ -199,7 +199,8 @@ namespace winrt::FFmpegInterop::implementation
 		vector<IMediaStreamDescriptor> pendingAudioStreamDescriptors;
 		vector<IMediaStreamDescriptor> pendingVideoStreamDescriptors;
 
-		if (m_formatContext->streams[videoStreamId]->disposition == AV_DISPOSITION_ATTACHED_PIC)
+		// Make sure the preferred video stream isn't album/cover art
+		if (videoStreamId >= 0 && m_formatContext->streams[videoStreamId]->disposition == AV_DISPOSITION_ATTACHED_PIC)
 		{
 			videoStreamId = -1;
 		}
@@ -258,7 +259,7 @@ namespace winrt::FFmpegInterop::implementation
 							SetThumbnail(m_mss, stream, config);
 							thumnbailStreamId = i;
 						}
-						CATCH_LOG_MSG("Failed to set thumbnail");
+						CATCH_LOG_MSG("Stream %d: Failed to set thumbnail", stream->index);
 					}
 
 					continue;
@@ -350,21 +351,24 @@ namespace winrt::FFmpegInterop::implementation
 		// Populate metadata
 		if (audioStreamId >= 0)
 		{
-			PopulateMetadata(m_mss, m_formatContext->streams[audioStreamId], config);
+			FFMPEG_INTEROP_TRACE("Stream %d: Populating metadata", m_formatContext->streams[audioStreamId]->index);
+			PopulateMetadata(m_mss, m_formatContext->streams[audioStreamId]->metadata);
 		}
 
 		if (videoStreamId >= 0)
 		{
-			PopulateMetadata(m_mss, m_formatContext->streams[videoStreamId], config);
+			FFMPEG_INTEROP_TRACE("Stream %d: Populating metadata", m_formatContext->streams[videoStreamId]->index);
+			PopulateMetadata(m_mss, m_formatContext->streams[videoStreamId]->metadata);
 		}
 
-		PopulateMetadata(m_mss, m_formatContext.get(), config);
+		FFMPEG_INTEROP_TRACE("Populating format metadata");
+		PopulateMetadata(m_mss, m_formatContext->metadata);
 
 		// Register event handlers. The delegates hold strong references to tie the lifetime of this object to the MSS.
-		m_startingEventToken = m_mss.Starting({ get_strong(), &FFmpegInteropMSS::OnStarting });
-		m_sampleRequestedEventToken = m_mss.SampleRequested({ get_strong(), &FFmpegInteropMSS::OnSampleRequested });
-		m_switchStreamsRequestedEventToken = m_mss.SwitchStreamsRequested({ get_strong(), &FFmpegInteropMSS::OnSwitchStreamsRequested });
-		m_closedEventToken = m_mss.Closed({ get_strong(), &FFmpegInteropMSS::OnClosed });
+		m_startingRevoker = m_mss.Starting(auto_revoke, { get_strong(), &FFmpegInteropMSS::OnStarting });
+		m_sampleRequestedRevoker = m_mss.SampleRequested(auto_revoke, { get_strong(), &FFmpegInteropMSS::OnSampleRequested });
+		m_switchStreamsRequestedRevoker = m_mss.SwitchStreamsRequested(auto_revoke, { get_strong(), &FFmpegInteropMSS::OnSwitchStreamsRequested });
+		m_closedRevoker = m_mss.Closed(auto_revoke, { get_strong(), &FFmpegInteropMSS::OnClosed });
 	}
 
 	void FFmpegInteropMSS::OnStarting(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceStartingEventArgs& args)
@@ -381,7 +385,7 @@ namespace winrt::FFmpegInterop::implementation
 
 			const TimeSpan hnsSeekTime{ startPosition.Value() };
 			FFMPEG_INTEROP_TRACE("Seek to %I64d hns", hnsSeekTime.count());
-			
+
 			try
 			{
 				// Convert the seek time from HNS to AV_TIME_BASE
@@ -501,10 +505,10 @@ namespace winrt::FFmpegInterop::implementation
 		// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
 		// the remote app process being suspended. If the remote app process is suspended first, then COM may cause a hang until the 
 		// remote app process is terminated.
-		m_mss.Starting(m_startingEventToken);
-		m_mss.SampleRequested(m_sampleRequestedEventToken);
-		m_mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
-		m_mss.Closed(m_closedEventToken);
+		m_startingRevoker.revoke();
+		m_sampleRequestedRevoker.revoke();
+		m_switchStreamsRequestedRevoker.revoke();
+		m_closedRevoker.revoke();
 
 		// Release the MSS and file stream
 		// This is critically important to do for the media source app service scenario! The remote app process may be suspended anytime after 

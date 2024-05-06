@@ -55,10 +55,10 @@ namespace winrt::FFmpegInterop::implementation
 		std::map<Windows::Media::Core::IMediaStreamDescriptor, std::unique_ptr<SampleProvider>> m_streamDescriptorMap;
 		std::map<int, SampleProvider*> m_streamIdMap;
 
-		event_token m_startingEventToken;
-		event_token m_sampleRequestedEventToken;
-		event_token m_switchStreamsRequestedEventToken;
-		event_token m_closedEventToken;
+		Windows::Media::Core::MediaStreamSource::Starting_revoker m_startingRevoker;
+		Windows::Media::Core::MediaStreamSource::SampleRequested_revoker m_sampleRequestedRevoker;
+		Windows::Media::Core::MediaStreamSource::SwitchStreamsRequested_revoker m_switchStreamsRequestedRevoker;
+		Windows::Media::Core::MediaStreamSource::Closed_revoker m_closedRevoker;
 	};
 }
 

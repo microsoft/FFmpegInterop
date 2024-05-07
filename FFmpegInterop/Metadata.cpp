@@ -140,13 +140,13 @@ namespace winrt::FFmpegInterop::implementation
 		// We intentionally set PKEY_ThumbnailStream on the MSS property handler instead of using the MediaStreamSource.Thumbnail 
 		// property in order to avoid a potential race condition. The MSS sets the PKEY_ThumbnailStream property for its
 		// property handler asynchronously after the MediaStreamSource.Thumbnail property is set. This creates a window
-		// of time where a property handler consumer could try to query for the PKEY_ThumbnailStream property before
-		// it's been set.
+		// of time where a property handler consumer could query for the PKEY_ThumbnailStream property before it's been
+		// set and fail to retrieve the thumbnail.
 		//
 		// Note, however, that the MSS doesn't check its property handler for the PKEY_ThumbnailStream property when a
 		// consumer gets the MediaStreamSource.Thumbnail property... This isn't an issue if the MSS consumer is another
 		// Windows Media component though, as MF uses the IPropertyHandler interface rather than the IMediaStreamSource
-		// interface.
+		// interface for retrieving metadata.
 		unique_prop_variant thumbnailProp;
 		thumbnailProp.vt = VT_STREAM;
 		thumbnailProp.pStream = thumbnailStream.detach();

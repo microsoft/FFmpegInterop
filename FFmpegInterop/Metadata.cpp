@@ -118,10 +118,6 @@ namespace winrt::FFmpegInterop::implementation
 
 		FFMPEG_INTEROP_TRACE("Stream %d: Setting thumbnail", stream->index);
 
-		stream->attached_pic.data;
-		stream->attached_pic.data;
-
-
 		// Write the thumbnail to an in-memory stream
 		AVPacket_ptr packet{ av_packet_clone(&stream->attached_pic) };
 		THROW_IF_NULL_ALLOC(packet);

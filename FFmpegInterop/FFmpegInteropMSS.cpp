@@ -195,7 +195,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		int audioStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) };
 		int videoStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0) };
-		int thumnbailStreamId{ -1 };
+		int thumbnailStreamId{ -1 };
 		vector<IMediaStreamDescriptor> pendingAudioStreamDescriptors;
 		vector<IMediaStreamDescriptor> pendingVideoStreamDescriptors;
 
@@ -252,12 +252,12 @@ namespace winrt::FFmpegInterop::implementation
 				// FFmpeg identifies album/cover art from a music file as a video stream
 				if (stream->disposition == AV_DISPOSITION_ATTACHED_PIC)
 				{
-					if (thumnbailStreamId < 0)
+					if (thumbnailStreamId < 0)
 					{
 						try
 						{
 							SetThumbnail(m_mss, stream, config);
-							thumnbailStreamId = i;
+							thumbnailStreamId = i;
 						}
 						CATCH_LOG_MSG("Stream %d: Failed to set thumbnail", stream->index);
 					}
@@ -351,13 +351,13 @@ namespace winrt::FFmpegInterop::implementation
 		// Populate metadata
 		if (audioStreamId >= 0)
 		{
-			FFMPEG_INTEROP_TRACE("Stream %d: Populating metadata", m_formatContext->streams[audioStreamId]->index);
+			FFMPEG_INTEROP_TRACE("Stream %d: Populating audio metadata", m_formatContext->streams[audioStreamId]->index);
 			PopulateMetadata(m_mss, m_formatContext->streams[audioStreamId]->metadata);
 		}
 
 		if (videoStreamId >= 0)
 		{
-			FFMPEG_INTEROP_TRACE("Stream %d: Populating metadata", m_formatContext->streams[videoStreamId]->index);
+			FFMPEG_INTEROP_TRACE("Stream %d: Populating video metadata", m_formatContext->streams[videoStreamId]->index);
 			PopulateMetadata(m_mss, m_formatContext->streams[videoStreamId]->metadata);
 		}
 

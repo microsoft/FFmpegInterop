@@ -21,7 +21,8 @@ namespace FFmpegInterop
 	runtimeclass FFmpegInteropMSSConfig
 	{
 		FFmpegInteropMSSConfig();
-		
+
+		Boolean IsMediaSourceAppService;
 		Boolean ForceAudioDecode;
 		Boolean ForceVideoDecode;
 		UInt32 AllowedDecodeErrors;

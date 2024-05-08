@@ -56,12 +56,12 @@ namespace winrt::FFmpegInterop::implementation
 #define FFMPEG_INTEROP_TRACE(message, ...) \
 __if_exists(__identifier(this)) \
 { \
-	FFmpegInteropProvider::TraceLoggingInfo("(%S%d) %S@0x%p: " message, \
+	FFmpegInteropProvider::TraceLoggingInfo("(%hs%d) %hs@0x%p: " message, \
 		FILENAME(__FILE__), __LINE__, __func__, this, __VA_ARGS__) \
 } \
 __if_not_exists(__identifier(this)) \
 { \
-	FFmpegInteropProvider::TraceLoggingInfo("(%S%d) %S: " message, \
+	FFmpegInteropProvider::TraceLoggingInfo("(%hs%d) %hs: " message, \
 		FILENAME(__FILE__), __LINE__, __func__, __VA_ARGS__) \
 } \
 

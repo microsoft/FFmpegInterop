@@ -27,6 +27,8 @@ namespace winrt::FFmpegInterop::implementation
     public:
         FFmpegInteropMSSConfig() = default;
 
+        bool IsMediaSourceAppService();
+        void IsMediaSourceAppService(_In_ bool isMediaSourceAppService);
         bool ForceAudioDecode();
         void ForceAudioDecode(_In_ bool forceAudioDecode);
         bool ForceVideoDecode();
@@ -38,6 +40,7 @@ namespace winrt::FFmpegInterop::implementation
         static constexpr uint32_t kAllowedDecodeErrorsDefault{ 10 };
 
     private:
+        bool m_isMediaSourceAppService{ false };
         bool m_forceAudioDecode{ false };
         bool m_forceVideoDecode{ false };
         uint32_t m_allowedDecodeErrors{ kAllowedDecodeErrorsDefault };

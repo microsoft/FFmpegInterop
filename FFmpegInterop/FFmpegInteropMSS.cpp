@@ -137,7 +137,7 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		// Convert async IRandomAccessStream to sync IStream
 		THROW_HR_IF_NULL(E_INVALIDARG, fileStream);
-		THROW_IF_FAILED(CreateStreamOverRandomAccessStream(static_cast<::IUnknown*>(get_abi(fileStream)), __uuidof(m_fileStream), m_fileStream.put_void()));
+		THROW_IF_FAILED(CreateStreamOverRandomAccessStream(winrt::get_unknown(fileStream), __uuidof(m_fileStream), m_fileStream.put_void()));
 
 		// Setup FFmpeg custom IO to access file as stream. This is necessary when accessing any file outside of app installation directory and appdata folder.
 		// Credit to Philipp Sch http://www.codeproject.com/Tips/489450/Creating-Custom-FFmpeg-IO-Context
@@ -193,14 +193,19 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		THROW_HR_IF_FFMPEG_FAILED(avformat_find_stream_info(m_formatContext.get(), nullptr));
 
-		int preferredAudioStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) };
-		int preferredVideoStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0) };
-		bool hasAudio{ false };
-		bool hasVideo{ false };
+		int audioStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0) };
+		int videoStreamId{ av_find_best_stream(m_formatContext.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0) };
+		int thumbnailStreamId{ -1 };
 		vector<IMediaStreamDescriptor> pendingAudioStreamDescriptors;
 		vector<IMediaStreamDescriptor> pendingVideoStreamDescriptors;
 
-		for (unsigned int i{ 0 }; i < m_formatContext->nb_streams; i++)
+		// Make sure the preferred video stream isn't album/cover art
+		if (videoStreamId >= 0 && m_formatContext->streams[videoStreamId]->disposition == AV_DISPOSITION_ATTACHED_PIC)
+		{
+			videoStreamId = -1;
+		}
+
+		for (int i{ 0 }; i < static_cast<int>(m_formatContext->nb_streams); i++)
 		{
 			AVStream* stream{ m_formatContext->streams[i] };
 
@@ -216,15 +221,15 @@ namespace winrt::FFmpegInterop::implementation
 			case AVMEDIA_TYPE_AUDIO:
 				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateAudioStream(m_formatContext.get(), stream, m_reader, config);
 
-				if (hasAudio || preferredAudioStreamId == i || preferredAudioStreamId < 0)
+				if (i >= audioStreamId)
 				{
 					// Add the stream to the MSS
 					m_mss.AddStreamDescriptor(streamDescriptor);
 
 					// Check if this is the first audio stream added to the MSS
-					if (!hasAudio)
+					if (i == audioStreamId || audioStreamId < 0)
 					{
-						hasAudio = true;
+						audioStreamId = i;
 						sampleProvider->Select(); // The first audio stream is selected by default
 
 						// Add any audio streams we already enumerated
@@ -247,21 +252,30 @@ namespace winrt::FFmpegInterop::implementation
 				// FFmpeg identifies album/cover art from a music file as a video stream
 				if (stream->disposition == AV_DISPOSITION_ATTACHED_PIC)
 				{
-					SetMSSThumbnail(m_mss, stream);
+					if (thumbnailStreamId < 0)
+					{
+						try
+						{
+							SetThumbnail(m_mss, stream, config);
+							thumbnailStreamId = i;
+						}
+						CATCH_LOG_MSG("Stream %d: Failed to set thumbnail", stream->index);
+					}
+
 					continue;
 				}
 
 				tie(sampleProvider, streamDescriptor) = StreamFactory::CreateVideoStream(m_formatContext.get(), stream, m_reader, config);
 
-				if (hasVideo || preferredVideoStreamId == i || preferredVideoStreamId < 0)
+				if (i >= videoStreamId)
 				{
 					// Add the stream to the MSS
 					m_mss.AddStreamDescriptor(streamDescriptor);
 
 					// Check if this is the first video stream added to the MSS
-					if (!hasVideo)
+					if (i == videoStreamId || videoStreamId < 0)
 					{
-						hasVideo = true;
+						videoStreamId = i;
 						sampleProvider->Select(); // The first video stream is selected by default
 
 						// Add any video streams we already enumerated
@@ -285,7 +299,7 @@ namespace winrt::FFmpegInterop::implementation
 				// Note: MSS didn't expose subtitle streams in media engine scenarios until 19041.
 				if (!ApiInformation::IsTypePresent(L"Windows.Media.Core.TimedMetadataStreamDescriptor"))
 				{
-					FFMPEG_INTEROP_TRACE("Stream %d: No subtitle support. AVCodec Name = %S",
+					FFMPEG_INTEROP_TRACE("Stream %d: No subtitle support. AVCodec Name = %hs",
 						stream->index, avcodec_get_name(stream->codecpar->codec_id));
 					continue;
 				}
@@ -297,7 +311,7 @@ namespace winrt::FFmpegInterop::implementation
 				catch (...)
 				{
 					// Unsupported subtitle stream. Just ignore.
-					FFMPEG_INTEROP_TRACE("Stream %d: Unsupported subtitle stream. AVCodec Name = %S",
+					FFMPEG_INTEROP_TRACE("Stream %d: Unsupported subtitle stream. AVCodec Name = %hs",
 						stream->index, avcodec_get_name(stream->codecpar->codec_id));
 					continue;
 				}
@@ -309,7 +323,7 @@ namespace winrt::FFmpegInterop::implementation
 
 			default:
 				// Ignore this stream
-				FFMPEG_INTEROP_TRACE("Stream %d: Unsupported. AVMediaType = %S, AVCodec Name = %S",
+				FFMPEG_INTEROP_TRACE("Stream %d: Unsupported. AVMediaType = %hs, AVCodec Name = %hs",
 					stream->index, av_get_media_type_string(stream->codecpar->codec_type), avcodec_get_name(stream->codecpar->codec_id));
 				continue;
 			}
@@ -335,16 +349,26 @@ namespace winrt::FFmpegInterop::implementation
 		}
 
 		// Populate metadata
-		if (m_formatContext->metadata != nullptr)
+		if (audioStreamId >= 0)
 		{
-			PopulateMSSMetadata(m_mss, m_formatContext->metadata);
+			FFMPEG_INTEROP_TRACE("Stream %d: Populating audio metadata", m_formatContext->streams[audioStreamId]->index);
+			PopulateMetadata(m_mss, m_formatContext->streams[audioStreamId]->metadata);
 		}
 
+		if (videoStreamId >= 0)
+		{
+			FFMPEG_INTEROP_TRACE("Stream %d: Populating video metadata", m_formatContext->streams[videoStreamId]->index);
+			PopulateMetadata(m_mss, m_formatContext->streams[videoStreamId]->metadata);
+		}
+
+		FFMPEG_INTEROP_TRACE("Populating format metadata");
+		PopulateMetadata(m_mss, m_formatContext->metadata);
+
 		// Register event handlers. The delegates hold strong references to tie the lifetime of this object to the MSS.
-		m_startingEventToken = m_mss.Starting({ get_strong(), &FFmpegInteropMSS::OnStarting });
-		m_sampleRequestedEventToken = m_mss.SampleRequested({ get_strong(), &FFmpegInteropMSS::OnSampleRequested });
-		m_switchStreamsRequestedEventToken = m_mss.SwitchStreamsRequested({ get_strong(), &FFmpegInteropMSS::OnSwitchStreamsRequested });
-		m_closedEventToken = m_mss.Closed({ get_strong(), &FFmpegInteropMSS::OnClosed });
+		m_startingRevoker = m_mss.Starting(auto_revoke, { get_strong(), &FFmpegInteropMSS::OnStarting });
+		m_sampleRequestedRevoker = m_mss.SampleRequested(auto_revoke, { get_strong(), &FFmpegInteropMSS::OnSampleRequested });
+		m_switchStreamsRequestedRevoker = m_mss.SwitchStreamsRequested(auto_revoke, { get_strong(), &FFmpegInteropMSS::OnSwitchStreamsRequested });
+		m_closedRevoker = m_mss.Closed(auto_revoke, { get_strong(), &FFmpegInteropMSS::OnClosed });
 	}
 
 	void FFmpegInteropMSS::OnStarting(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceStartingEventArgs& args)
@@ -361,7 +385,7 @@ namespace winrt::FFmpegInterop::implementation
 
 			const TimeSpan hnsSeekTime{ startPosition.Value() };
 			FFMPEG_INTEROP_TRACE("Seek to %I64d hns", hnsSeekTime.count());
-			
+
 			try
 			{
 				// Convert the seek time from HNS to AV_TIME_BASE
@@ -481,10 +505,10 @@ namespace winrt::FFmpegInterop::implementation
 		// they'll be released when the MSS is destroyed. That kicks off a race condition between COM releasing the remote interfaces and
 		// the remote app process being suspended. If the remote app process is suspended first, then COM may cause a hang until the 
 		// remote app process is terminated.
-		m_mss.Starting(m_startingEventToken);
-		m_mss.SampleRequested(m_sampleRequestedEventToken);
-		m_mss.SwitchStreamsRequested(m_switchStreamsRequestedEventToken);
-		m_mss.Closed(m_closedEventToken);
+		m_startingRevoker.revoke();
+		m_sampleRequestedRevoker.revoke();
+		m_switchStreamsRequestedRevoker.revoke();
+		m_closedRevoker.revoke();
 
 		// Release the MSS and file stream
 		// This is critically important to do for the media source app service scenario! The remote app process may be suspended anytime after 

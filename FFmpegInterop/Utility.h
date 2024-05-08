@@ -54,6 +54,31 @@ namespace std
 
 namespace winrt::FFmpegInterop::implementation
 {
+	inline std::string tolower(_Inout_ std::string str)
+	{
+		std::transform(str.begin(), str.end(), str.begin(), [](_In_ char c){ return std::tolower(c); });
+		return str;
+	}
+
+	template <typename T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+	inline wil::unique_cotaskmem_string to_cotaskmem_string(_In_ const T& str)
+	{
+		const std::string_view strView{ str };
+		const size_t originalSizeInBytes{ strView.size() * sizeof(char) };
+		THROW_HR_IF(HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW), originalSizeInBytes > std::numeric_limits<int32_t>::max());
+
+		// Get the required buffer size
+		int size{ MultiByteToWideChar(CP_UTF8, 0, strView.data(), static_cast<int32_t>(originalSizeInBytes), nullptr, 0) };
+		THROW_LAST_ERROR_IF(size == 0);
+
+		// Allocate the buffer and convert the string
+		wil::unique_cotaskmem_string result{ wil::make_cotaskmem_string(nullptr, size) };
+		int charsWritten{ MultiByteToWideChar(CP_UTF8, 0, strView.data(), static_cast<int32_t>(originalSizeInBytes), result.get(), size) };
+		THROW_HR_IF(E_UNEXPECTED, charsWritten != size);
+
+		return result;
+	};
+
 	constexpr uint8_t BITS_PER_BYTE{ 8 };
 	constexpr int64_t MS_PER_SEC{ 1000 };
 	constexpr int64_t HNS_PER_SEC{ 10000000 };
@@ -105,7 +130,7 @@ namespace winrt::FFmpegInterop::implementation
 		if (__status < 0) \
 		{ \
 		 	char buf[AV_ERROR_MAX_STRING_SIZE]{0}; \
-			FFMPEG_INTEROP_TRACE("FFmpeg failed: %S", av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, __status)); \
+			FFMPEG_INTEROP_TRACE("FFmpeg failed: %hs", av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, __status)); \
 			THROW_HR_MSG(averror_to_hresult(__status), #status); \
 		} \
 	} while (false) \

@@ -65,7 +65,8 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		const std::string_view strView{ str };
 		const size_t originalSizeInBytes{ strView.size() * sizeof(char) };
-		THROW_HR_IF(HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW), originalSizeInBytes > std::numeric_limits<int32_t>::max());
+		THROW_HR_IF(HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW),
+			originalSizeInBytes > static_cast<size_t>(std::numeric_limits<int32_t>::max()));
 
 		// Get the required buffer size
 		int size{ MultiByteToWideChar(CP_UTF8, 0, strView.data(), static_cast<int32_t>(originalSizeInBytes), nullptr, 0) };

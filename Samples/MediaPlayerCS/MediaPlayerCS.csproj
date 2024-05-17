@@ -134,7 +134,11 @@
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
-    <Content Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\*.dll" />
+    <Content Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec*.dll" />
+    <Content Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avformat*.dll" />
+    <Content Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avutil*.dll" />
+    <Content Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swresample*.dll" />
+    <Content Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swscale*.dll" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">

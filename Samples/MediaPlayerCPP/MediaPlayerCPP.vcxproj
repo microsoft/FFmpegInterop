@@ -175,7 +175,7 @@
   </ItemGroup>
   <!--
     We use wildcards to support customizing the FFmpeg binary names, however, wildcards are not supported in project
-    items for .vcxproj files. To workaround this limitation, wildcard items are moved to a target body.
+    items for .vcxproj files. To workaround this limitation wildcard items are moved to a target body.
     https://learn.microsoft.com/en-us/cpp/build/reference/vcxproj-files-and-wildcards#move-wildcard-items-to-a-target-body
   -->
   <Target Name="AddWildcardItems" AfterTargets="BuildGenerateSources">

@@ -87,7 +87,7 @@ common_settings=" \
     --enable-shared \
     --enable-cross-compile \
     --extra-cflags=\"-GUARD:CF -Gy -Gw\" \
-    --extra-ldflags=\"-PROFILE -GUARD:CF -DYNAMICBASE -LTCG -OPT:ICF -OPT:REF\" \
+    --extra-ldflags=\"-PROFILE -GUARD:CF -DYNAMICBASE -OPT:ICF -OPT:REF\" \
     "
 
 # Architecture-specific settings

@@ -156,23 +156,33 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec-61_ms.dll">
+    <_WildcardNone Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avcodec*.dll">
       <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avformat-61_ms.dll">
+    </_WildcardNone>
+    <_WildcardNone Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avformat*.dll">
       <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avutil-59_ms.dll">
+    </_WildcardNone>
+    <_WildcardNone Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\avutil*.dll">
       <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swresample-5_ms.dll">
+    </_WildcardNone>
+    <_WildcardNone Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swresample*.dll">
       <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swscale-8_ms.dll">
+    </_WildcardNone>
+    <_WildcardNone Include="..\..\ffmpeg\Build\$(PlatformTarget)\bin\swscale*.dll">
       <DeploymentContent>true</DeploymentContent>
-    </None>
+    </_WildcardNone>
     <None Include="packages.config" />
   </ItemGroup>
+  <!--
+    We use wildcards to support customizing the FFmpeg binary names, however, wildcards are not supported in project
+    items for .vcxproj files. To workaround this limitation wildcard items are moved to a target body.
+    https://learn.microsoft.com/en-us/cpp/build/reference/vcxproj-files-and-wildcards#move-wildcard-items-to-a-target-body
+  -->
+  <Target Name="AddWildcardItems" AfterTargets="BuildGenerateSources">
+    <ItemGroup>
+      <None Include="@(_WildcardNone)" />
+    </ItemGroup>
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(SolutionDir)packages\Microsoft.Windows.CppWinRT.2.0.240405.15\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('$(SolutionDir)packages\Microsoft.Windows.CppWinRT.2.0.240405.15\build\native\Microsoft.Windows.CppWinRT.targets')" />

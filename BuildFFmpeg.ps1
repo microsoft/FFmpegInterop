@@ -62,7 +62,7 @@ param(
     [string]$CRT = 'dynamic',
 
     [string]$Settings = ''
-    )
+)
 
 # Validate FFmpeg submodule
 $configure = Join-Path $PSScriptRoot 'ffmpeg\configure'
@@ -73,22 +73,24 @@ if (-not (Test-Path $configure))
 }
 
 # Validate FFmpeg build environment
-if (-not $env:MSYS2_BIN) {
+if (-not $env:MSYS2_BIN)
+{
     Write-Error(
         'ERROR: MSYS2_BIN environment variable not set. ' +
         'Use SetUpFFmpegBuildEnvironment.ps1 to set up the FFmpeg build environment.')
     exit 1
 }
 
-if (-not (Test-Path $env:MSYS2_BIN)) {
+if (-not (Test-Path $env:MSYS2_BIN))
+{
     Write-Error(
         "ERROR: MSYS2_BIN environment variable is not valid - $env:MSYS2_BIN does not exist. " +
         'Use SetUpFFmpegBuildEnvironment.ps1 to set up the FFmpeg build environment.')
     exit 1
 }
 
-# Export full current PATH from environment into MSYS2
-$env:MSYS2_PATH_TYPE = 'inherit'
+# Save the original environment state
+$originalEnvVars = Get-ChildItem env:
 
 # Locate Visual Studio installation
 if (-not (Get-Module -Name VSSetup -ListAvailable))
@@ -112,6 +114,18 @@ Import-Module "$($vsInstance.InstallationPath)\Common7\Tools\Microsoft.VisualStu
 $hostArch = [System.Environment]::Is64BitOperatingSystem ? 'x64' : 'x86'
 $debugLevel = 'None' # Set to Trace for verbose output
 
+# FFmpegConfig.sh sets the /QSpectre option for --extra-cflags to enable Spectre mitigations. However, --extra-cflags
+# options also get passed to the ARM assembler and -QSpectre causes an A2029 (unknown command-line argument) error.
+# To work around this we modify FFmpeg's configure script to have armasm_flags() filter /Q options.
+$configurePath = 'ffmpeg\configure'
+$configure = Get-Content $configurePath
+$configure = $configure -replace '(?sm)(armasm_flags\(\).*)((^\s*)\*\))', "`$1`$3-Q*) ;;`n`$2"
+$configure | Out-File -encoding UTF8 $configurePath
+
+# TODO: vcvars.bat currently uses the wrong path for OneCore spectre-mitigated libs. Remove this workaround once the issue is fixed.
+# https://developercommunity.visualstudio.com/t/vcvarsbat-uses-the-wrong-path-for-OneCo/10664642
+$spectreLibs = $AppPlatform -eq 'onecore' ? '' : 'spectre'
+
 # Build FFmpeg for each specified architecture
 foreach ($arch in $Architectures)
 {
@@ -120,9 +134,20 @@ foreach ($arch in $Architectures)
     # Initialize the build environment
     Enter-VsDevShell `
         -VsInstallPath $vsInstance.InstallationPath `
-        -DevCmdArguments "-arch=$arch -host_arch=$hostArch -app_platform=$AppPlatform" `
+        -DevCmdArguments "-arch=$arch -host_arch=$hostArch -app_platform=$AppPlatform -vcvars_spectre_libs=$spectreLibs" `
         -SkipAutomaticLocation `
         -DevCmdDebugLevel $debugLevel
+
+    # TODO: vcvars.bat currently uses the wrong path for OneCore spectre-mitigated libs. Remove this workaround once the issue is fixed.
+    # https://developercommunity.visualstudio.com/t/vcvarsbat-uses-the-wrong-path-for-OneCo/10664642
+    if ($AppPlatform -eq 'onecore')
+    {
+        $env:LIB = $env:LIB.Replace('onecore', 'spectre\onecore')
+        $env:LIBPATH = $env:LIBPATH.Replace('onecore', 'spectre\onecore')
+    }
+
+    # Export full current PATH from environment into MSYS2
+    $env:MSYS2_PATH_TYPE = 'inherit'
 
     # Set the options for FFmpegConfig.sh
     $opts = `
@@ -137,7 +162,17 @@ foreach ($arch in $Architectures)
 
     # Build FFmpeg
     & $env:MSYS2_BIN --login -x "$PSScriptRoot\FFmpegConfig.sh" $opts
-    if (-not $?)
+    $buildResult = $?
+
+    # Restore the original environment state
+    Remove-Item env:*
+    foreach ($envVar in $originalEnvVars)
+    {
+        Set-Item "env:$($envVar.Name)" $envVar.Value
+    }
+
+    # Stop if the build failed
+    if (-not $buildResult)
     {
         Write-Error "ERROR: FFmpegConfig.sh failed"
         exit 1

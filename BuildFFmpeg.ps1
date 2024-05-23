@@ -117,10 +117,21 @@ $debugLevel = 'None' # Set to Trace for verbose output
 # FFmpegConfig.sh sets the /QSpectre option for --extra-cflags to enable Spectre mitigations. However, --extra-cflags
 # options also get passed to the ARM assembler and -QSpectre causes an A2029 (unknown command-line argument) error.
 # To work around this we modify FFmpeg's configure script to have armasm_flags() filter /Q options.
-$configurePath = 'ffmpeg\configure'
-$configure = Get-Content $configurePath
-$configure = $configure -replace '(?sm)(armasm_flags\(\).*)((^\s*)\*\))', "`$1`$3-Q*) ;;`n`$2"
-$configure | Out-File -encoding UTF8 $configurePath
+$configurePath = "$PSScriptRoot\ffmpeg\configure"
+$configure = Get-Content $configurePath -Encoding UTF8 -Raw
+if (-not ($configure -match '(?sm)armasm_flags\(\).*?^}'))
+{
+    Write-Error("ERROR: Failed to find armasm_flags() in $configurePath")
+    exit 1
+}
+
+$armasm_flags = $matches[0]
+if (-not ($armasm_flags.Contains('-Q*)')))
+{
+    $updated_armasm_flags = $armasm_flags -replace '(?m)(^\s*)\*\)', "`$1-Q*) ;;`n`$&"
+    $configure = $configure.Replace($armasm_flags, $updated_armasm_flags )
+    $configure | Out-File -Encoding UTF8 $configurePath
+}
 
 # TODO: vcvars.bat currently uses the wrong path for OneCore spectre-mitigated libs. Remove this workaround once the issue is fixed.
 # https://developercommunity.visualstudio.com/t/vcvarsbat-uses-the-wrong-path-for-OneCo/10664642

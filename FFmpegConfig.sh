@@ -86,7 +86,7 @@ common_settings=" \
     --disable-dxva2 \
     --enable-shared \
     --enable-cross-compile \
-    --extra-cflags=\"-GUARD:CF -Gy -Gw\" \
+    --extra-cflags=\"-GUARD:CF -Qspectre -Gy -Gw\" \
     --extra-ldflags=\"-PROFILE -GUARD:CF -DYNAMICBASE -OPT:ICF -OPT:REF\" \
     "
 
@@ -97,11 +97,13 @@ if [ -z $arch ]; then
 elif [ $arch == "x86" ]; then
     arch_settings="
         --arch=x86 \
+        --extra-ldflags=\"-CETCOMPAT\" \
         --prefix=../../Build/$arch \
         "
 elif [ $arch == "x64" ]; then
     arch_settings="
         --arch=x86_64 \
+        --extra-ldflags=\"-CETCOMPAT\" \
         --prefix=../../Build/$arch \
         "
 elif [ $arch == "arm" ]; then

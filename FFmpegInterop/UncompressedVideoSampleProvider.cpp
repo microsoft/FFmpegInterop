@@ -79,6 +79,7 @@ namespace winrt::FFmpegInterop::implementation
 
 		MediaPropertySet videoProp{ videoEncProp.Properties() };
 		videoProp.Insert(MF_MT_ALL_SAMPLES_INDEPENDENT, PropertyValue::CreateUInt32(true));
+		videoProp.Insert(MF_MT_COMPRESSED, PropertyValue::CreateUInt32(false));
 		videoProp.Insert(MF_MT_INTERLACE_MODE, PropertyValue::CreateUInt32(MFVideoInterlace_MixedInterlaceOrProgressive));
 	}
 

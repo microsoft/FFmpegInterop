@@ -57,7 +57,7 @@ namespace winrt::FFmpegInterop::implementation
 		{ "encoder_options", { PKEY_Media_EncodingSettings, VT_LPWSTR } },
 		{ "encoder_settings", { PKEY_Media_EncodingSettings, VT_LPWSTR } },
 		{ "filename", { PKEY_OriginalFileName, VT_LPWSTR } },
-		{ "genre", { PKEY_Music_Genre, VT_VECTOR | VT_LPWSTR } },
+		{ "genre", { PKEY_Music_Genre, VT_LPWSTR } },
 		{ "initial_key", { PKEY_Music_InitialKey, VT_LPWSTR } },
 		{ "keywords", { PKEY_Keywords, VT_LPWSTR } },
 		{ "language", { PKEY_Language, VT_LPWSTR } },

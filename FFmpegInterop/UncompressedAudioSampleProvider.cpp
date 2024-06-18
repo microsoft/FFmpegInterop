@@ -63,6 +63,8 @@ namespace winrt::FFmpegInterop::implementation
 		// it would set encoding properties with values for the compressed audio type.
 
 		MediaPropertySet properties{ encProp.Properties() };
+		properties.Insert(MF_MT_COMPRESSED, PropertyValue::CreateUInt32(false));
+
 		if (m_channelLayout.order == AV_CHANNEL_ORDER_NATIVE)
 		{
 			properties.Insert(MF_MT_AUDIO_CHANNEL_MASK, PropertyValue::CreateUInt32(static_cast<uint32_t>(m_channelLayout.u.mask)));

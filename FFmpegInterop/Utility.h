@@ -56,7 +56,11 @@ namespace winrt::FFmpegInterop::implementation
 {
 	inline std::string tolower(_Inout_ std::string str)
 	{
-		std::transform(str.begin(), str.end(), str.begin(), [](_In_ char c){ return static_cast<char>(std::tolower(c)); });
+		std::transform(str.begin(), str.end(), str.begin(),
+			[](_In_ unsigned char c)
+			{
+				return static_cast<unsigned char>(std::tolower(c));
+			});
 		return str;
 	}
 

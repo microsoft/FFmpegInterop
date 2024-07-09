@@ -101,7 +101,7 @@ namespace winrt::FFmpegInterop::implementation
 		return m_length;
 	}
 
-	void FFmpegInteropBuffer::Length(_In_ uint32_t length)
+	void FFmpegInteropBuffer::Length(_In_ uint32_t /*length*/)
 	{
 		// We have a fixed length
 		THROW_HR(CO_E_NOT_SUPPORTED);

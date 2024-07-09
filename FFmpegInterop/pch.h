@@ -72,7 +72,7 @@ typedef struct _MT_CUSTOM_VIDEO_PRIMARIES {
 #endif // !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP | WINAPI_PARTITION_GAMES)
 
 // FFmpeg
-#pragma warning(disable: 4244)
+#pragma warning(disable:4244)
 extern "C"
 {
 #include <libavcodec/avcodec.h>
@@ -83,7 +83,7 @@ extern "C"
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 }
-#pragma warning(default: 4244)
+#pragma warning(default:4244)
 
 // STL
 #include <algorithm>

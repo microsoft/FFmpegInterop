@@ -33,7 +33,7 @@ namespace winrt::FFmpegInterop::implementation
 
 	}
 
-	void ACMSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
+	void ACMSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool /*setFormatUserData*/)
 	{
 		// We intentionally don't call SampleProvider::SetEncodingProperties() here. We'll set all of the encoding properties we need.
 
@@ -45,16 +45,21 @@ namespace winrt::FFmpegInterop::implementation
 		WAVEFORMATEXTENSIBLE* waveFormatExtensible{ reinterpret_cast<WAVEFORMATEXTENSIBLE*>(waveFormatBuf.data()) };
 		waveFormatExtensible->SubFormat = MFAudioFormat_Base;
 		waveFormatExtensible->SubFormat.Data1 = codecPar->codec_tag;
-		waveFormatExtensible->Samples.wValidBitsPerSample = setValidBitsPerSample ? codecPar->bits_per_coded_sample : 0;
-		waveFormatExtensible->dwChannelMask = codecPar->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ? static_cast<uint32_t>(codecPar->ch_layout.u.mask) : 0;
+		waveFormatExtensible->Samples.wValidBitsPerSample =
+			setValidBitsPerSample ? static_cast<WORD>(codecPar->bits_per_coded_sample) : 0;
+		waveFormatExtensible->dwChannelMask =
+			codecPar->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ? static_cast<uint32_t>(codecPar->ch_layout.u.mask) : 0;
 
 		WAVEFORMATEX& waveFormatEx{ waveFormatExtensible->Format };
 		waveFormatEx.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-		waveFormatEx.nChannels = codecPar->ch_layout.nb_channels;
+		waveFormatEx.nChannels = static_cast<WORD>(codecPar->ch_layout.nb_channels);
 		waveFormatEx.nSamplesPerSec = codecPar->sample_rate;
 		waveFormatEx.nAvgBytesPerSec = static_cast<uint32_t>(codecPar->bit_rate / BITS_PER_BYTE);
-		waveFormatEx.nBlockAlign = codecPar->block_align;
-		waveFormatEx.wBitsPerSample = setValidBitsPerSample ? (codecPar->bits_per_coded_sample + BITS_PER_BYTE - codecPar->bits_per_coded_sample % BITS_PER_BYTE) : codecPar->bits_per_coded_sample;
+		waveFormatEx.nBlockAlign = static_cast<WORD>(codecPar->block_align);
+		waveFormatEx.wBitsPerSample =
+			setValidBitsPerSample ?
+				static_cast<WORD>(codecPar->bits_per_coded_sample + BITS_PER_BYTE - codecPar->bits_per_coded_sample % BITS_PER_BYTE) :
+				static_cast<WORD>(codecPar->bits_per_coded_sample);
 		waveFormatEx.cbSize = static_cast<uint16_t>(codecPar->extradata_size) + sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
 
 		copy(codecPar->extradata, codecPar->extradata + codecPar->extradata_size, waveFormatBuf.begin() + sizeof(WAVEFORMATEXTENSIBLE));
@@ -77,7 +82,7 @@ namespace winrt::FFmpegInterop::implementation
 			GUID propGuid{ GUID_NULL };
 			unique_prop_variant propValue;
 			THROW_IF_FAILED(mediaTypeAttributes->GetItemByIndex(i, &propGuid, &propValue));
-			
+
 			// Add the property to the encoding property set
 			encPropSet.Insert(propGuid, CreatePropValueFromMFAttribute(propValue));
 		}

@@ -184,7 +184,7 @@ namespace winrt::FFmpegInterop::implementation
 	}
 	CATCH_RETURN();
 
-	IFACEMETHODIMP FFmpegInteropByteStreamHandler::GetMaxNumberOfBytesRequiredForResolution(_Out_ QWORD* pcb) noexcept
+	IFACEMETHODIMP FFmpegInteropByteStreamHandler::GetMaxNumberOfBytesRequiredForResolution(_Out_ QWORD* /*pcb*/) noexcept
 	try
 	{
 		RETURN_HR(E_NOTIMPL);

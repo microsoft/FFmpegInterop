@@ -53,7 +53,7 @@ namespace winrt::FFmpegInterop::implementation
 #endif // DBG
 
 		const AVDictionaryEntry* tag{ nullptr };
-		while(tag = av_dict_iterate(metadata, tag))
+		while((tag = av_dict_iterate(metadata, tag)) != nullptr)
 		{
 			FFMPEG_INTEROP_TRACE("Property: Key = %hs, Value = %hs", tag->key, tag->value);
 

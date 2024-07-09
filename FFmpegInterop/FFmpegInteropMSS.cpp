@@ -498,6 +498,8 @@ namespace winrt::FFmpegInterop::implementation
 	{
 		auto logger{ FFmpegInteropProvider::OnClosed::Start() };
 
+		FFMPEG_INTEROP_TRACE("MediaStreamSourceClosedReason: %d", args.Request().Reason());
+
 		lock_guard<mutex> lock{ m_lock };
 
 		// Unregister event handlers

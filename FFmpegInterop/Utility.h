@@ -56,7 +56,11 @@ namespace winrt::FFmpegInterop::implementation
 {
 	inline std::string tolower(_Inout_ std::string str)
 	{
-		std::transform(str.begin(), str.end(), str.begin(), [](_In_ char c){ return std::tolower(c); });
+		std::transform(str.begin(), str.end(), str.begin(),
+			[](_In_ unsigned char c)
+			{
+				return static_cast<unsigned char>(std::tolower(c));
+			});
 		return str;
 	}
 
@@ -130,7 +134,9 @@ namespace winrt::FFmpegInterop::implementation
 		const int __status = verify_averror(status); \
 		if (__status < 0) \
 		{ \
+			__pragma(warning(disable:4456)) \
 		 	char buf[AV_ERROR_MAX_STRING_SIZE]{0}; \
+			__pragma(warning(default:4456)) \
 			FFMPEG_INTEROP_TRACE("FFmpeg failed: %hs", av_make_error_string(buf, AV_ERROR_MAX_STRING_SIZE, __status)); \
 			THROW_HR_MSG(averror_to_hresult(__status), #status); \
 		} \
@@ -211,7 +217,7 @@ namespace winrt::FFmpegInterop::implementation
 		ShutdownWrapper(_In_ const ShutdownWrapper& other) = delete;
 		ShutdownWrapper(_In_ ShutdownWrapper&& other) = default;
 
-		ShutdownWrapper(_In_opt_ std::nullptr_t ptr = nullptr) noexcept { }
+		ShutdownWrapper(_In_opt_ std::nullptr_t /*ptr*/ = nullptr) noexcept { }
 
 		ShutdownWrapper(_In_opt_ T* ptr) noexcept :
 			m_ptr(ptr)

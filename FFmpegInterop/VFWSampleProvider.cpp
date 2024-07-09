@@ -33,7 +33,7 @@ namespace winrt::FFmpegInterop::implementation
 		
 	}
 
-	void VFWSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
+	void VFWSampleProvider::SetEncodingProperties(_Inout_ [[maybe_unused]] const IMediaEncodingProperties& encProp, _In_ bool /*setFormatUserData*/)
 	{
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 		// We intentionally don't call SampleProvider::SetEncodingProperties() here. We'll set all of the encoding properties we need.

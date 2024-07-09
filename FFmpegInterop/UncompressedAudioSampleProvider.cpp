@@ -57,7 +57,7 @@ namespace winrt::FFmpegInterop::implementation
 		THROW_HR_IF_FFMPEG_FAILED(swr_init(m_swrContext.get()));
 	}
 
-	void UncompressedAudioSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool setFormatUserData)
+	void UncompressedAudioSampleProvider::SetEncodingProperties(_Inout_ const IMediaEncodingProperties& encProp, _In_ bool /*setFormatUserData*/)
 	{
 		// We intentionally don't call SampleProvider::SetEncodingProperties() here as
 		// it would set encoding properties with values for the compressed audio type.

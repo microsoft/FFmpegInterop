@@ -21,7 +21,7 @@
 
 using namespace winrt::FFmpegInterop::implementation;
 
-BOOL WINAPI DllMain(_In_ HINSTANCE hInstance, _In_ DWORD dwReason, _In_opt_ LPVOID lpReserved)
+BOOL WINAPI DllMain(_In_ HINSTANCE hInstance, _In_ DWORD dwReason, _In_opt_ LPVOID /*lpReserved*/)
 {
 	if (dwReason == DLL_PROCESS_ATTACH)
 	{

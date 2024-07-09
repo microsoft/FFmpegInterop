@@ -50,7 +50,7 @@ namespace winrt::FFmpegInterop::implementation
 		auto [numBytesToSkip, numBitsToSkip] = div(numBits, BITS_PER_BYTE);
 
 		m_byteIndex += numBytesToSkip;
-		m_bitIndex += numBitsToSkip;
+		m_bitIndex += static_cast<uint8_t>(numBitsToSkip);
 		if (m_bitIndex >= BITS_PER_BYTE)
 		{
 			m_byteIndex++;

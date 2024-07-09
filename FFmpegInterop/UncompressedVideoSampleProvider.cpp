@@ -144,7 +144,7 @@ namespace winrt::FFmpegInterop::implementation
 			uint8_t* data[4]{ };
 			const int requiredBufferSize{ av_image_fill_pointers(data, AV_PIX_FMT_NV12, frame->height, bufferRef->data, m_lineSizes) };
 			THROW_HR_IF_FFMPEG_FAILED(requiredBufferSize);
-			THROW_HR_IF(MF_E_UNEXPECTED, requiredBufferSize != bufferRef->size);
+			THROW_HR_IF(MF_E_UNEXPECTED, static_cast<size_t>(requiredBufferSize) != bufferRef->size);
 
 			THROW_HR_IF_FFMPEG_FAILED(sws_scale(m_swsContext.get(), frame->data, frame->linesize, 0, frame->height, data, m_lineSizes));
 

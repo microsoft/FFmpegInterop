@@ -134,10 +134,6 @@ if (-not ($armasm_flags.Contains('-Q*)')))
     $configure | Out-File -Encoding UTF8 $configurePath
 }
 
-# TODO: vcvars.bat currently uses the wrong path for OneCore spectre-mitigated libs. Remove this workaround once the issue is fixed.
-# https://developercommunity.visualstudio.com/t/vcvarsbat-uses-the-wrong-path-for-OneCo/10664642
-$spectreLibs = $AppPlatform -eq 'onecore' ? '' : 'spectre'
-
 # Build FFmpeg for each specified architecture
 foreach ($arch in $Architectures)
 {
@@ -146,17 +142,9 @@ foreach ($arch in $Architectures)
     # Initialize the build environment
     Enter-VsDevShell `
         -VsInstallPath $vsInstance.InstallationPath `
-        -DevCmdArguments "-arch=$arch -host_arch=$hostArch -app_platform=$AppPlatform -vcvars_spectre_libs=$spectreLibs" `
+        -DevCmdArguments "-arch=$arch -host_arch=$hostArch -app_platform=$AppPlatform -vcvars_spectre_libs=spectre" `
         -SkipAutomaticLocation `
         -DevCmdDebugLevel $debugLevel
-
-    # TODO: vcvars.bat currently uses the wrong path for OneCore spectre-mitigated libs. Remove this workaround once the issue is fixed.
-    # https://developercommunity.visualstudio.com/t/vcvarsbat-uses-the-wrong-path-for-OneCo/10664642
-    if ($AppPlatform -eq 'onecore')
-    {
-        $env:LIB = $env:LIB.Replace('onecore', 'spectre\onecore')
-        $env:LIBPATH = $env:LIBPATH.Replace('onecore', 'spectre\onecore')
-    }
 
     # Export full current PATH from environment into MSYS2
     $env:MSYS2_PATH_TYPE = 'inherit'

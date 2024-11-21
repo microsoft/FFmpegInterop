@@ -39,16 +39,10 @@ namespace
 		IStream* fileStream{ reinterpret_cast<IStream*>(ptr) };
 		ULONG bytesRead{ 0 };
 
-		if (FAILED(fileStream->Read(buf, bufSize, &bytesRead)))
-		{
-			return AVERROR_EXTERNAL;
-		}
+		RETURN_IF_FAILED(fileStream->Read(buf, bufSize, &bytesRead));
 
 		// Assume we've reached EOF if we didn't read any bytes
-		if (bytesRead == 0)
-		{
-			return AVERROR_EOF;
-		}
+		RETURN_HR_IF(static_cast<HRESULT>(AVERROR_EOF), bytesRead == 0);
 
 		return bytesRead;
 	}
@@ -61,10 +55,7 @@ namespace
 		in.QuadPart = pos;
 		ULARGE_INTEGER out{ 0 };
 
-		if (FAILED(fileStream->Seek(in, whence, &out)))
-		{
-			return AVERROR_EXTERNAL;
-		}
+		RETURN_IF_FAILED(fileStream->Seek(in, whence, &out));
 
 		return out.QuadPart;
 	}
@@ -75,6 +66,7 @@ namespace winrt::FFmpegInterop::implementation
 	void FFmpegInteropMSS::InitializeFromStream(_In_ const IRandomAccessStream& fileStream, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		auto logger{ FFmpegInteropProvider::InitializeFromStream::Start() };
+		[[maybe_unused]] wil::ThreadErrorContext errorContext; // Enable WIL's thread error cache for averror_to_hresult()
 
 		(void) make<FFmpegInteropMSS>(fileStream, mss, config);
 
@@ -84,6 +76,7 @@ namespace winrt::FFmpegInterop::implementation
 	void FFmpegInteropMSS::InitializeFromUri(_In_ const hstring& uri, _In_ const MediaStreamSource& mss, _In_opt_ const FFmpegInterop::FFmpegInteropMSSConfig& config)
 	{
 		auto logger{ FFmpegInteropProvider::InitializeFromUri::Start() };
+		[[maybe_unused]] wil::ThreadErrorContext errorContext; // Enable WIL's thread error cache for averror_to_hresult()
 
 		(void) make<FFmpegInteropMSS>(uri, mss, config);
 
@@ -374,6 +367,7 @@ namespace winrt::FFmpegInterop::implementation
 	void FFmpegInteropMSS::OnStarting(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceStartingEventArgs& args)
 	{
 		auto logger{ FFmpegInteropProvider::OnStarting::Start() };
+		[[maybe_unused]] wil::ThreadErrorContext errorContext; // Enable WIL's thread error cache for averror_to_hresult()
 
 		const MediaStreamSourceStartingRequest request{ args.Request() };
 		const IReference<TimeSpan> startPosition{ request.StartPosition() };
@@ -425,6 +419,7 @@ namespace winrt::FFmpegInterop::implementation
 	void FFmpegInteropMSS::OnSampleRequested(_In_ const MediaStreamSource&, _In_ const MediaStreamSourceSampleRequestedEventArgs& args)
 	{
 		auto logger{ FFmpegInteropProvider::OnSampleRequested::Start() };
+		[[maybe_unused]] wil::ThreadErrorContext errorContext; // Enable WIL's thread error cache for averror_to_hresult()
 
 		const MediaStreamSourceSampleRequest request{ args.Request() };
 

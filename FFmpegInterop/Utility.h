@@ -116,7 +116,16 @@ namespace winrt::FFmpegInterop::implementation
 		case AVERROR_INVALIDDATA:
 			return MF_E_INVALID_FILE_FORMAT;
 		default:
-			return E_FAIL;
+			{
+				wil::FailureInfo info;
+				if (wil::GetLastError(info, 0, status))
+				{
+					// Assume status is an HRESULT if it was traced by WIL
+					return status;
+				}
+
+				return E_FAIL;
+			}
 		}
 	}
 

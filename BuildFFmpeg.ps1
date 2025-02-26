@@ -30,6 +30,9 @@ See the following resources for more information about the hybrid CRT:
 .PARAMETER Settings
 Specifies options to pass to FFmpeg's configure script.
 
+.PARAMETER Fuzzing
+Specifies whether to build FFmpeg with fuzzing support.
+
 .INPUTS
 None. You cannot pipe objects to BuildFFmpeg.ps1.
 
@@ -61,7 +64,9 @@ param(
     [ValidateSet('dynamic', 'hybrid', 'static')]
     [string]$CRT = 'dynamic',
 
-    [string]$Settings = ''
+    [string]$Settings = '',
+
+    [bool]$Fuzzing = $false
 )
 
 # Validate FFmpeg submodule
@@ -160,6 +165,25 @@ foreach ($arch in $Architectures)
         $opts += '--settings', $Settings
     }
 
+    # Fuzzing requires libraries in the $VCToolsInstallDir to be lnked
+    if ($Fuzzing)
+    {
+        # Create new directory since $VCToolsInstallDir has spaces
+        $fuzzingLibsDir = Join-Path $PSScriptRoot 'libs'
+        if (-not (Test-Path $fuzzingLibsDir))
+        {
+            New-Item -ItemType Directory -Path $fuzzingLibsDir
+        }
+
+        # Copy the contents of $VCInstallToolsDir\lib\arch\* to $PSScriptRoot\libs 
+        Write-Host "Copying fuzzing libs from $env:VCToolsInstallDir to $fuzzingLibsDir"
+        Copy-Item -Path "$env:VCToolsInstallDir\lib\$arch\*" -Destination $fuzzingLibsDir -Recurse -Force
+        
+        # FFmpeg build needs forward slashes in paths
+        $fuzzingLibsDir = $fuzzingLibsDir -replace '\\', '/'
+        $opts += '--fuzzing-libs', $fuzzingLibsDir
+    }
+
     # Build FFmpeg
     & $env:MSYS2_BIN --login -x "$PSScriptRoot\FFmpegConfig.sh" $opts
     $buildResult = $?
@@ -169,6 +193,13 @@ foreach ($arch in $Architectures)
     foreach ($envVar in $originalEnvVars)
     {
         Set-Item "env:$($envVar.Name)" $envVar.Value
+    }
+
+    # Delete the contents of the fuzzing libs directory and the folder itself
+    if (Test-Path $fuzzingLibsDir)
+    {
+        Remove-Item -Path "$fuzzingLibsDir\*" -Recurse -Force
+        Remove-Item -Path $fuzzingLibsDir  
     }
 
     # Stop if the build failed

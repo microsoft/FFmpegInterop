@@ -2,7 +2,7 @@
 dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # Parse the options
-options=$(getopt -o "" --long arch:,app-platform:,settings:,crt: -n "$0" -- "$@")
+options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,fuzzing-libs: -n "$0" -- "$@")
 if [ $? -ne 0 ]; then
     echo "ERROR: Invalid option(s)"
     exit 1
@@ -39,6 +39,7 @@ while true; do
             shift 2
             ;;
         --crt)
+            crt=$2
             case "${2,,}" in
                 dynamic)
                     crt_settings="--extra-cflags=\"-MD\""
@@ -64,6 +65,11 @@ while true; do
             ;;
         --settings)
             user_settings=$2
+            shift 2
+            ;;
+        --fuzzing-libs)
+            fuzzing=true
+            fuzzing_libs=$2
             shift 2
             ;;
         --)
@@ -128,6 +134,28 @@ else
     echo "ERROR: $arch is not a valid architecture" 1>&2
     exit 1
 fi
+
+# Fuzzer-specific settings
+if [[ $fuzzing ]]; then
+    if [[ "$arch" == "arm" || "$arch" == "arm64" ]]; then
+        echo "ERROR: Fuzzing is not supported on ARM/ARM64 architectures" 1>&2
+        exit 1
+    fi
+
+    fuzz_settings="
+        --extra-cflags=\"-fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=edge -fsanitize-coverage=trace-cmp -fsanitize-coverage=trace-div\" \
+        --extra-ldflags=\"-LIBPATH:$fuzzing_libs\" \
+        "
+
+    # Add sancov.lib or libsancov.lib based on CRT
+    if [[ $crt == "dynamic" ]]; then
+        fuzz_crt_settings="--extra-ldflags=\"-DEFAULTLIB:sancov.lib\""
+    else
+        fuzz_crt_settings="--extra-ldflags=\"-DEFAULTLIB:libsancov.lib\""
+    fi
+    
+fi
+
 
 # Build FFmpeg
 pushd $dir/ffmpeg > /dev/null

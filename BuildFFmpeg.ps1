@@ -66,7 +66,7 @@ param(
 
     [string]$Settings = '',
 
-    [bool]$Fuzzing = $false
+    [switch]$Fuzzing
 )
 
 # Validate FFmpeg submodule
@@ -176,7 +176,7 @@ foreach ($arch in $Architectures)
         }
 
         # Copy the contents of $VCInstallToolsDir\lib\arch\* to $PSScriptRoot\libs 
-        Write-Host "Copying fuzzing libs from $env:VCToolsInstallDir to $fuzzingLibsDir"
+        Write-Host "Copying fuzzing libs from $env:VCToolsInstallDir\lib\$arch to $fuzzingLibsDir"
         Copy-Item -Path "$env:VCToolsInstallDir\lib\$arch\*" -Destination $fuzzingLibsDir -Recurse -Force
         
         # FFmpeg build needs forward slashes in paths

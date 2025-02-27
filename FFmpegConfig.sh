@@ -155,7 +155,6 @@ if [[ $fuzzing ]]; then
     fi  
 fi
 
-
 # Build FFmpeg
 pushd $dir/ffmpeg > /dev/null
 

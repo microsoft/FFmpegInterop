@@ -152,8 +152,7 @@ if [[ $fuzzing ]]; then
         fuzz_crt_settings="--extra-ldflags=\"-DEFAULTLIB:sancov.lib\""
     else
         fuzz_crt_settings="--extra-ldflags=\"-DEFAULTLIB:libsancov.lib\""
-    fi
-    
+    fi  
 fi
 
 

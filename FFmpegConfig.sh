@@ -162,7 +162,7 @@ rm -rf Output/$arch
 mkdir -p Output/$arch
 cd Output/$arch
 
-eval ../../configure $common_settings $arch_settings $app_platform_settings $crt_settings $onecore_settings $user_settings &&
+eval ../../configure $common_settings $arch_settings $app_platform_settings $crt_settings $onecore_settings $user_settings $fuzz_settings $fuzz_crt_settings &&
 make -j`nproc` &&
 make install
 

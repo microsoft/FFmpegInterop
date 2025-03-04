@@ -47,7 +47,7 @@ namespace winrt::FFmpegInterop::implementation
 		bih.biWidth = codecPar->width;
 		bih.biHeight = codecPar->height;
 		bih.biPlanes = 1; // Must be 1
-		bih.biBitCount = codecPar->bits_per_coded_sample;
+		bih.biBitCount = static_cast<WORD>(codecPar->bits_per_coded_sample);
 		bih.biCompression = codecPar->codec_tag;
 
 		copy(codecPar->extradata, codecPar->extradata + codecPar->extradata_size, vihBuf.begin() + sizeof(VIDEOINFOHEADER));

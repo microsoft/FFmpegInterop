@@ -2,7 +2,7 @@
 dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # Parse the options
-options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,fuzzing-libs: -n "$0" -- "$@")
+options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,fuzzing -n "$0" -- "$@")
 if [ $? -ne 0 ]; then
     echo "ERROR: Invalid option(s)"
     exit 1
@@ -67,10 +67,9 @@ while true; do
             user_settings=$2
             shift 2
             ;;
-        --fuzzing-libs)
+        --fuzzing)
             fuzzing=true
-            fuzzing_libs=$2
-            shift 2
+            shift
             ;;
         --)
             shift
@@ -142,16 +141,13 @@ if [[ $fuzzing ]]; then
         exit 1
     fi
 
-    fuzz_settings="
-        --extra-cflags=\"-fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=edge -fsanitize-coverage=trace-cmp -fsanitize-coverage=trace-div\" \
-        --extra-ldflags=\"-LIBPATH:$fuzzing_libs\" \
-        "
+    fuzz_settings="--extra-cflags=\"-fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=edge -fsanitize-coverage=trace-cmp -fsanitize-coverage=trace-div\" "
 
     # Add sancov.lib or libsancov.lib based on CRT
     if [[ $crt == "dynamic" ]]; then
-        fuzz_crt_settings="--extra-ldflags=\"-DEFAULTLIB:sancov.lib\""
+        fuzz_settings+="--extra-ldflags=\"-DEFAULTLIB:sancov.lib\""
     else
-        fuzz_crt_settings="--extra-ldflags=\"-DEFAULTLIB:libsancov.lib\""
+        fuzz_settings+="--extra-ldflags=\"-DEFAULTLIB:libsancov.lib\""
     fi  
 fi
 
@@ -162,7 +158,7 @@ rm -rf Output/$arch
 mkdir -p Output/$arch
 cd Output/$arch
 
-eval ../../configure $common_settings $arch_settings $app_platform_settings $crt_settings $onecore_settings $user_settings $fuzz_settings $fuzz_crt_settings &&
+eval ../../configure $common_settings $arch_settings $app_platform_settings $crt_settings $onecore_settings $user_settings $fuzz_settings &&
 make -j`nproc` &&
 make install
 

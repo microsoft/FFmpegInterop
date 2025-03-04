@@ -165,23 +165,18 @@ foreach ($arch in $Architectures)
         $opts += '--settings', $Settings
     }
 
-    # Fuzzing requires libraries in the $VCToolsInstallDir to be lnked
+    # Fuzzing requires libraries in the $VCToolsInstallDir to be linked
     if ($Fuzzing)
     {
-        # Create new directory since $VCToolsInstallDir has spaces
-        $fuzzingLibsDir = Join-Path $PSScriptRoot 'libs'
-        if (-not (Test-Path $fuzzingLibsDir))
+        $fuzzingLibPath = Join-Path -Path $env:VCToolsInstallDir -ChildPath "lib\$arch"
+        if (-not (Test-Path $fuzzingLibPath))
         {
-            New-Item -ItemType Directory -Path $fuzzingLibsDir
+            Write-Error "ERROR: $fuzzingLibPath does not exist. Ensure the Visual Studio installation is correct."
+            exit 1
         }
-
-        # Copy the contents of $VCInstallToolsDir\lib\arch\* to $PSScriptRoot\libs 
-        Write-Host "Copying fuzzing libs from $env:VCToolsInstallDir\lib\$arch to $fuzzingLibsDir"
-        Copy-Item -Path "$env:VCToolsInstallDir\lib\$arch\*" -Destination $fuzzingLibsDir -Recurse -Force
-        
-        # FFmpeg build needs forward slashes in paths
-        $fuzzingLibsDir = $fuzzingLibsDir -replace '\\', '/'
-        $opts += '--fuzzing-libs', $fuzzingLibsDir
+        Write-Host "Adding $fuzzingLibPath to the LIB environment variable"
+        $env:LIB="$env:LIB;$fuzzingLibPath"
+        $opts += '--fuzzing'
     }
 
     # Build FFmpeg
@@ -193,13 +188,6 @@ foreach ($arch in $Architectures)
     foreach ($envVar in $originalEnvVars)
     {
         Set-Item "env:$($envVar.Name)" $envVar.Value
-    }
-
-    # Delete the contents of the fuzzing libs directory and the folder itself
-    if (Test-Path $fuzzingLibsDir)
-    {
-        Remove-Item -Path "$fuzzingLibsDir\*" -Recurse -Force
-        Remove-Item -Path $fuzzingLibsDir  
     }
 
     # Stop if the build failed

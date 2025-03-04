@@ -175,7 +175,7 @@ foreach ($arch in $Architectures)
             exit 1
         }
         Write-Host "Adding $fuzzingLibPath to the LIB environment variable"
-        $env:LIB="$env:LIB;$fuzzingLibPath"
+        $env:LIB = "$env:LIB;$fuzzingLibPath"
         $opts += '--fuzzing'
     }
 

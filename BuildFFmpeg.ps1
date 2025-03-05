@@ -30,6 +30,9 @@ See the following resources for more information about the hybrid CRT:
 .PARAMETER Settings
 Specifies options to pass to FFmpeg's configure script.
 
+.PARAMETER Fuzzing
+Specifies whether to build FFmpeg with fuzzing support.
+
 .INPUTS
 None. You cannot pipe objects to BuildFFmpeg.ps1.
 
@@ -61,7 +64,9 @@ param(
     [ValidateSet('dynamic', 'hybrid', 'static')]
     [string]$CRT = 'dynamic',
 
-    [string]$Settings = ''
+    [string]$Settings = '',
+
+    [switch]$Fuzzing
 )
 
 # Validate FFmpeg submodule
@@ -158,6 +163,20 @@ foreach ($arch in $Architectures)
     if ($Settings)
     {
         $opts += '--settings', $Settings
+    }
+
+    # Fuzzing requires libraries in the $VCToolsInstallDir to be linked
+    if ($Fuzzing)
+    {
+        $fuzzingLibPath = Join-Path -Path $env:VCToolsInstallDir -ChildPath "lib\$arch"
+        if (-not (Test-Path $fuzzingLibPath))
+        {
+            Write-Error "ERROR: $fuzzingLibPath does not exist. Ensure the Visual Studio installation is correct."
+            exit 1
+        }
+        Write-Host "Adding $fuzzingLibPath to the LIB environment variable"
+        $env:LIB = "$env:LIB;$fuzzingLibPath"
+        $opts += '--fuzzing'
     }
 
     # Build FFmpeg

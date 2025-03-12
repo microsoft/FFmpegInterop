@@ -119,7 +119,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <Target Name="ShowRuntimeLibrary" BeforeTargets="Build">
+  <Target Name="ShowRuntimeLibrary" AfterTargets="Build">
     <Message Text="RuntimeLibrary: $(RuntimeLibrary)" Importance="high" />
   </Target>
   <ItemDefinitionGroup Condition="'$(Fuzzing)'=='true'">

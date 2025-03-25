@@ -2,7 +2,7 @@
 dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # Parse the options
-options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,fuzzing -n "$0" -- "$@")
+options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,prefast:,fuzzing -n "$0" -- "$@")
 if [ $? -ne 0 ]; then
     echo "ERROR: Invalid option(s)"
     exit 1
@@ -65,6 +65,10 @@ while true; do
             ;;
         --settings)
             user_settings=$2
+            shift 2
+            ;;
+        --prefast)
+            prefast_rulesets=$2
             shift 2
             ;;
         --fuzzing)
@@ -134,6 +138,11 @@ else
     exit 1
 fi
 
+# PREfast static analysis settings
+if [[ $prefast_rulesets ]]; then
+    prefast_settings="--extra-cflags=\"-analyze -analyze:log:includesuppressed -analyze:log:format:sarif -analyze:plugin EspXEngine.dll -analyze:ruleset $prefast_rulesets\""
+fi
+
 # Fuzzer-specific settings
 if [[ $fuzzing ]]; then
     if [[ "$arch" == "arm" || "$arch" == "arm64" ]]; then
@@ -148,7 +157,7 @@ if [[ $fuzzing ]]; then
         fuzz_settings+="--extra-ldflags=\"-DEFAULTLIB:sancov.lib\""
     else
         fuzz_settings+="--extra-ldflags=\"-DEFAULTLIB:libsancov.lib\""
-    fi  
+    fi
 fi
 
 # Build FFmpeg
@@ -158,7 +167,7 @@ rm -rf Output/$arch
 mkdir -p Output/$arch
 cd Output/$arch
 
-eval ../../configure $common_settings $arch_settings $app_platform_settings $crt_settings $onecore_settings $user_settings $fuzz_settings &&
+eval ../../configure $common_settings $arch_settings $app_platform_settings $crt_settings $onecore_settings $user_settings $prefast_settings $fuzz_settings &&
 make -j`nproc` &&
 make install
 

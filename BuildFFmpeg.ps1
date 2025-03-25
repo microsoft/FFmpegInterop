@@ -30,6 +30,9 @@ See the following resources for more information about the hybrid CRT:
 .PARAMETER Settings
 Specifies options to pass to FFmpeg's configure script.
 
+.PARAMETER PREfast
+Specifies one or more rule sets to use for PREfast static analysis.
+
 .PARAMETER Fuzzing
 Specifies whether to build FFmpeg with fuzzing support.
 
@@ -64,10 +67,22 @@ param(
     [ValidateSet('dynamic', 'hybrid', 'static')]
     [string]$CRT = 'dynamic',
 
-    [string]$Settings = '',
+    [string]$Settings,
+
+    [string[]]$PREfast,
 
     [switch]$Fuzzing
 )
+
+function ConvertWindowsPathToUnixPath([string]$path)
+{
+    $path = Resolve-Path $path;
+    $drive = Split-Path $path -Qualifier;
+
+    $path = $path.Replace($drive, "/$($drive.ToLower()[0])");
+    $path = $path.Replace('\', '/');
+    return $path;
+}
 
 # Validate FFmpeg submodule
 $configure = Join-Path $PSScriptRoot 'ffmpeg\configure'
@@ -139,6 +154,20 @@ if (-not ($armasm_flags.Contains('-Q*)')))
     $configure | Out-File -Encoding UTF8 $configurePath
 }
 
+if ($PREfast)
+{
+    # Validate PREfast rule set paths and convert to Unix paths
+    $PREfast = $PREfast | ForEach-Object {
+        if (-not (Test-Path $_))
+        {
+            Write-Error "ERROR: PREfast rule set '$_' does not exist."
+            exit 1
+        }
+
+        ConvertWindowsPathToUnixPath($_)
+    }
+}
+
 # Build FFmpeg for each specified architecture
 foreach ($arch in $Architectures)
 {
@@ -163,6 +192,11 @@ foreach ($arch in $Architectures)
     if ($Settings)
     {
         $opts += '--settings', $Settings
+    }
+
+    if ($PREfast)
+    {
+        $opts += '--prefast', "$($PREfast -join ';')"
     }
 
     # Fuzzing requires libraries in the $VCToolsInstallDir to be linked
@@ -197,3 +231,4 @@ foreach ($arch in $Architectures)
         exit 1
     }
 }
+

@@ -134,10 +134,9 @@ Import-Module "$($vsInstance.InstallationPath)\Common7\Tools\Microsoft.VisualStu
 $hostArch = [System.Environment]::Is64BitOperatingSystem ? 'x64' : 'x86'
 $debugLevel = 'None' # Set to Trace for verbose output
 
-# FFmpegConfig.sh sets the -QSpectre option for --extra-cflags to enable Spectre mitigations for the FFmpeg binaries.
-# However, --extra-cflags options also get passed to the ARM assembler and -QSpectre causes an A2029 (unknown
-# command-line argument) error for ARM/ARM64 builds. To work around this, we modify FFmpeg's configure script to have
-# armasm_flags() filter out -Q* options.
+# --extra-cflags options also get passed to the ARM assembler for ARM/ARM64 builds and some options cause an A2029
+# (unknown command-line argument) error. To work around this, we modify FFmpeg's configure script to have armasm_flags()
+# filter out problematic options.
 $configurePath = "$PSScriptRoot\ffmpeg\configure"
 $configure = Get-Content $configurePath -Encoding UTF8 -Raw
 if (-not ($configure -match '(?sm)armasm_flags\(\).*?^}'))
@@ -145,12 +144,23 @@ if (-not ($configure -match '(?sm)armasm_flags\(\).*?^}'))
     Write-Error("ERROR: Failed to find armasm_flags() in $configurePath")
     exit 1
 }
-
 $armasm_flags = $matches[0]
+
 if (-not ($armasm_flags.Contains('-Q*)')))
 {
-    $updated_armasm_flags = $armasm_flags -replace '(?m)(^\s*)\*\)', "`$1-Q*) ;;`n`$&"
-    $configure = $configure.Replace($armasm_flags, $updated_armasm_flags )
+    $armasm_flags = $armasm_flags -replace '(?m)(^\s*)\*\)', "`$1-Q*) ;;`n`$&"
+}
+
+if (-not ($armasm_flags.Contains('-analyze*)')))
+{
+    $armasm_flags = $armasm_flags -replace '(?m)(^\s*)\*\)', "`$1-analyze:plugin) shift 2 ;;`n`$&"
+    $armasm_flags = $armasm_flags -replace '(?m)(^\s*)\*\)', "`$1-analyze:ruleset) shift 2 ;;`n`$&"
+    $armasm_flags = $armasm_flags -replace '(?m)(^\s*)\*\)', "`$1-analyze*) ;;`n`$&"
+}
+
+if (-not ($armasm_flags -eq $matches[0]))
+{
+    $configure = $configure.Replace($matches[0], $armasm_flags)
     $configure | Out-File -Encoding UTF8 $configurePath
 }
 

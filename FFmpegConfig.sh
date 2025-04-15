@@ -2,7 +2,7 @@
 dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # Parse the options
-options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,prefast:,fuzzing -n "$0" -- "$@")
+options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,prefast:,sarif-logs,fuzzing -n "$0" -- "$@")
 if [ $? -ne 0 ]; then
     echo "ERROR: Invalid option(s)"
     exit 1
@@ -22,12 +22,12 @@ while true; do
                     app_platform_settings="--extra-cflags=\"-DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP\""
                     ;;
                 onecore)
-                    app_platform_settings=" \
+                    app_platform_settings="\
                         --extra-cflags=\"-DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00\" \
                         --extra-ldflags=\"-APPCONTAINER WindowsApp.lib -NODEFAULTLIB:kernel32.lib -DEFAULTLIB:onecore.lib\""
                     ;;
                 uwp)
-                    app_platform_settings=" \
+                    app_platform_settings="\
                         --extra-cflags=\"-DWINAPI_FAMILY=WINAPI_FAMILY_APP -D_WIN32_WINNT=0x0A00\" \
                         --extra-ldflags=\"-APPCONTAINER WindowsApp.lib\""
                     ;;
@@ -68,8 +68,14 @@ while true; do
             shift 2
             ;;
         --prefast)
-            prefast_rulesets=$2
+            prefast_settings="--extra-cflags=\"\
+                -analyze -analyze:log:includesuppressed -analyze:log:format:sarif -analyze:plugin EspXEngine.dll \
+                -analyze:ruleset $2\""
             shift 2
+            ;;
+        --sarif-logs)
+            sarif_logs=true
+            shift
             ;;
         --fuzzing)
             fuzzing=true
@@ -100,47 +106,46 @@ common_settings=" \
     "
 
 # Architecture-specific settings
-if [ -z $arch ]; then
+if [[ -z $arch ]]; then
     echo "ERROR: No architecture set" 1>&2
     exit 1
-elif [ $arch == "x86" ]; then
+elif [[ $arch == "x86" ]]; then
     arch_settings="
         --arch=x86 \
         --extra-ldflags=\"-CETCOMPAT\" \
-        --prefix=../../Build/$arch \
+        --prefix=$dir/ffmpeg/Build/$arch \
         "
-elif [ $arch == "x64" ]; then
+elif [[ $arch == "x64" ]]; then
     arch_settings="
         --arch=x86_64 \
         --extra-ldflags=\"-CETCOMPAT\" \
-        --prefix=../../Build/$arch \
+        --prefix=$dir/ffmpeg/Build/$arch \
         "
-elif [ $arch == "arm" ]; then
+elif [[ $arch == "arm" ]]; then
     arch_settings="
         --arch=arm \
         --as=armasm \
         --cpu=armv7 \
         --enable-thumb \
         --extra-cflags=\"-D__ARM_PCS_VFP\" \
-        --prefix=../../Build/$arch \
+        --prefix=$dir/ffmpeg/Build/$arch \
         "
-elif [ $arch == "arm64" ]; then
+elif [[ $arch == "arm64" ]]; then
     arch_settings="
         --arch=arm64 \
         --as=armasm64 \
         --cpu=armv7 \
         --enable-thumb \
         --extra-cflags=\"-D__ARM_PCS_VFP\" \
-        --prefix=../../Build/$arch \
+        --prefix=$dir/ffmpeg/Build/$arch \
         "
 else
     echo "ERROR: $arch is not a valid architecture" 1>&2
     exit 1
 fi
 
-# PREfast static analysis settings
-if [[ $prefast_rulesets ]]; then
-    prefast_settings="--extra-cflags=\"-analyze -analyze:log:includesuppressed -analyze:log:format:sarif -analyze:plugin EspXEngine.dll -analyze:ruleset $prefast_rulesets\""
+if [[ $sarif_logs ]]; then
+    sarif_logs_settings="--extra-cflags=\"-experimental:log $dir/ffmpeg/Output/$arch/\""
 fi
 
 # Fuzzer-specific settings
@@ -150,7 +155,9 @@ if [[ $fuzzing ]]; then
         exit 1
     fi
 
-    fuzz_settings="--extra-cflags=\"-fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=edge -fsanitize-coverage=trace-cmp -fsanitize-coverage=trace-div\" "
+    fuzz_settings="--extra-cflags=\"\
+        -fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=edge \
+        -fsanitize-coverage=trace-cmp -fsanitize-coverage=trace-div\""
 
     # Add sancov.lib or libsancov.lib based on CRT
     if [[ $crt == "dynamic" ]]; then
@@ -167,7 +174,16 @@ rm -rf Output/$arch
 mkdir -p Output/$arch
 cd Output/$arch
 
-eval ../../configure $common_settings $arch_settings $app_platform_settings $crt_settings $onecore_settings $user_settings $prefast_settings $fuzz_settings &&
+eval ../../configure \
+    $common_settings \
+    $arch_settings \
+    $app_platform_settings \
+    $crt_settings \
+    $onecore_settings \
+    $user_settings \
+    $prefast_settings \
+    $sarif_logs_settings \
+    $fuzz_settings &&
 make -j`nproc` &&
 make install
 

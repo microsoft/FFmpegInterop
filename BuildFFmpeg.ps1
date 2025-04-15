@@ -36,6 +36,10 @@ Specifies one or more patches or directories containing patches to apply to FFmp
 .PARAMETER Prefast
 Specifies one or more rulesets to use for PREfast static analysis.
 
+.PARAMETER SarifLogs
+Specifies whether to enable SARIF output diagnostics for MSVC.
+https://learn.microsoft.com/en-us/cpp/build/reference/sarif-output
+
 .PARAMETER Fuzzing
 Specifies whether to build FFmpeg with fuzzing support.
 
@@ -70,6 +74,7 @@ param(
     [string]$Settings,
     [string]$Patches,
     [string[]]$Prefast,
+    [switch]$SarifLogs,
     [switch]$Fuzzing
 )
 
@@ -241,6 +246,11 @@ foreach ($arch in $Architectures)
         $opts += '--prefast', "$($Prefast -join ';')"
     }
 
+    if ($SarifLogs)
+    {
+        $opts += '--sarif-logs'
+    }
+
     # Fuzzing requires libraries in the $VCToolsInstallDir to be linked
     if ($Fuzzing)
     {
@@ -250,6 +260,7 @@ foreach ($arch in $Architectures)
             Write-Error "ERROR: $fuzzingLibPath does not exist. Ensure the Visual Studio installation is correct."
             exit 1
         }
+
         Write-Host "Adding $fuzzingLibPath to the LIB environment variable"
         $env:LIB = "$env:LIB;$fuzzingLibPath"
         $opts += '--fuzzing'
@@ -273,4 +284,3 @@ foreach ($arch in $Architectures)
         exit 1
     }
 }
-

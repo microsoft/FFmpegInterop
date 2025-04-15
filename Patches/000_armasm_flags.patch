@@ -1,0 +1,30 @@
+diff --git a/configure b/configure
+index d77a55b653..c964c00b91 100755
+--- a/configure
++++ b/configure
+@@ -4799,11 +4799,25 @@ EOF
+ fi
+ 
+ armasm_flags(){
++    skip_arg=false
+     for flag; do
++        if [ "$skip_arg" = true ]; then
++            # Filter out any arguments for MSVC cl.exe options that were
++            # previously filtered out below
++            case $flag in
++                -*) skip_arg=false ;;
++                *)
++                    continue
++                    ;;
++            esac
++        fi
+         case $flag in
+             # Filter out MSVC cl.exe options from cflags that shouldn't
+             # be passed to gas-preprocessor
++            -analyze*)          skip_arg=true                   ;;
++            -experimental:log*) skip_arg=true                   ;;
+             -M[TD]*)                                            ;;
++            -Q*)                                                ;;
+             *)                  echo $flag                      ;;
+         esac
+    done

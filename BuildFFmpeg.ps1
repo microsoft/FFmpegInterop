@@ -30,8 +30,11 @@ See the following resources for more information about the hybrid CRT:
 .PARAMETER Settings
 Specifies options to pass to FFmpeg's configure script.
 
-.PARAMETER PREfast
-Specifies one or more rule sets to use for PREfast static analysis.
+.PARAMETER Patches
+Specifies one or more patches or directories containing patches to apply to FFmpeg before building.
+
+.PARAMETER Prefast
+Specifies one or more rulesets to use for PREfast static analysis.
 
 .PARAMETER Fuzzing
 Specifies whether to build FFmpeg with fuzzing support.
@@ -60,32 +63,80 @@ param(
     [Parameter(Mandatory=$true, Position=0)]
     [ValidateSet('x86', 'x64', 'arm', 'arm64')]
     [string[]]$Architectures,
-
     [ValidateSet('desktop', 'onecore', 'uwp')]
     [string]$AppPlatform = 'desktop',
-
     [ValidateSet('dynamic', 'hybrid', 'static')]
     [string]$CRT = 'dynamic',
-
     [string]$Settings,
-
-    [string[]]$PREfast,
-
+    [string]$Patches,
+    [string[]]$Prefast,
     [switch]$Fuzzing
 )
 
+function ApplyFFmpegPatch([string]$path)
+{
+    if (-not (Test-Path $path))
+    {
+        Write-Error "ERROR: Patch `"$path`" does not exist."
+        exit 1
+    }
+
+    if (Test-Path $path -PathType Container)
+    {
+        # Apply all patches in the directory
+        $patches = Get-ChildItem -Path $path
+        foreach ($patch in $patches)
+        {
+            ApplyFFmpegPatch($patch)
+        }
+
+        return
+    }
+
+    $patch = $path
+    Push-Location -Path "$PSScriptRoot\ffmpeg"
+
+    try
+    {
+        # Check if the patch can be applied cleanly
+        & git apply --check $patch -C0 --quiet
+        if ($? -eq $true)
+        {
+            Write-Host "Applying patch: $patch"
+            & git apply $patch
+            return
+        }
+
+        # Check if the patch has already been applied
+        & git apply --reverse --check $patch -C0 --quiet
+        if ($? -eq $true)
+        {
+            Write-Host "Patch `"$patch`" has already been applied."
+        }
+        else
+        {
+            Write-Error "ERROR: Patch `"$patch`" could not be applied."
+            exit 1
+        }
+    }
+    finally
+    {
+        Pop-Location
+    }
+}
+
 function ConvertWindowsPathToUnixPath([string]$path)
 {
-    $path = Resolve-Path $path;
-    $drive = Split-Path $path -Qualifier;
+    $path = Resolve-Path $path
+    $drive = Split-Path $path -Qualifier
 
-    $path = $path.Replace($drive, "/$($drive.ToLower()[0])");
-    $path = $path.Replace('\', '/');
-    return $path;
+    $path = $path.Replace($drive, "/$($drive.ToLower()[0])")
+    $path = $path.Replace('\', '/')
+    return $path
 }
 
 # Validate FFmpeg submodule
-$configure = Join-Path $PSScriptRoot 'ffmpeg\configure'
+$configure = "$PSScriptRoot\ffmpeg\configure"
 if (-not (Test-Path $configure))
 {
     Write-Error "ERROR: $configure does not exist. Ensure the FFmpeg git submodule is initialized and cloned."
@@ -107,6 +158,31 @@ if (-not (Test-Path $env:MSYS2_BIN))
         "ERROR: MSYS2_BIN environment variable is not valid - $env:MSYS2_BIN does not exist. " +
         'Use SetUpFFmpegBuildEnvironment.ps1 to set up the FFmpeg build environment.')
     exit 1
+}
+
+# Apply FFmpeg patches
+ApplyFFmpegPatch("$PSScriptRoot\patches")
+
+if ($Patches)
+{
+    foreach ($patch in $Patches)
+    {
+        ApplyFFmpegPatch($patch)
+    }
+}
+
+if ($Prefast)
+{
+    # Validate PREfast ruleset paths and convert to Unix paths
+    $Prefast = $Prefast | ForEach-Object {
+        if (-not (Test-Path $_))
+        {
+            Write-Error "ERROR: PREfast ruleset `"$_`" does not exist."
+            exit 1
+        }
+
+        ConvertWindowsPathToUnixPath($_)
+    }
 }
 
 # Save the original environment state
@@ -134,40 +210,6 @@ Import-Module "$($vsInstance.InstallationPath)\Common7\Tools\Microsoft.VisualStu
 $hostArch = [System.Environment]::Is64BitOperatingSystem ? 'x64' : 'x86'
 $debugLevel = 'None' # Set to Trace for verbose output
 
-# FFmpegConfig.sh sets the -QSpectre option for --extra-cflags to enable Spectre mitigations for the FFmpeg binaries.
-# However, --extra-cflags options also get passed to the ARM assembler and -QSpectre causes an A2029 (unknown
-# command-line argument) error for ARM/ARM64 builds. To work around this, we modify FFmpeg's configure script to have
-# armasm_flags() filter out -Q* options.
-$configurePath = "$PSScriptRoot\ffmpeg\configure"
-$configure = Get-Content $configurePath -Encoding UTF8 -Raw
-if (-not ($configure -match '(?sm)armasm_flags\(\).*?^}'))
-{
-    Write-Error("ERROR: Failed to find armasm_flags() in $configurePath")
-    exit 1
-}
-
-$armasm_flags = $matches[0]
-if (-not ($armasm_flags.Contains('-Q*)')))
-{
-    $updated_armasm_flags = $armasm_flags -replace '(?m)(^\s*)\*\)', "`$1-Q*) ;;`n`$&"
-    $configure = $configure.Replace($armasm_flags, $updated_armasm_flags )
-    $configure | Out-File -Encoding UTF8 $configurePath
-}
-
-if ($PREfast)
-{
-    # Validate PREfast rule set paths and convert to Unix paths
-    $PREfast = $PREfast | ForEach-Object {
-        if (-not (Test-Path $_))
-        {
-            Write-Error "ERROR: PREfast rule set '$_' does not exist."
-            exit 1
-        }
-
-        ConvertWindowsPathToUnixPath($_)
-    }
-}
-
 # Build FFmpeg for each specified architecture
 foreach ($arch in $Architectures)
 {
@@ -194,9 +236,9 @@ foreach ($arch in $Architectures)
         $opts += '--settings', $Settings
     }
 
-    if ($PREfast)
+    if ($Prefast)
     {
-        $opts += '--prefast', "$($PREfast -join ';')"
+        $opts += '--prefast', "$($Prefast -join ';')"
     }
 
     # Fuzzing requires libraries in the $VCToolsInstallDir to be linked

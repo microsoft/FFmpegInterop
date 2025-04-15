@@ -2,7 +2,7 @@
 dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # Parse the options
-options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,prefast:,sarif-logs,fuzzing -n "$0" -- "$@")
+options=$(getopt -o "" --long arch:,app-platform:,settings:,crt:,compiler-rsp:,prefast:,sarif-logs,fuzzing -n "$0" -- "$@")
 if [ $? -ne 0 ]; then
     echo "ERROR: Invalid option(s)"
     exit 1
@@ -67,10 +67,28 @@ while true; do
             user_settings=$2
             shift 2
             ;;
+        --compiler-rsp)
+            # Convert the response file paths from Windows to Unix format
+            IFS=';' read -r -a rsps <<< "$2"
+            for i in "${!rsps[@]}"; do
+                rsps[$i]="@$(cygpath --unix "${rsps[$i]}")"
+            done
+            rsps=$(IFS=' ' echo "${rsps[*]}")
+
+            compiler_rsp_settings+="--extra-cflags=\"$rsps\""
+            shift 2
+            ;;
         --prefast)
-            prefast_settings="--extra-cflags=\"\
-                -analyze -analyze:log:includesuppressed -analyze:log:format:sarif -analyze:plugin EspXEngine.dll \
-                -analyze:ruleset $2\""
+            # Convert the ruleset paths from Windows to Unix format
+            IFS=';' read -r -a rulesets <<< "$2"
+            for i in "${!rulesets[@]}"; do
+                rulesets[$i]="$(cygpath --unix "${rulesets[$i]}")"
+            done
+            rulesets=$(IFS=';' echo "${rulesets[*]}")
+
+            prefast_settings="\
+                --extra-cflags=\"-analyze -analyze:log:includesuppressed -analyze:log:format:sarif -analyze:plugin \
+                EspXEngine.dll -analyze:ruleset $rulesets\""
             shift 2
             ;;
         --sarif-logs)
@@ -93,7 +111,7 @@ while true; do
 done
 
 # Common settings
-common_settings=" \
+common_settings="\
     --toolchain=msvc \
     --target-os=win32 \
     --disable-programs \
@@ -110,19 +128,19 @@ if [[ -z $arch ]]; then
     echo "ERROR: No architecture set" 1>&2
     exit 1
 elif [[ $arch == "x86" ]]; then
-    arch_settings="
+    arch_settings="\
         --arch=x86 \
         --extra-ldflags=\"-CETCOMPAT\" \
         --prefix=$dir/ffmpeg/Build/$arch \
         "
 elif [[ $arch == "x64" ]]; then
-    arch_settings="
+    arch_settings="\
         --arch=x86_64 \
         --extra-ldflags=\"-CETCOMPAT\" \
         --prefix=$dir/ffmpeg/Build/$arch \
         "
 elif [[ $arch == "arm" ]]; then
-    arch_settings="
+    arch_settings="\
         --arch=arm \
         --as=armasm \
         --cpu=armv7 \
@@ -131,7 +149,7 @@ elif [[ $arch == "arm" ]]; then
         --prefix=$dir/ffmpeg/Build/$arch \
         "
 elif [[ $arch == "arm64" ]]; then
-    arch_settings="
+    arch_settings="\
         --arch=arm64 \
         --as=armasm64 \
         --cpu=armv7 \
@@ -155,8 +173,8 @@ if [[ $fuzzing ]]; then
         exit 1
     fi
 
-    fuzz_settings="--extra-cflags=\"\
-        -fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=edge \
+    fuzz_settings="\
+        --extra-cflags=\"-fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=edge \
         -fsanitize-coverage=trace-cmp -fsanitize-coverage=trace-div\""
 
     # Add sancov.lib or libsancov.lib based on CRT
@@ -181,6 +199,7 @@ eval ../../configure \
     $crt_settings \
     $onecore_settings \
     $user_settings \
+    $compiler_rsp_settings \
     $prefast_settings \
     $sarif_logs_settings \
     $fuzz_settings &&

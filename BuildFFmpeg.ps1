@@ -33,6 +33,9 @@ Specifies options to pass to FFmpeg's configure script.
 .PARAMETER Patches
 Specifies one or more patches or directories containing patches to apply to FFmpeg before building.
 
+.PARAMETER CompilerRsp
+Specifies one or more compiler response files (.rsp) to pass to the FFmpeg build.
+
 .PARAMETER Prefast
 Specifies one or more rulesets to use for PREfast static analysis.
 
@@ -73,6 +76,7 @@ param(
     [string]$CRT = 'dynamic',
     [string]$Settings,
     [string]$Patches,
+    [string[]]$CompilerRsp,
     [string[]]$Prefast,
     [switch]$SarifLogs,
     [switch]$Fuzzing
@@ -130,16 +134,6 @@ function ApplyFFmpegPatch([string]$path)
     }
 }
 
-function ConvertWindowsPathToUnixPath([string]$path)
-{
-    $path = Resolve-Path $path
-    $drive = Split-Path $path -Qualifier
-
-    $path = $path.Replace($drive, "/$($drive.ToLower()[0])")
-    $path = $path.Replace('\', '/')
-    return $path
-}
-
 # Validate FFmpeg submodule
 $configure = "$PSScriptRoot\ffmpeg\configure"
 if (-not (Test-Path $configure))
@@ -165,7 +159,6 @@ if (-not (Test-Path $env:MSYS2_BIN))
     exit 1
 }
 
-# Apply FFmpeg patches
 ApplyFFmpegPatch("$PSScriptRoot\patches")
 
 if ($Patches)
@@ -176,9 +169,21 @@ if ($Patches)
     }
 }
 
+if ($CompilerRsp)
+{
+    $CompilerRsp = $CompilerRsp | ForEach-Object {
+        if (-not (Test-Path $_))
+        {
+            Write-Error "ERROR: Compiler response file `"$_`" does not exist."
+            exit 1
+        }
+
+        Resolve-Path $_
+    }
+}
+
 if ($Prefast)
 {
-    # Validate PREfast ruleset paths and convert to Unix paths
     $Prefast = $Prefast | ForEach-Object {
         if (-not (Test-Path $_))
         {
@@ -186,7 +191,7 @@ if ($Prefast)
             exit 1
         }
 
-        ConvertWindowsPathToUnixPath($_)
+        Resolve-Path $_
     }
 }
 
@@ -241,6 +246,11 @@ foreach ($arch in $Architectures)
         $opts += '--settings', $Settings
     }
 
+    if ($CompilerRsp)
+    {
+        $opts += '--compiler-rsp', "$($CompilerRsp -join ';')"
+    }
+
     if ($Prefast)
     {
         $opts += '--prefast', "$($Prefast -join ';')"
@@ -263,6 +273,7 @@ foreach ($arch in $Architectures)
 
         Write-Host "Adding $fuzzingLibPath to the LIB environment variable"
         $env:LIB = "$env:LIB;$fuzzingLibPath"
+
         $opts += '--fuzzing'
     }
 

@@ -2,7 +2,7 @@ diff --git a/configure b/configure
 index d77a55b653..c964c00b91 100755
 --- a/configure
 +++ b/configure
-@@ -4799,11 +4799,25 @@ EOF
+@@ -4799,11 +4799,26 @@ EOF
  fi
  
  armasm_flags(){
@@ -21,6 +21,7 @@ index d77a55b653..c964c00b91 100755
          case $flag in
              # Filter out MSVC cl.exe options from cflags that shouldn't
              # be passed to gas-preprocessor
++            @*)                 skip_arg=true                   ;;
 +            -analyze*)          skip_arg=true                   ;;
 +            -experimental:log*) skip_arg=true                   ;;
              -M[TD]*)                                            ;;

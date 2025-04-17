@@ -93,7 +93,7 @@ function ApplyFFmpegPatch([string]$path)
     if (Test-Path $path -PathType Container)
     {
         # Apply all patches in the directory
-        $patches = Get-ChildItem -Path $path
+        $patches = Get-ChildItem -Path $path\*.patch
         foreach ($patch in $patches)
         {
             ApplyFFmpegPatch($patch)

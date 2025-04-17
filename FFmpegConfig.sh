@@ -175,7 +175,7 @@ if [[ $fuzzing ]]; then
 
     fuzz_settings="\
         --extra-cflags=\"-fsanitize=address -fsanitize-coverage=inline-8bit-counters -fsanitize-coverage=edge \
-        -fsanitize-coverage=trace-cmp -fsanitize-coverage=trace-div\""
+        -fsanitize-coverage=trace-cmp -fsanitize-coverage=trace-div\" "
 
     # Add sancov.lib or libsancov.lib based on CRT
     if [[ $crt == "dynamic" ]]; then

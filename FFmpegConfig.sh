@@ -68,27 +68,19 @@ while true; do
             shift 2
             ;;
         --compiler-rsp)
-            # Convert the response file paths from Windows to Unix format
-            IFS=';' read -r -a rsps <<< "$2"
-            for i in "${!rsps[@]}"; do
-                rsps[$i]="@$(cygpath --unix "${rsps[$i]}")"
-            done
-            rsps=$(IFS=' '; echo "${rsps[*]}")
+            # Convert the compiler response file path from Windows to Unix format
+            rsp="$(cygpath --unix "$2")"
 
-            compiler_rsp_settings+="--extra-cflags=\"$rsps\""
+            compiler_rsp_settings+="--extra-cflags=\"@$rsp\""
             shift 2
             ;;
         --prefast)
-            # Convert the ruleset paths from Windows to Unix format
-            IFS=';' read -r -a rulesets <<< "$2"
-            for i in "${!rulesets[@]}"; do
-                rulesets[$i]="$(cygpath --unix "${rulesets[$i]}")"
-            done
-            rulesets=$(IFS=';'; echo "${rulesets[*]}")
+            # Convert the ruleset path from Windows to Unix format
+            ruleset="$(cygpath --unix "$2")"
 
             prefast_settings="\
                 --extra-cflags=\"-analyze -analyze:log:includesuppressed -analyze:log:format:sarif -analyze:plugin \
-                EspXEngine.dll -analyze:ruleset $rulesets\""
+                EspXEngine.dll -analyze:ruleset $ruleset\""
             shift 2
             ;;
         --sarif-logs)

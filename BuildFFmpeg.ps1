@@ -33,17 +33,17 @@ Specifies options to pass to FFmpeg's configure script.
 .PARAMETER Patches
 Specifies one or more patches or directories containing patches to apply to FFmpeg before building.
 
-.PARAMETER CompilerRsp
-Specifies one or more compiler response files (.rsp) to pass to the FFmpeg build.
-
-See the following resource for more information about compiler response files:
-- https://learn.microsoft.com/en-us/cpp/build/reference/at-specify-a-compiler-response-file
-
 .PARAMETER Prefast
-Specifies one or more rulesets to use for PREfast static analysis.
+Specifies a ruleset to use for PREfast static analysis.
 
 See the following resource for more information about PREfast static analysis:
 - https://learn.microsoft.com/en-us/cpp/build/reference/analyze-code-analysis
+
+.PARAMETER CompilerRsp
+Specifies a compiler response file (.rsp) to pass to the FFmpeg build.
+
+See the following resource for more information about compiler response files:
+- https://learn.microsoft.com/en-us/cpp/build/reference/at-specify-a-compiler-response-file
 
 .PARAMETER SarifLogs
 Specifies whether to enable SARIF output diagnostics for MSVC.
@@ -84,8 +84,8 @@ param(
     [string]$CRT = 'dynamic',
     [string]$Settings,
     [string]$Patches,
-    [string[]]$CompilerRsp,
-    [string[]]$Prefast,
+    [string]$Prefast,
+    [string]$CompilerRsp,
     [switch]$SarifLogs,
     [switch]$Fuzzing
 )
@@ -177,30 +177,26 @@ if ($Patches)
     }
 }
 
-if ($CompilerRsp)
-{
-    $CompilerRsp = $CompilerRsp | ForEach-Object {
-        if (-not (Test-Path $_))
-        {
-            Write-Error "ERROR: Compiler response file `"$_`" does not exist."
-            exit 1
-        }
-
-        Resolve-Path $_
-    }
-}
-
 if ($Prefast)
 {
-    $Prefast = $Prefast | ForEach-Object {
-        if (-not (Test-Path $_))
-        {
-            Write-Error "ERROR: PREfast ruleset `"$_`" does not exist."
-            exit 1
-        }
-
-        Resolve-Path $_
+    if (-not (Test-Path $Prefast))
+    {
+        Write-Error "ERROR: PREfast ruleset `"$Prefast`" does not exist."
+        exit 1
     }
+
+    $Prefast = Resolve-Path $Prefast
+}
+
+if ($CompilerRsp)
+{
+    if (-not (Test-Path $CompilerRsp))
+    {
+        Write-Error "ERROR: Compiler response file `"$CompilerRsp`" does not exist."
+        exit 1
+    }
+
+    $CompilerRsp = Resolve-Path $CompilerRsp
 }
 
 # Save the original environment state
@@ -256,12 +252,12 @@ foreach ($arch in $Architectures)
 
     if ($CompilerRsp)
     {
-        $opts += '--compiler-rsp', "$($CompilerRsp -join ';')"
+        $opts += '--compiler-rsp', $CompilerRsp
     }
 
     if ($Prefast)
     {
-        $opts += '--prefast', "$($Prefast -join ';')"
+        $opts += '--prefast', $Prefast
     }
 
     if ($SarifLogs)

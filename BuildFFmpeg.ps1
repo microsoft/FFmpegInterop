@@ -36,12 +36,20 @@ Specifies one or more patches or directories containing patches to apply to FFmp
 .PARAMETER CompilerRsp
 Specifies one or more compiler response files (.rsp) to pass to the FFmpeg build.
 
+See the following resource for more information about compiler response files:
+- https://learn.microsoft.com/en-us/cpp/build/reference/at-specify-a-compiler-response-file
+
 .PARAMETER Prefast
 Specifies one or more rulesets to use for PREfast static analysis.
 
+See the following resource for more information about PREfast static analysis:
+- https://learn.microsoft.com/en-us/cpp/build/reference/analyze-code-analysis
+
 .PARAMETER SarifLogs
 Specifies whether to enable SARIF output diagnostics for MSVC.
-https://learn.microsoft.com/en-us/cpp/build/reference/sarif-output
+
+See the following resource for more information about SARIF diagnostics:
+- https://learn.microsoft.com/en-us/cpp/build/reference/sarif-output
 
 .PARAMETER Fuzzing
 Specifies whether to build FFmpeg with fuzzing support.

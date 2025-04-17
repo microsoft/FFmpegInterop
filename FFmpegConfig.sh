@@ -73,7 +73,7 @@ while true; do
             for i in "${!rsps[@]}"; do
                 rsps[$i]="@$(cygpath --unix "${rsps[$i]}")"
             done
-            rsps=$(IFS=' ' echo "${rsps[*]}")
+            rsps=$(IFS=' '; echo "${rsps[*]}")
 
             compiler_rsp_settings+="--extra-cflags=\"$rsps\""
             shift 2
@@ -84,7 +84,7 @@ while true; do
             for i in "${!rulesets[@]}"; do
                 rulesets[$i]="$(cygpath --unix "${rulesets[$i]}")"
             done
-            rulesets=$(IFS=';' echo "${rulesets[*]}")
+            rulesets=$(IFS=';'; echo "${rulesets[*]}")
 
             prefast_settings="\
                 --extra-cflags=\"-analyze -analyze:log:includesuppressed -analyze:log:format:sarif -analyze:plugin \

@@ -2,7 +2,7 @@ diff --git a/configure b/configure
 index d77a55b653..c964c00b91 100755
 --- a/configure
 +++ b/configure
-@@ -4799,11 +4799,26 @@ EOF
+@@ -4799,11 +4799,24 @@ EOF
  fi
  
  armasm_flags(){
@@ -12,10 +12,8 @@ index d77a55b653..c964c00b91 100755
 +            # Filter out any arguments for MSVC cl.exe options that were
 +            # previously filtered out below
 +            case $flag in
-+                -*) skip_arg=false ;;
-+                *)
-+                    continue
-+                    ;;
++                -*)             skip_arg=false                  ;;
++                *)              continue                        ;;
 +            esac
 +        fi
          case $flag in

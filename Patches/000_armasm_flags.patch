@@ -2,7 +2,7 @@ diff --git a/configure b/configure
 index 732de59292..abd004981f 100755
 --- a/configure
 +++ b/configure
-@@ -4898,11 +4898,24 @@ EOF
+@@ -4898,11 +4898,25 @@ EOF
  fi
  
  armasm_flags(){
@@ -22,6 +22,7 @@ index 732de59292..abd004981f 100755
 +            @*)                 skip_arg=true                   ;;
 +            -analyze*)          skip_arg=true                   ;;
 +            -experimental:log*) skip_arg=true                   ;;
++            -guard:*)                                           ;;
              -M[TD]*)                                            ;;
 +            -Q*)                                                ;;
              *)                  echo $flag                      ;;

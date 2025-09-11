@@ -80,7 +80,7 @@ for ($i = 0; $i -lt 2; $i++)
 }
 
 # Install additional packages 
-$packages = @('make', 'gcc', 'diffutils', 'yasm')
+$packages = @('make', 'gcc', 'diffutils', 'nasm')
 foreach ($package in $packages)
 {
     Write-Host "Installing $package..."

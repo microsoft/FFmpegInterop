@@ -111,7 +111,7 @@ common_settings="\
     --disable-dxva2 \
     --enable-shared \
     --enable-cross-compile \
-    --extra-cflags=\"-GUARD:CF -Qspectre -Gy -Gw\" \
+    --extra-cflags=\"-guard:cf -Qspectre -Gy -Gw\" \
     --extra-ldflags=\"-PROFILE -GUARD:CF -DYNAMICBASE -OPT:ICF -OPT:REF\" \
     "
 

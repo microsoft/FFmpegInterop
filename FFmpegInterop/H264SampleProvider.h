@@ -70,7 +70,7 @@ namespace winrt::FFmpegInterop::implementation
 		uint8_t GetLevel() const noexcept{ return m_level; }
 		uint32_t GetSpsId() const noexcept { return m_spsId; }
 
-		bool HasNonConstrainedBaseline() const noexcept { return m_profile == FF_PROFILE_H264_BASELINE && !GetConstraintSet1(); }
+		bool HasNonConstrainedBaseline() const noexcept { return m_profile == AV_PROFILE_H264_BASELINE && !GetConstraintSet1(); }
 
 	private:
 		uint8_t m_profile{ 0 };

@@ -1,8 +1,8 @@
 diff --git a/configure b/configure
-index d77a55b653..c964c00b91 100755
+index 732de59292..abd004981f 100755
 --- a/configure
 +++ b/configure
-@@ -4799,11 +4799,24 @@ EOF
+@@ -4898,11 +4898,24 @@ EOF
  fi
  
  armasm_flags(){

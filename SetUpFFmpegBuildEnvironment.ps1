@@ -76,6 +76,13 @@ Write-Host "Modifying $msys2_shell..."
 Write-Host 'Updating packages...'
 for ($i = 0; $i -lt 2; $i++)
 {
+    $pacman_db_lock = "$msys2_root\var\lib\pacman\db.lck"
+    if (Test-Path $pacman_db_lock)
+    {
+        Write-Host "Deleting $pacman_db_lock..."
+        Remove-Item $pacman_db_lock
+    }
+
     # Close all MSYS2 processes
     & taskkill /FI 'MODULES eq msys-2.0.dll' /F
 

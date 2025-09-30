@@ -72,12 +72,15 @@ $msys2_shell = "$msys2_root\msys2_shell.cmd"
 Write-Host "Modifying $msys2_shell..."
 (Get-Content $msys2_shell).replace('rem set MSYS2_PATH_TYPE=inherit', 'set MSYS2_PATH_TYPE=inherit') | Set-Content $msys2_shell
 
-# Update packages
+# Update core packages
 Write-Host 'Updating packages...'
-for ($i = 0; $i -lt 2; $i++)
-{
-    Start-Process -Wait $msys2_shell -ArgumentList '-c "pacman -Syuu --noconfirm"'
-}
+Start-Process -Wait $msys2_shell -ArgumentList '-c "pacman -Syuu --noconfirm"'
+
+# Close all MSYS2 processes
+& taskkill /FI 'MODULES eq msys-2.0.dll' /F
+
+# Update the remaining non-core packages
+Start-Process -Wait $msys2_shell -ArgumentList '-c "pacman -Syuu --noconfirm"'
 
 # Install additional packages 
 $packages = @('make', 'gcc', 'diffutils', 'nasm')

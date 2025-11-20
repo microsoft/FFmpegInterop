@@ -77,9 +77,9 @@ Write-Host 'Updating packages...'
 for ($i = 0; $i -lt 2; $i++)
 {
     # Close all MSYS2 processes
-    & taskkill /FI 'MODULES eq msys-2.0.dll' /F
+    & taskkill /FI 'MODULES eq msys-2.0.dll' /F | Out-Null
 
-    Start-Process -Wait $msys2_shell -ArgumentList '-c "pacman -Syuu --noconfirm --verbose --debug --ignore pacman"'
+    Start-Process -Wait $msys2_shell -ArgumentList '-c "pacman -Syu --noconfirm"'
 }
 
 # Install additional packages 

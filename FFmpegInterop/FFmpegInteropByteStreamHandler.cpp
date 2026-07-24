@@ -24,6 +24,40 @@ using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Media::Core;
 using namespace winrt::Windows::Storage::Streams;
 
+namespace
+{
+	// {54a658c4-fa41-4ff5-9531-1cc79259198c}
+	constexpr GUID FFMPEGINTEROP_FACTORY_CACHE_RESET
+	{
+		0x54a658c4, 0xfa41, 0x4ff5, { 0x95, 0x31, 0x1c, 0xc7, 0x92, 0x59, 0x19, 0x8c }
+	};
+
+	struct FactoryCacheReset : winrt::implements<FactoryCacheReset, ::IUnknown>
+	{
+		~FactoryCacheReset()
+		{
+			winrt::clear_factory_cache();
+		}
+
+		static winrt::com_ptr<FactoryCacheReset> GetInstance()
+		{
+			static std::mutex mutex;
+			const std::lock_guard lock{ mutex };
+
+			if (auto instance{ s_weakInstance.get() })
+			{
+				return instance;
+			}
+
+			auto instance{ winrt::make_self<FactoryCacheReset>() };
+			s_weakInstance = instance;
+			return instance;
+		}
+
+		inline static winrt::weak_ref<FactoryCacheReset> s_weakInstance;
+	};
+}
+
 namespace winrt::FFmpegInterop::implementation
 {
 	FFmpegInteropByteStreamHandler::FFmpegInteropByteStreamHandler()
@@ -60,15 +94,12 @@ namespace winrt::FFmpegInterop::implementation
 		RETURN_HR_IF(E_INVALIDARG, (dwFlags & 0xF) != MF_RESOLUTION_MEDIASOURCE);
 
 		// Queue a work item to create the media source
-		com_ptr<IMFByteStream> byteStream;
-		byteStream.copy_from(pByteStream);
-
+		auto state{ make_self<FFmpegInteropByteStreamHandlerState>(pByteStream) };
 		com_ptr<IMFAsyncResult> result;
-		RETURN_IF_FAILED(MFCreateAsyncResult(pByteStream, pCallback, pState, result.put()));
+		RETURN_IF_FAILED(MFCreateAsyncResult(state.get(), pCallback, pState, result.put()));
 
 		auto cancelCookie{ MFPutWorkItem([
 			strong_this{ get_strong() },
-			byteStream{ std::move(byteStream) },
 			result{ std::move(result) }]()
 			{
 				auto invokeCallback{ wil::scope_exit([&result]()
@@ -76,7 +107,7 @@ namespace winrt::FFmpegInterop::implementation
 					LOG_IF_FAILED(MFInvokeCallback(result.get()));
 				}) };
 
-				strong_this->CreateMediaSource(byteStream.get(), result.get());
+				strong_this->CreateMediaSource(result.get());
 			}) };
 
 		if (ppCancelCookie != nullptr)
@@ -89,14 +120,18 @@ namespace winrt::FFmpegInterop::implementation
 	}
 	CATCH_RETURN();
 
-	void FFmpegInteropByteStreamHandler::CreateMediaSource(_In_ IMFByteStream* byteStream, _In_ IMFAsyncResult* result)
+	void FFmpegInteropByteStreamHandler::CreateMediaSource(_In_ IMFAsyncResult* result)
 	try
 	{
 		auto logger{ FFmpegInteropProvider::CreateMediaSource::Start() };
 
+		com_ptr<::IUnknown> object;
+		THROW_IF_FAILED(result->GetObject(object.put()));
+		auto state{ get_self<FFmpegInteropByteStreamHandlerState>(object.as<IFFmpegInteropByteStreamHandlerStateMarker>()) };
+
 		// Wrap the byte stream in a proxy to prevent it from being closed if we fail to create and initialize the MSS,
 		// so that the source resolver can rollover and attempt other byte stream handlers.
-		auto byteStreamProxy{ make_self<ByteStreamProxy>(byteStream) };
+		auto byteStreamProxy{ make_self<ByteStreamProxy>(std::move(state->m_byteStream)) };
 
 		// Wrap the byte stream into a random access stream
 		IRandomAccessStream stream{ nullptr };
@@ -106,19 +141,19 @@ namespace winrt::FFmpegInterop::implementation
 		IActivationFactory mssFactory{ get_activation_factory<MediaStreamSource>() };
 		MediaStreamSource mss{ mssFactory.ActivateInstance<MediaStreamSource>() };
 
-		FFmpegInteropMSS::InitializeFromStream(stream, mss, nullptr);
-
-		// We need to take care handling the MSS after this point. The MSS and FFmpegInteropMSS have circular
-		// references on each other that need to be broken by calling Shutdown() on the MSS's IMFMediaSource.
-		// Getting the MSS's IMFMediaSource can't fail, but theoretically if it did the MSS and FFmpegInteropMSS would leak.
 		com_ptr<IMFMediaSource> mediaSource;
 		THROW_IF_FAILED(mss.as<IMFGetService>()->GetService(MF_MEDIASOURCE_SERVICE, __uuidof(mediaSource), mediaSource.put_void()));
 
-		// Store a mapping of the result to the media source.
-		// EndCreateObject() will use this mapping to return the media source to the caller.
-		// If for some reason ownership of the media source is never transferred to the caller,
-		// then during destruction the media source will be shutdown to prevent a leak.
-		m_map[result] = ShutdownWrapper<IMFMediaSource>{ std::move(mediaSource) };
+		// Add a FactoryCacheReset reference to the media source's attribute store so that FFmpegInterop.dll's C++/WinRT
+		// factory cache is cleared when the last MSS is destroyed. This prevents cached Windows.Media.dll activation
+		// factories from dangling if Windows.Media.dll is unloaded.
+		THROW_IF_FAILED(mediaSource.as<IMFAttributes>()->SetUnknown(FFMPEGINTEROP_FACTORY_CACHE_RESET, FactoryCacheReset::GetInstance().get()));
+
+		FFmpegInteropMSS::InitializeFromStream(stream, mss, nullptr);
+
+		// After initialization, the MSS and FFmpegInteropMSS have circular references on each other that need to be
+		// broken by calling Shutdown() on the MSS's IMFMediaSource.
+		state->m_mediaSource = ShutdownWrapper<IMFMediaSource>{ std::move(mediaSource) };
 
 		// Allow the byte stream to be closed when the media source shuts down
 		byteStreamProxy->AllowClosing(true);
@@ -152,16 +187,15 @@ namespace winrt::FFmpegInterop::implementation
 		RETURN_HR_IF_NULL(E_INVALIDARG, pObjectType);
 		RETURN_HR_IF_NULL(E_POINTER, ppObject);
 
+		com_ptr<::IUnknown> object;
+		THROW_IF_FAILED(pResult->GetObject(object.put()));
+		auto state{ get_self<FFmpegInteropByteStreamHandlerState>(object.try_as<IFFmpegInteropByteStreamHandlerStateMarker>()) };
+		RETURN_HR_IF_NULL(E_INVALIDARG, state);
+
 		RETURN_IF_FAILED(pResult->GetStatus());
 
-		// Get the media source
-		auto iter{ m_map.find(pResult) };
-		RETURN_HR_IF(MF_E_INVALIDREQUEST, iter == m_map.end());
-		*ppObject = iter->second.Detach();
+		*ppObject = state->m_mediaSource.Detach();
 		*pObjectType = MF_OBJECT_MEDIASOURCE;
-
-		// The caller is now responsible for shutting down the media source
-		m_map.erase(iter);
 
 		logger.Stop();
 		return S_OK;

@@ -50,9 +50,27 @@ namespace winrt::FFmpegInterop::implementation
 		IFACEMETHOD(GetMaxNumberOfBytesRequiredForResolution)(_Out_ QWORD* pcb) noexcept;
 
 	private:
-		void CreateMediaSource(_In_ IMFByteStream* byteStream, _In_ IMFAsyncResult* result);
+		void CreateMediaSource(_In_ IMFAsyncResult* result);
+	};
 
-		std::map<IMFAsyncResult*, ShutdownWrapper<IMFMediaSource>> m_map;
+	struct __declspec(uuid("6b8ee872-efe6-41ae-8b98-b9a6c8cd2e8d")) IFFmpegInteropByteStreamHandlerStateMarker : 
+		::IUnknown
+	{
+
+	};
+
+	struct FFmpegInteropByteStreamHandlerState :
+		public implements<
+			FFmpegInteropByteStreamHandlerState,
+			IFFmpegInteropByteStreamHandlerStateMarker>
+	{
+		FFmpegInteropByteStreamHandlerState(_In_ IMFByteStream* byteStream) noexcept
+		{
+			m_byteStream.copy_from(byteStream);
+		}
+
+		com_ptr<IMFByteStream> m_byteStream;
+		ShutdownWrapper<IMFMediaSource> m_mediaSource;
 	};
 
 	// Byte stream wrapper that prevents the underlying byte stream from being closed unless permitted
@@ -62,9 +80,9 @@ namespace winrt::FFmpegInterop::implementation
 			IMFByteStream>
 	{
 	public:
-		ByteStreamProxy(_In_ IMFByteStream* byteStream) noexcept
+		ByteStreamProxy(_In_ com_ptr<IMFByteStream> byteStream) noexcept
 		{
-			m_byteStream.copy_from(byteStream);
+			m_byteStream = std::move(byteStream);
 		}
 
 		void AllowClosing(bool fAllowClosing) noexcept
